@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7;padding:18px 22px 34px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 auto 14px;max-width:900px}
+.brand{font-size:20px;font-weight:900;color:#fff}.brand span{color:#e8643a}.top-title{color:#9aa5c4;font-size:12px;font-weight:850}
+.top-actions{display:flex;gap:8px;align-items:center}.link-btn,.btn{height:40px;border:1px solid #e8643a;background:#e8643a;color:#fff;border-radius:8px;padding:0 14px;font:inherit;font-size:13px;font-weight:850;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.link-btn.secondary,.btn.secondary{background:#252a3a;border-color:#343b52;color:#d9dee8}.btn:hover,.link-btn:hover{filter:brightness(1.08)}.btn:disabled{opacity:.65;cursor:not-allowed}
+.profile{position:relative}.profile-btn{width:38px;height:38px;border-radius:50%;border:1px solid #343b52;background:#252a3a;color:#fff;font-weight:900;cursor:pointer}.profile-menu{display:none;position:absolute;right:0;top:46px;z-index:40;min-width:170px;background:#1c2030;border:1px solid #343b52;border-radius:8px;box-shadow:0 16px 34px rgba(0,0,0,.35);overflow:hidden}.profile-menu.active{display:block}.profile-menu a,.profile-menu button{display:block;width:100%;border:0;background:transparent;color:#d9dee8;text-align:left;text-decoration:none;padding:12px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.profile-menu a:hover,.profile-menu button:hover{background:#252a3a;color:#fff}
+.wrap{max-width:900px;margin:0 auto;background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;overflow:hidden}
+.head{padding:20px 22px;border-bottom:1px solid #2a2f3a}.head h1{font-size:23px;color:#fff;margin-bottom:5px}.head p{color:#9aa5c4;font-size:13px;line-height:1.4}
+.body{padding:22px;display:grid;gap:16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field{display:grid;gap:6px}.field.full{grid-column:1/-1}.field label{color:#9aa5c4;font-size:11px;font-weight:900;text-transform:uppercase}.field input,.field textarea{width:100%;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:13px;padding:10px 12px}.field input{height:42px}.field textarea{min-height:130px;resize:vertical}.field input:disabled{opacity:.75}.field input:focus,.field textarea:focus{outline:none;border-color:#e8643a}
+.alert{display:none;border-radius:8px;padding:11px 13px;font-size:13px}.alert.active{display:block}.alert.error{background:#3a1d22;color:#ffb4bd;border:1px solid #6b2c36}.alert.success{background:#173421;color:#9af0b4;border:1px solid #2c6b3b}
+.foot{display:flex;gap:10px;justify-content:flex-end;padding:16px 22px;border-top:1px solid #2a2f3a;background:#1c2030}
+@media(max-width:720px){body{padding:14px}.top{align-items:flex-start}.top-title{display:none}.top-actions{flex-wrap:wrap}.grid{grid-template-columns:1fr}.foot{display:grid}.btn,.link-btn{width:100%}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><div class="brand">HR <span>Guru</span></div><div class="top-title">Profile</div></div>
+  <div class="top-actions">
+    <a class="link-btn secondary" href="/">Dashboard</a>
+    <div class="profile">
+      <button class="profile-btn" id="profileBtn" type="button" onclick="toggleProfileMenu()" aria-label="Open profile menu">U</button>
+      <div class="profile-menu" id="profileMenu">
+        <a href="/profile">Profile</a>
+        {% if session.get("impersonation_active") %}<a href="/admin/restore-profile">Return to Admin</a>{% endif %}
+        <button type="button" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+<main class="wrap">
+  <div class="head">
+    <h1>View Profile</h1>
+    <p>Update your contact details used across HR Guru ATS.</p>
+  </div>
+  <div class="body">
+    <div id="alert" class="alert"></div>
+    <div class="grid">
+      <div class="field"><label>Name</label><input id="profileName" placeholder="User name"></div>
+      <div class="field"><label>Email</label><input id="profileEmail" type="email" placeholder="email@example.com"></div>
+      <div class="field"><label>Phone</label><input id="profilePhone" placeholder="Contact number"></div>
+      <div class="field"><label>Role</label><input id="profileRole" disabled></div>
+      <div class="field full"><label>Notes</label><textarea id="profileNotes" placeholder="Internal contact notes"></textarea></div>
+    </div>
+  </div>
+  <div class="foot">
+    <button class="btn secondary" type="button" onclick="resetProfile()">Cancel</button>
+    <button class="btn" id="saveBtn" type="button" onclick="saveProfile()">Save Profile</button>
+  </div>
+</main>
+<script>
+let currentUser = {};
+function value(id){return document.getElementById(id)?.value || ''}
+function setValue(id,value){const el=document.getElementById(id);if(el)el.value=value ?? ''}
+function showAlert(message,type='error'){
+  const el=document.getElementById('alert');
+  el.textContent=message || '';
+  el.className=message ? 'alert active '+type : 'alert';
+}
+function toggleProfileMenu(){document.getElementById('profileMenu')?.classList.toggle('active')}
+document.addEventListener('click',event=>{
+  if(!event.target.closest('.profile'))document.getElementById('profileMenu')?.classList.remove('active');
+});
+function applyProfile(user){
+  currentUser = user || {};
+  const name = currentUser.username || currentUser.recruiter_name || '';
+  setValue('profileName', name);
+  setValue('profileEmail', currentUser.email || currentUser.recruiter_email || '');
+  setValue('profilePhone', currentUser.phone || '');
+  setValue('profileRole', currentUser.role || (currentUser.is_admin ? 'Admin' : 'Recruiter'));
+  setValue('profileNotes', currentUser.notes || '');
+  const btn=document.getElementById('profileBtn');
+  if(btn)btn.textContent=(name || 'U').trim().slice(0,1).toUpperCase() || 'U';
+}
+async function loadProfile(){
+  showAlert('');
+  try{
+    const res=await fetch('/api/me');
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok || data.error)throw new Error(data.error || 'Unable to load profile.');
+    applyProfile(data);
+  }catch(e){
+    showAlert(e.message || 'Unable to load profile.');
+  }
+}
+function resetProfile(){
+  applyProfile(currentUser);
+  showAlert('');
+}
+async function saveProfile(){
+  const name=value('profileName').trim();
+  const email=value('profileEmail').trim();
+  const phone=value('profilePhone').trim();
+  const notes=value('profileNotes').trim();
+  if(!name)return showAlert('Name is required.');
+  if(email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return showAlert('Please enter a valid email address.');
+  const btn=document.getElementById('saveBtn');
+  btn.disabled=true;btn.textContent='Saving...';
+  showAlert('');
+  try{
+    const res=await fetch('/api/me',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,phone,notes})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok || data.error)throw new Error(data.error || 'Unable to save profile.');
+    applyProfile(data.user || {});
+    showAlert('Profile updated successfully.','success');
+  }catch(e){
+    showAlert(e.message || 'Unable to save profile.');
+  }finally{
+    btn.disabled=false;btn.textContent='Save Profile';
+  }
+}
+async function signOut(){
+  await fetch('/api/logout',{method:'POST'});
+  localStorage.removeItem('hrguru_user');
+  window.location.href='/login';
+}
+document.addEventListener('DOMContentLoaded',loadProfile);
+</script>
+</body>
+</html>

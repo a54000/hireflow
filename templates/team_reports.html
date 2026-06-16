@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Reports - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7;padding:12px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 auto 12px;max-width:1180px}
+.brand{font-size:20px;font-weight:900;color:#fff}.brand span{color:#e8643a}.top-title{color:#9aa5c4;font-size:12px;font-weight:850}
+.top-actions{display:flex;gap:8px;align-items:center}.link-btn,.btn{height:40px;border:1px solid #e8643a;background:#e8643a;color:#fff;border-radius:8px;padding:0 14px;font:inherit;font-size:13px;font-weight:850;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.link-btn.secondary,.btn.secondary{background:#252a3a;border-color:#343b52;color:#d9dee8}.link-btn:hover,.btn:hover{filter:brightness(1.08)}
+.profile{position:relative}.profile-btn{width:38px;height:38px;border-radius:50%;border:1px solid #343b52;background:#252a3a;color:#fff;font-weight:900;cursor:pointer}.profile-menu{display:none;position:absolute;right:0;top:46px;z-index:40;min-width:170px;background:#1c2030;border:1px solid #343b52;border-radius:8px;box-shadow:0 16px 34px rgba(0,0,0,.35);overflow:hidden}.profile-menu.active{display:block}.profile-menu a,.profile-menu button{display:block;width:100%;border:0;background:transparent;color:#d9dee8;text-align:left;text-decoration:none;padding:12px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.profile-menu a:hover,.profile-menu button:hover{background:#252a3a;color:#fff}
+.wrap{max-width:1180px;margin:0 auto;background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;overflow:hidden}
+.head{padding:16px 18px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.head h1{font-size:22px;color:#fff;margin-bottom:4px}.head p{color:#9aa5c4;font-size:13px}.filter{display:grid;gap:6px;min-width:240px}.filter label{color:#9aa5c4;font-size:11px;font-weight:900;text-transform:uppercase}.filter select{height:40px;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:13px;padding:0 12px}.filter select:focus{outline:none;border-color:#e8643a}.status{padding:10px 18px;color:#9aa5c4;font-size:13px;border-bottom:1px solid #2a2f3a;min-height:38px}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:14px 18px;border-bottom:1px solid #2a2f3a}.card{background:#151923;border:1px solid #343b52;border-radius:8px;padding:14px;display:grid;gap:6px;min-height:86px}.card strong{font-size:28px;line-height:1;color:#fff}.card span{font-size:12px;color:#bac4df;font-weight:850}
+.table-wrap{overflow:auto;min-height:360px;max-height:calc(100vh - 300px)}table{width:100%;min-width:980px;border-collapse:collapse;table-layout:fixed}th,td{height:44px;padding:9px 12px;border-bottom:1px solid #2a2f3a;border-right:1px solid #2a2f3a;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}th{position:sticky;top:0;z-index:2;background:#0d1017;color:#aab3c8;font-size:12px;font-weight:900}tr:hover td{background:#222838}.empty{padding:42px;text-align:center;color:#8b95b5}.name{font-weight:850;color:#fff}.num{font-weight:900;color:#fff}.client{color:#bac4df}.requirement{font-weight:850;color:#fff}
+@media(max-width:760px){body{padding:8px}.top,.head{display:grid}.top-actions{flex-wrap:wrap}.cards{grid-template-columns:1fr 1fr;padding:12px}.wrap,.top{max-width:calc(100vw - 16px)}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><div class="brand">HR <span>Guru</span></div><div class="top-title">Team Reports</div></div>
+  <div class="top-actions">
+    <a class="link-btn secondary" href="/">Dashboard</a>
+    <button class="btn" type="button" onclick="loadReport()">Refresh</button>
+    <div class="profile">
+      <button class="profile-btn" type="button" onclick="toggleProfileMenu()" aria-label="Open profile menu">U</button>
+      <div class="profile-menu" id="profileMenu">
+        <a href="/profile">Profile</a>
+        {% if session.get("impersonation_active") %}<a href="/admin/restore-profile">Return to Admin</a>{% endif %}
+        <button type="button" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+<main class="wrap">
+  <div class="head">
+    <div>
+      <h1>Recruiter's Requirement-wise Report</h1>
+      <p>Today’s submissions by recruiter, client, and requirement.</p>
+    </div>
+    <div class="filter">
+      <label>Client</label>
+      <select id="clientFilter" onchange="loadReport()"><option value="">All clients</option></select>
+    </div>
+  </div>
+  <div class="status" id="statusText">Loading report...</div>
+  <div class="cards" id="summaryCards"></div>
+  <div class="table-wrap" id="tableWrap"></div>
+</main>
+<script>
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function toggleProfileMenu(){document.getElementById('profileMenu')?.classList.toggle('active');}
+document.addEventListener('click',event=>{if(!event.target.closest('.profile'))document.getElementById('profileMenu')?.classList.remove('active');});
+function renderCards(totals){
+  const cards=[
+    ['Submissions', totals.submissions || 0],
+    ['Recruiters Active', totals.recruiters || 0],
+    ['Requirements', totals.requirements_worked || 0],
+    ['Selections', totals.selections || 0]
+  ];
+  document.getElementById('summaryCards').innerHTML=cards.map(([label,value])=>`<div class="card"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`).join('');
+}
+function renderRows(rows){
+  if(!rows.length){
+    document.getElementById('tableWrap').innerHTML='<div class="empty">No submissions found for today.</div>';
+    return;
+  }
+  document.getElementById('tableWrap').innerHTML=`<table>
+    <thead><tr><th>Recruiter</th><th>Client</th><th>Requirement</th><th>Taggd Recruiter</th><th>Submissions</th><th>Selections</th></tr></thead>
+    <tbody>${rows.map(row=>`<tr>
+      <td class="name">${escapeHtml(row.recruiter || 'Unassigned')}</td>
+      <td class="client">${escapeHtml(row.client_name || 'Unassigned')}</td>
+      <td class="requirement">${escapeHtml(row.requirement || 'No Requirement')}</td>
+      <td>${escapeHtml(row.taggd_recruiter_name || 'Not assigned')}</td>
+      <td class="num">${escapeHtml(row.submissions || 0)}</td>
+      <td class="num">${escapeHtml(row.selections || 0)}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+function renderClientOptions(clients, selected){
+  const select=document.getElementById('clientFilter');
+  const current=selected ?? select.value;
+  select.innerHTML='<option value="">All clients</option>'+(clients||[]).map(client=>`<option value="${escapeHtml(client)}" ${client===current?'selected':''}>${escapeHtml(client)}</option>`).join('');
+  select.value=current;
+}
+async function loadReport(){
+  const status=document.getElementById('statusText');
+  status.textContent='Loading report...';
+  try{
+    const params=new URLSearchParams();
+    const client=document.getElementById('clientFilter')?.value || '';
+    if(client)params.set('client',client);
+    const res=await fetch('/api/team-reports/today-by-recruiter'+(params.toString()?`?${params.toString()}`:''));
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'Unable to load report.');
+    renderClientOptions(Array.isArray(data.clients)?data.clients:[], data.client || client);
+    renderCards(data.totals||{});
+    renderRows(Array.isArray(data.rows)?data.rows:[]);
+    status.textContent=`Report date: ${data.date || 'today'}`;
+  }catch(e){
+    status.textContent=e.message||'Unable to load report.';
+    document.getElementById('summaryCards').innerHTML='';
+    document.getElementById('tableWrap').innerHTML='<div class="empty">Unable to load report.</div>';
+  }
+}
+async function signOut(){
+  await fetch('/api/logout',{method:'POST'});
+  localStorage.removeItem('hrguru_user');
+  window.location.href='/login';
+}
+document.addEventListener('DOMContentLoaded',loadReport);
+</script>
+</body>
+</html>

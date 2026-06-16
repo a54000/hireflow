@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulk Upload - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e0e0e0;padding:18px 22px 34px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 auto 14px;max-width:1280px}
+.logo{font-size:20px;font-weight:900;color:#fff}.logo span{color:#e8643a}.top-title{color:#9aa5c4;font-size:12px;font-weight:850}
+.top-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}.link-btn{height:40px;min-width:max-content;border:1px solid #343b52;background:#252a3a;color:#d9dee8;border-radius:8px;padding:0 14px;font:inherit;font-size:13px;font-weight:850;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;line-height:1}.link-btn.primary{background:#e8643a;border-color:#e8643a;color:#fff}.link-btn:hover{filter:brightness(1.08)}
+.profile{position:relative}.profile-btn{width:38px;height:38px;border-radius:50%;border:1px solid #343b52;background:#252a3a;color:#fff;font-weight:900;cursor:pointer}.profile-menu{display:none;position:absolute;right:0;top:46px;z-index:40;min-width:170px;background:#1c2030;border:1px solid #343b52;border-radius:8px;box-shadow:0 16px 34px rgba(0,0,0,.35);overflow:hidden}.profile-menu.active{display:block}.profile-menu a,.profile-menu button{display:block;width:100%;border:0;background:transparent;color:#d9dee8;text-align:left;text-decoration:none;padding:12px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.profile-menu a:hover,.profile-menu button:hover{background:#252a3a;color:#fff}
+.main{max-width:1280px;margin:0 auto;min-height:100vh}
+.page-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px;background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;padding:18px 22px}
+h1{font-size:24px;color:#fff;margin-bottom:4px}
+.subtitle,.muted{color:#8892b0;font-size:13px;line-height:1.45}
+.steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.step{background:#1c2030;border:1px solid #2a2f3a;border-radius:8px;padding:10px 12px;color:#cfd5df;font-size:12px;font-weight:700}
+.step span{display:inline-flex;width:20px;height:20px;border-radius:50%;align-items:center;justify-content:center;background:#e8643a;color:#fff;margin-right:6px;font-size:11px}
+.mode-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}.mode-tab{background:#252a3a;border:1px solid #343b52;color:#d9dee8;border-radius:8px;padding:9px 13px;font-weight:800;cursor:pointer}.mode-tab.active,.mode-tab:hover{background:#e8643a;border-color:#e8643a;color:#fff}
+.mode-section{display:none}.mode-section.active{display:block}
+.panel{background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;margin-bottom:16px}
+.panel-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;padding:16px 18px;border-bottom:1px solid #2a2f3a}
+.panel-title{font-size:16px;color:#fff;font-weight:800;margin-bottom:3px}
+.panel-body{padding:18px}
+.field label{display:block;color:#8892b0;font-size:12px;font-weight:700;margin-bottom:6px}
+input,select,textarea{width:100%;min-height:38px;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#e0e0e0;padding:8px 10px;font-size:13px}
+textarea{resize:vertical;min-height:62px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#e8643a}
+input[type="checkbox"]{width:auto;min-height:auto}
+.check-row{display:flex;align-items:center;gap:8px;color:#d9dee8;font-size:13px;font-weight:700}
+.check-row input{flex:0 0 auto}
+.btn{background:#e8643a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:800;min-height:38px;padding:9px 14px;font-size:13px;white-space:nowrap}
+.btn:hover{background:#d5542c}.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.secondary{background:#252a3a;border:1px solid #343b52;color:#d9dee8}.btn.secondary:hover{border-color:#e8643a;color:#fff;background:#2a3042}
+.btn.danger{background:#8f3434}.btn.danger:hover{background:#a33b3b}
+.upload-drop{border:1px dashed #516079;background:#161a27;border-radius:10px;padding:16px;display:grid;gap:10px}
+.upload-row{display:flex;gap:10px;align-items:center}
+.file-list{display:flex;gap:8px;flex-wrap:wrap}
+.file-pill{background:#252a3a;border:1px solid #343b52;border-radius:999px;padding:5px 9px;font-size:12px;color:#d9dee8}
+.excel-grid,.sheet-grid{display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:12px;align-items:end}.sheet-grid .wide{grid-column:1/-1}.sheet-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px}
+.excel-note{margin-top:10px;color:#8892b0;font-size:12px;line-height:1.45}
+.mapping-panel{display:none;margin-top:12px;border:1px solid #2a2f3a;border-radius:8px;background:#151923;overflow:hidden}
+.mapping-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:12px 14px;border-bottom:1px solid #2a2f3a}
+.mapping-title{font-size:13px;font-weight:800;color:#fff}
+.mapping-subtitle{color:#8892b0;font-size:12px;line-height:1.4;margin-top:3px}
+.mapping-panel .preview-table-wrap{margin-top:0;border:none;border-radius:0;max-height:260px}
+.mapping-panel select{min-width:220px}
+.preview-table-wrap{margin-top:12px;max-height:320px;overflow:auto;border:1px solid #2a2f3a;border-radius:8px}.preview-table{width:100%;border-collapse:collapse;background:#151923}.preview-table th,.preview-table td{border-bottom:1px solid #2a2f3a;padding:8px 10px;text-align:left;font-size:12px;color:#d9dee8;white-space:nowrap}.preview-table th{position:sticky;top:0;background:#0d1017;color:#aab3c8}
+.alert{display:none;margin-top:10px;padding:11px 13px;border-radius:8px;font-size:13px;white-space:pre-wrap}
+.alert.ok{display:block;background:#153b28;color:#73e095}.alert.error{display:block;background:#4a1f25;color:#ff8585}.alert.warn{display:block;background:#4b3a23;color:#f3c35d}
+@media(max-width:1100px){
+  .steps{grid-template-columns:1fr}.excel-grid,.sheet-grid{grid-template-columns:1fr}.sheet-grid .wide{grid-column:auto}.page-head,.panel-head{flex-direction:column;align-items:stretch}
+}
+@media(max-width:760px){body{padding:14px}.top,.page-head{align-items:flex-start}.top{display:grid}.top-actions{flex-wrap:wrap}.top-title{display:none}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div>
+    <div class="logo">HR <span>Guru</span></div>
+    <div class="top-title">Bulk Upload</div>
+  </div>
+  <div class="top-actions">
+    <a class="link-btn" href="/">Dashboard</a>
+    <a class="link-btn" href="/add-candidate">Add Candidate</a>
+    <a class="link-btn" href="/bulk-upload-guide">Bulk Upload Guide</a>
+    <a class="link-btn primary" href="/api/template">Download Template</a>
+    <div class="profile">
+      <button class="profile-btn" type="button" onclick="toggleProfileMenu()" aria-label="Open profile menu">U</button>
+      <div class="profile-menu" id="profileMenu">
+        <a href="/profile">Profile</a>
+        {% if session.get("impersonation_active") %}<a href="/admin/restore-profile">Return to Admin</a>{% endif %}
+        <button type="button" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main class="main">
+  <div class="page-head">
+    <div>
+      <h1>Recruiter Bulk Upload</h1>
+      <p class="subtitle">Choose the import style that matches how the recruiter team prepared candidate data.</p>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step"><span>1</span>Choose import type</div>
+    <div class="step"><span>2</span>Attach JD files</div>
+    <div class="step"><span>3</span>Select Excel file</div>
+    <div class="step"><span>4</span>Attach CV files</div>
+    <div class="step"><span>5</span>Import and review skipped rows</div>
+  </div>
+
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="excelModeBtn" onclick="showImportMode('excel')">Excel + CV Upload</button>
+    <button class="mode-tab admin-only" id="googleModeBtn" onclick="showImportMode('google')">Google Sheet Import</button>
+  </div>
+
+  <div class="mode-section active" id="excelModeSection">
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Import Candidates</div>
+        <p class="subtitle">Create Requirements first, including Taggd Recruiter Name, then upload JD files, the completed Excel/CSV file, and matching CV files. Bulk upload maps candidates only to existing Requirements.</p>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="excel-grid">
+        <div class="field">
+          <label>JD Files for Requirements</label>
+          <input id="excelJdFiles" type="file" multiple accept=".pdf,.doc,.docx,.txt" onchange="handleExcelSelection()">
+        </div>
+        <div class="field">
+          <label>Candidate Spreadsheet</label>
+          <input id="excelFile" type="file" accept=".xlsx,.xls,.csv" onchange="handleExcelSelection()">
+        </div>
+        <div class="field">
+          <label>Matching CV Files</label>
+          <input id="excelCvFiles" type="file" multiple accept=".pdf,.doc,.docx" onchange="handleExcelSelection()">
+        </div>
+        <button class="btn" id="excelUploadBtn" onclick="uploadExcelBatch()">Upload Excel</button>
+      </div>
+      <div class="file-list" id="excelFileList" style="margin-top:10px"></div>
+      <div class="excel-note">Before upload, create the Requirement from Add Requirement and select the Taggd Recruiter Name there. Bulk upload does not create Requirements. Required columns: Requirement, Candidate Name, Email, Phone, Current Company, Current Role, Experience, Key Skills, Notice Period, Current Salary, Expected Salary, Current Location, Preferred Location. Requirement can contain the existing Requirement title, ATS Requirement ID, or Requisition ID; CV files should match each row by email, phone, or candidate name. Rows with missing Requirements are skipped with a Requirement not found reason.</div>
+      <div id="excelAlert" class="alert"></div>
+    </div>
+  </section>
+  </div>
+  <div class="mode-section" id="googleModeSection">
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title" id="sheetImportTitle">Import From Google Sheet</div>
+        <p class="subtitle" id="sheetImportSubtitle">Paste a team Google Sheet URL, choose tabs, preview mapped candidates, then import without CV files. Position Title must map to an existing Requirement.</p>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="sheet-grid">
+        <div class="field wide google-source-field">
+          <label>Google Sheet URL</label>
+          <input id="googleSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
+        </div>
+        <div class="field">
+          <label>Tabs to import</label>
+          <input id="googleSheetTabs" placeholder="May, April, March (blank = all tabs)">
+        </div>
+        <div class="field">
+          <label>Default Client</label>
+          <input id="googleDefaultClient" placeholder="M&M, Taggd-M&M, client name">
+        </div>
+        <div class="field google-source-field">
+          <label>Import Mode</label>
+          <label class="check-row"><input id="googleSmartImport" type="checkbox" checked> Only read new rows since last import</label>
+        </div>
+        <div class="field google-source-field">
+          <label>Fallback</label>
+          <label class="check-row"><input id="googleSnapshotImport" type="checkbox"> Use downloaded XLSX snapshot</label>
+        </div>
+      </div>
+      <div class="sheet-actions">
+        <button class="btn secondary" id="googlePreviewBtn" onclick="previewGoogleSheetImport()">Preview</button>
+        <button class="btn" id="googleImportBtn" onclick="importGoogleSheetCandidates()" disabled>Import Ready Candidates</button>
+        <a class="btn secondary google-source-field" href="/login/google" style="text-decoration:none;display:inline-flex;align-items:center">Reconnect Google Permissions</a>
+      </div>
+      <div class="excel-note" id="sheetImportNote">Use a Google Sheet URL. Position Title is used to find an existing Requirement; ATS no longer creates Requirements during import. Create the Requirement first with Taggd Recruiter Name. Smart new-row mode reads only rows added after the previous successful import.</div>
+      <div id="googleSheetAlert" class="alert"></div>
+      <div class="mapping-panel" id="googleMappingPanel"></div>
+      <div id="googleSheetPreview"></div>
+    </div>
+  </section>
+  </div>
+</main>
+
+<script>
+let excelFile = null;
+let excelCvFiles = [];
+let excelJdFiles = [];
+let googleSheetPreviewOk = false;
+let googleColumnMappings = {};
+let googleFieldOptions = [];
+let googleImportBatchId = '';
+let googleImportSkippedRows = [];
+let sheetImportMode = 'google';
+let currentUser = {is_admin: false};
+
+function toggleProfileMenu() {
+  document.getElementById('profileMenu')?.classList.toggle('active');
+}
+
+document.addEventListener('click', function(event) {
+  const menu = document.querySelector('.profile');
+  if (menu && !menu.contains(event.target)) {
+    document.getElementById('profileMenu')?.classList.remove('active');
+  }
+});
+
+async function signOut() {
+  await fetch('/api/logout', {method: 'POST'});
+  localStorage.removeItem('hrguru_user');
+  window.location.href = '/login';
+}
+
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, function(ch) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+}
+
+function showAlert(id, message, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = message || '';
+  el.className = 'alert ' + (type || 'ok');
+  el.style.display = message ? 'block' : 'none';
+}
+
+function formatUploadError(message) {
+  const text = String(message || 'Upload failed.');
+  if (!/Requirement not found|Missing Requirement|Create the Requirement/i.test(text)) return text;
+  return text + '\n\nAction needed: create the missing Requirement from Add Requirement, confirm the client name/title match the spreadsheet, then upload again.';
+}
+
+async function initPage() {
+  try {
+    const res = await fetch('/api/me');
+    if (res.ok) currentUser = await res.json();
+  } catch(e) {}
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = currentUser && currentUser.is_admin ? '' : 'none';
+  });
+  showAlert('excelAlert', '', 'ok');
+  showAlert('googleSheetAlert', '', 'ok');
+  const requestedMode = new URLSearchParams(window.location.search).get('mode');
+  showImportMode(requestedMode === 'google' && currentUser && currentUser.is_admin ? 'google' : 'excel');
+}
+
+function showImportMode(mode) {
+  sheetImportMode = 'google';
+  const isExcel = mode === 'excel';
+  const isGoogle = mode === 'google';
+  document.getElementById('excelModeSection').classList.toggle('active', isExcel);
+  document.getElementById('googleModeSection').classList.toggle('active', isGoogle);
+  document.getElementById('excelModeBtn').classList.toggle('active', isExcel);
+  document.getElementById('googleModeBtn').classList.toggle('active', isGoogle);
+  document.querySelectorAll('.google-source-field').forEach(el => el.style.display = isGoogle ? '' : 'none');
+  const title = document.getElementById('sheetImportTitle');
+  const subtitle = document.getElementById('sheetImportSubtitle');
+  const note = document.getElementById('sheetImportNote');
+  if (title) title.textContent = 'Import From Google Sheet';
+  if (subtitle) {
+    subtitle.textContent = 'Paste a team Google Sheet URL, choose tabs, preview mapped candidates, then import without CV files. Position Title must map to an existing Requirement.';
+  }
+  if (note) {
+    note.textContent = 'Use this when the team maintains candidates in a shared Google Sheet. Smart new-row mode reads only rows added after the previous successful import.';
+  }
+  resetCandidateSheetPreview();
+}
+
+function googleSheetPayload() {
+  return {
+    sheet_url: document.getElementById('googleSheetUrl').value.trim(),
+    tabs: document.getElementById('googleSheetTabs').value.trim(),
+    default_client_name: document.getElementById('googleDefaultClient').value.trim(),
+    smart_import: document.getElementById('googleSmartImport').checked,
+    snapshot_import: document.getElementById('googleSnapshotImport').checked,
+    column_mapping: googleColumnMappings
+  };
+}
+
+function localCandidateSheetFile() {
+  return null;
+}
+
+function usingLocalCandidateSheet() {
+  return false;
+}
+
+function resetCandidateSheetPreview() {
+  googleSheetPreviewOk = false;
+  googleImportBatchId = '';
+  const importBtn = document.getElementById('googleImportBtn');
+  if (importBtn) importBtn.disabled = true;
+  document.getElementById('googleSheetPreview').innerHTML = '';
+  document.getElementById('googleMappingPanel').innerHTML = '';
+  document.getElementById('googleMappingPanel').style.display = 'none';
+  showAlert('googleSheetAlert', '', 'ok');
+}
+
+function localCandidateSheetFormData(extra={}) {
+  const fd = new FormData();
+  const file = localCandidateSheetFile();
+  if (file) fd.append('local_excel_file', file);
+  fd.append('tabs', document.getElementById('googleSheetTabs').value.trim());
+  fd.append('default_client_name', document.getElementById('googleDefaultClient').value.trim());
+  fd.append('column_mapping', JSON.stringify(googleColumnMappings || {}));
+  Object.entries(extra || {}).forEach(([key, value]) => fd.append(key, value));
+  return fd;
+}
+
+function renderGoogleMappings(data) {
+  const panel = document.getElementById('googleMappingPanel');
+  const mappings = data.column_mappings || [];
+  googleFieldOptions = data.field_options || googleFieldOptions || [];
+  if (!mappings.length || !googleFieldOptions.length) {
+    panel.style.display = 'none';
+    panel.innerHTML = '';
+    return;
+  }
+  mappings.forEach(item => {
+    const header = item.sheet_header || '';
+    if (header && !Object.prototype.hasOwnProperty.call(googleColumnMappings, header)) {
+      googleColumnMappings[header] = item.ats_field || '';
+    }
+  });
+  const unmapped = mappings.filter(item => {
+    const header = item.sheet_header || '';
+    const selected = Object.prototype.hasOwnProperty.call(googleColumnMappings, header) ? googleColumnMappings[header] : (item.ats_field || '');
+    return !selected;
+  });
+  if (!unmapped.length) {
+    panel.innerHTML = `
+      <div class="mapping-head">
+        <div>
+          <div class="mapping-title">Column Mapping</div>
+          <div class="mapping-subtitle">All source file headings were mapped automatically. You can import directly.</div>
+        </div>
+      </div>`;
+    panel.style.display = 'block';
+    return;
+  }
+  const rows = unmapped.map(item => {
+    const header = item.sheet_header || '';
+    const selected = Object.prototype.hasOwnProperty.call(googleColumnMappings, header) ? googleColumnMappings[header] : (item.ats_field || '');
+    const options = googleFieldOptions.map(opt => {
+      const isSelected = String(opt.value || '') === String(selected || '') ? ' selected' : '';
+      return `<option value="${escapeHtml(opt.value)}"${isSelected}>${escapeHtml(opt.label)}</option>`;
+    }).join('');
+    return `<tr>
+      <td>${escapeHtml(header)}</td>
+      <td><select class="google-mapping-select" data-sheet-header="${escapeHtml(header)}">${options}</select></td>
+    </tr>`;
+  }).join('');
+  panel.innerHTML = `
+    <div class="mapping-head">
+      <div>
+        <div class="mapping-title">Column Mapping</div>
+        <div class="mapping-subtitle">Only unmapped source file headings are shown. Choose the ATS candidate field each heading should fill.</div>
+      </div>
+    </div>
+    <div class="preview-table-wrap"><table class="preview-table">
+      <thead><tr><th>Source Heading</th><th>ATS Candidate Field</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="excel-note" style="padding:0 14px 12px">After changing a mapping, you can import directly. Click Preview again only if you want refreshed counts and sample rows.</div>`;
+  panel.style.display = 'block';
+  panel.querySelectorAll('.google-mapping-select').forEach(select => {
+    select.addEventListener('change', function() {
+      const header = this.getAttribute('data-sheet-header') || '';
+      googleColumnMappings[header] = this.value;
+      if (googleSheetPreviewOk) {
+        document.getElementById('googleImportBtn').disabled = false;
+        showAlert('googleSheetAlert', 'Column mapping changed. Import will use the updated mapping. Preview again only if you want refreshed counts.', 'warn');
+      } else {
+        showAlert('googleSheetAlert', 'Column mapping changed. Import will use the updated mapping after a successful preview.', 'warn');
+      }
+    });
+  });
+}
+
+function renderGooglePreview(data) {
+  renderGoogleMappings(data);
+  const target = document.getElementById('googleSheetPreview');
+  const summary = data.summary || {};
+  const tabs = (data.sheet_names || []).join(', ') || '-';
+  const modeText = [
+    usingLocalCandidateSheet() ? 'Using local Excel candidate sheet.' : (document.getElementById('googleSmartImport').checked ? 'Smart new-row scan is on.' : 'Full re-scan is on.'),
+    usingLocalCandidateSheet() ? 'The uploaded workbook is parsed locally.' : (document.getElementById('googleSnapshotImport').checked ? 'Using downloaded XLSX snapshot fallback.' : 'Using fast Google Sheets API when available.')
+  ].join(' ');
+  const rows = (data.sample || []).map(r => `
+    <tr>
+      <td>${escapeHtml(r.sheet)}</td>
+      <td>${escapeHtml(r.row)}</td>
+      <td>${escapeHtml(r.candidate_name)}</td>
+      <td>${escapeHtml(r.email_addr)}</td>
+      <td>${escapeHtml(r.phone)}</td>
+      <td>${escapeHtml(r.role)}</td>
+      <td>${escapeHtml(r.status)}</td>
+    </tr>`).join('');
+  const requirementWarning = summary.missing_requirement
+    ? `<div class="excel-note" style="color:#ffcf75">Requirement not found for ${Number(summary.missing_requirement || 0)} row${Number(summary.missing_requirement || 0) === 1 ? '' : 's'}. Create/map the Requirement first, then upload again.</div>`
+    : '';
+  target.innerHTML = `
+    <div class="excel-note">Tabs found: ${escapeHtml(tabs)}</div>
+    <div class="excel-note">${escapeHtml(modeText)}</div>
+    <div class="excel-note">Rows: ${summary.total_rows || 0} | Ready: ${summary.eligible || 0} | Requirement Not Found: ${summary.missing_requirement || 0} | Duplicates: ${summary.duplicates || 0} | Missing Contact: ${summary.missing_contact || 0}</div>
+    ${requirementWarning}
+    <div class="preview-table-wrap"><table class="preview-table">
+      <thead><tr><th>Tab</th><th>Row</th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="7">No rows found.</td></tr>'}</tbody>
+    </table></div>`;
+}
+
+async function previewGoogleSheetImport() {
+  const payload = googleSheetPayload();
+  const useLocal = usingLocalCandidateSheet();
+  if (useLocal && !localCandidateSheetFile()) {
+    showAlert('googleSheetAlert', 'Select a local Excel candidate sheet first.', 'warn');
+    return;
+  }
+  if (!useLocal && !payload.sheet_url) {
+    showAlert('googleSheetAlert', 'Paste a Google Sheet URL first.', 'warn');
+    return;
+  }
+  const btn = document.getElementById('googlePreviewBtn');
+  const importBtn = document.getElementById('googleImportBtn');
+  btn.disabled = true;
+  importBtn.disabled = true;
+  btn.textContent = 'Previewing...';
+  googleSheetPreviewOk = false;
+  showAlert('googleSheetAlert', useLocal ? 'Reading local Excel candidate sheet...' : 'Downloading and reading Google Sheet...', 'warn');
+  try {
+    const res = useLocal
+      ? await fetch('/api/local_candidate_sheet/preview', {method:'POST', body:localCandidateSheetFormData()})
+      : await fetch('/api/google_sheet/preview', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Preview failed.');
+    renderGooglePreview(data);
+    googleSheetPreviewOk = (data.summary && data.summary.eligible > 0);
+    googleImportBatchId = '';
+    importBtn.disabled = !googleSheetPreviewOk;
+    showAlert('googleSheetAlert', googleSheetPreviewOk ? `${data.summary.eligible} candidates are ready to import.` : 'No ready candidates found. Review the preview status column.', googleSheetPreviewOk ? 'ok' : 'warn');
+  } catch(e) {
+    showAlert('googleSheetAlert', e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Preview';
+  }
+}
+
+function renderSkippedRows(rows) {
+  const target = document.getElementById('googleSheetPreview');
+  const skipped = Array.isArray(rows) ? rows : [];
+  if (!target || !skipped.length) return;
+  const body = skipped.slice(0, 30).map(row => `
+    <tr>
+      <td>${escapeHtml(row.sheet || '-')}</td>
+      <td>${escapeHtml(row.row || '-')}</td>
+      <td>${escapeHtml(row.candidate_name || '-')}</td>
+      <td>${escapeHtml(row.reason || '-')}</td>
+    </tr>`).join('');
+  const more = skipped.length > 30 ? `<div class="excel-note">Showing first 30 skipped rows out of ${skipped.length}.</div>` : '';
+  target.innerHTML += `
+    <div class="excel-note" style="color:#ffcf75;margin-top:12px">Skipped rows need attention before they can be imported.</div>
+    ${more}
+    <div class="preview-table-wrap"><table class="preview-table">
+      <thead><tr><th>Tab</th><th>Row</th><th>Candidate</th><th>Reason</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table></div>`;
+}
+
+async function importGoogleSheetCandidates() {
+  if (!googleSheetPreviewOk) {
+    showAlert('googleSheetAlert', usingLocalCandidateSheet() ? 'Preview the local Excel file before importing.' : 'Preview the Google Sheet before importing.', 'warn');
+    return;
+  }
+  if (!confirm(usingLocalCandidateSheet() ? 'Import ready candidates from this local Excel file in smaller batches? If it stops, you can click Import again and already imported rows will be skipped.' : 'Import ready candidates from this Google Sheet in smaller batches? If it stops, you can click Import again and already imported rows will be skipped.')) return;
+  const btn = document.getElementById('googleImportBtn');
+  btn.disabled = true;
+  btn.textContent = 'Importing...';
+  let offset = 0;
+  const limit = 100;
+  const useLocal = usingLocalCandidateSheet();
+  const smartImport = !useLocal && document.getElementById('googleSmartImport').checked;
+  let totalImported = 0;
+  let totalSkipped = 0;
+  let totalRows = 0;
+  googleImportSkippedRows = [];
+  showAlert('googleSheetAlert', 'Importing ready candidates in batches...', 'warn');
+  try {
+    while (true) {
+      let res;
+      if (useLocal) {
+        const fd = localCandidateSheetFormData({offset, limit});
+        if (googleImportBatchId) fd.append('batch_id', googleImportBatchId);
+        res = await fetch('/api/local_candidate_sheet/import', {method:'POST', body:fd});
+      } else {
+        const payload = googleSheetPayload();
+        payload.offset = offset;
+        payload.limit = limit;
+        if (googleImportBatchId) payload.batch_id = googleImportBatchId;
+        res = await fetch('/api/google_sheet/import', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+      }
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Import failed.');
+      googleImportBatchId = data.batch_id || googleImportBatchId;
+      totalImported += data.imported || 0;
+      totalSkipped += data.skipped ? data.skipped.length : 0;
+      if (Array.isArray(data.skipped) && data.skipped.length) {
+        googleImportSkippedRows.push(...data.skipped);
+      }
+      totalRows = data.total_rows || totalRows;
+      offset = Object.prototype.hasOwnProperty.call(data, 'next_offset') ? data.next_offset : offset + limit;
+      showAlert('googleSheetAlert', `Imported ${totalImported} candidates. Processed ${Math.min(offset, totalRows || offset)} of ${totalRows || '...'} rows. Skipped ${totalSkipped}.`, 'warn');
+      if (!data.has_more) break;
+      if (smartImport) offset = 0;
+    }
+    renderSkippedRows(googleImportSkippedRows);
+    const skippedNote = totalSkipped ? ' Review skipped rows below. If Requirement is not found, create/map that Requirement first and upload again.' : '';
+    showAlert('googleSheetAlert', `Import complete. Imported ${totalImported} candidates. Skipped ${totalSkipped}.${skippedNote}`, totalSkipped ? 'warn' : 'ok');
+    googleSheetPreviewOk = false;
+  } catch(e) {
+    showAlert('googleSheetAlert', `${e.message}\nYou can click Import again to continue. Rows already imported in this batch will be skipped.`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Import Ready Candidates';
+  }
+}
+
+function handleExcelSelection() {
+  excelFile = (document.getElementById('excelFile').files || [])[0] || null;
+  excelJdFiles = Array.from(document.getElementById('excelJdFiles').files || []);
+  excelCvFiles = Array.from(document.getElementById('excelCvFiles').files || []);
+  const list = document.getElementById('excelFileList');
+  const parts = [];
+  excelJdFiles.forEach(file => parts.push(`<span class="file-pill">JD: ${escapeHtml(file.name)}</span>`));
+  if (excelFile) parts.push(`<span class="file-pill">Spreadsheet: ${escapeHtml(excelFile.name)}</span>`);
+  excelCvFiles.forEach(file => parts.push(`<span class="file-pill">CV: ${escapeHtml(file.name)}</span>`));
+  list.innerHTML = parts.join('');
+  showAlert('excelAlert', '', 'ok');
+}
+
+async function uploadExcelBatch() {
+  if (!excelFile) {
+    showAlert('excelAlert', 'Select a candidate spreadsheet first.', 'warn');
+    return;
+  }
+  if (!excelJdFiles.length) {
+    showAlert('excelAlert', 'Attach at least one JD file for the Requirement(s) in this upload.', 'warn');
+    return;
+  }
+  if (!excelCvFiles.length) {
+    showAlert('excelAlert', 'Upload matching CV files with the spreadsheet.', 'warn');
+    return;
+  }
+  const btn = document.getElementById('excelUploadBtn');
+  const fd = new FormData();
+  excelJdFiles.forEach(file => fd.append('jd_files', file));
+  fd.append('excel_file', excelFile);
+  excelCvFiles.forEach(file => fd.append('cv_files', file));
+  btn.disabled = true;
+  btn.textContent = 'Uploading...';
+  showAlert('excelAlert', 'Checking spreadsheet rows and CV matches...', 'warn');
+  try {
+    const res = await fetch('/api/upload', {method:'POST', body:fd});
+    const raw = await res.text();
+    let data = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch(parseError) {
+      const plain = raw.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      throw new Error(plain ? plain.slice(0, 220) : `Server returned ${res.status} ${res.statusText}`);
+    }
+    if (!res.ok || data.error) {
+      showAlert('excelAlert', formatUploadError(data.error || 'Upload failed.'), 'error');
+      return;
+    }
+    const jdMsg = data.jd_warnings && data.jd_warnings.length
+      ? `\nJD warning: ${data.jd_warnings.join(', ')} could not be matched to a Requirement title.`
+      : `\nJD files attached: ${data.jd_attached || 0}.`;
+    showAlert('excelAlert', `Uploaded ${data.added || 0} candidate${(data.added || 0) === 1 ? '' : 's'}.${jdMsg}`, data.jd_warnings && data.jd_warnings.length ? 'warn' : 'ok');
+    excelFile = null;
+    excelJdFiles = [];
+    excelCvFiles = [];
+    document.getElementById('excelFile').value = '';
+    document.getElementById('excelJdFiles').value = '';
+    document.getElementById('excelCvFiles').value = '';
+    document.getElementById('excelFileList').innerHTML = '';
+  } catch(e) {
+    showAlert('excelAlert', formatUploadError('Upload failed: ' + e.message), 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Upload Excel';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', initPage);
+</script>
+</body>
+</html>

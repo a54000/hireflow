@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Quality Console - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7}
+main{width:min(1220px,100%);margin:0 auto;padding:22px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.brand{font-size:21px;font-weight:950;color:#fff}.brand span{color:#e8643a}.nav{display:flex;gap:8px;flex-wrap:wrap}.btn,.nav a{height:38px;border-radius:8px;border:1px solid #343b52;background:#252a3a;color:#fff;text-decoration:none;padding:0 13px;font:inherit;font-size:13px;font-weight:850;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.btn.primary{background:#e8643a;border-color:#e8643a}.btn:disabled{opacity:.65;cursor:not-allowed}
+.panel{border:1px solid #2a2f3a;background:#171c28;border-radius:10px;overflow:hidden}.head{padding:16px 18px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.head h1{font-size:24px;color:#fff}.head p{color:#9aa5c4;font-size:12px;margin-top:4px;line-height:1.4}.status{padding:12px 18px;color:#9aa5c4;font-size:13px}.status.error{color:#ffb4bd}
+.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:14px 18px;border-bottom:1px solid #2a2f3a}.metric{border:1px solid #343b52;background:#151d2d;border-radius:8px;padding:10px}.metric strong{display:block;color:#fff;font-size:26px;line-height:1}.metric span{display:block;color:#aebde0;font-size:11px;font-weight:850;margin-top:5px}.metric.critical{border-color:#7f2937;background:#2a141b}.metric.watch{border-color:#7c4a12;background:#2a2114}
+.issues{display:grid;gap:10px;padding:0 18px 18px}.issue{border:1px solid #343b52;background:#151923;border-radius:9px;padding:12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px}.issue h2{font-size:15px;color:#fff;margin-bottom:4px}.issue p{font-size:12px;color:#9aa5c4;line-height:1.4}.badge{border-radius:999px;padding:5px 9px;font-size:11px;font-weight:950;align-self:start}.badge.Critical{background:#2a141b;color:#ffb4bd;border:1px solid #7f2937}.badge.Watch{background:#2a2114;color:#ffd18a;border:1px solid #7c4a12}.count{font-size:28px;color:#fff;font-weight:950;text-align:right}.sample{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}.chip{border-radius:999px;background:#202636;border:1px solid #343b52;color:#bac4df;padding:5px 8px;font-size:11px;font-weight:850}.empty{padding:28px 18px;text-align:center;color:#9aa5c4}
+@media(max-width:760px){main{padding:16px 12px}.top,.head{display:grid}.summary{grid-template-columns:1fr}.issue{grid-template-columns:1fr}.count{text-align:left}}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div class="brand">HR <span>Guru</span></div>
+    <div class="nav">
+      <a href="/admin">Dashboard</a>
+      <a href="/admin/followups">Follow-ups</a>
+      <a href="/admin/client-sla">Client SLA</a>
+      <button class="btn primary" id="runBtn" type="button" onclick="runCheck()">Run Check</button>
+    </div>
+  </div>
+  <section class="panel">
+    <div class="head">
+      <div>
+        <h1>Data Quality Console</h1>
+        <p>Run this before reviewing follow-ups or client SLA. It checks whether statuses, CVs, requirement mappings, client names, and Taggd recruiter mappings are clean enough for reliable reporting.</p>
+      </div>
+    </div>
+    <div class="status" id="status">Console is on demand. Click Run Check to inspect current data quality.</div>
+    <div class="summary" id="summary" style="display:none"></div>
+    <div class="issues" id="issues"></div>
+    <div class="empty" id="empty" style="display:none">No data quality issues found for the current checks.</div>
+  </section>
+</main>
+<script>
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function metric(label,value,cls=''){return `<div class="metric ${cls}"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`;}
+function sampleText(item){
+  if(item.value)return `${item.value}: ${item.count}`;
+  if(item.candidate_name)return `#${item.id} ${item.candidate_name}`;
+  if(item.title)return `#${item.id} ${item.title}`;
+  if(item.email || item.phone)return `${item.email || 'no email'} / ${item.phone || 'no phone'} (${item.count})`;
+  return JSON.stringify(item);
+}
+function issueCard(issue){
+  const sample=(issue.sample||[]).map(item=>`<span class="chip">${escapeHtml(sampleText(item))}</span>`).join('');
+  return `<article class="issue">
+    <div>
+      <h2>${escapeHtml(issue.title)}</h2>
+      <p>${escapeHtml(issue.detail || '')}</p>
+    </div>
+    <div>
+      <div class="badge ${escapeHtml(issue.severity)}">${escapeHtml(issue.severity)}</div>
+      <div class="count">${escapeHtml(issue.count)}</div>
+    </div>
+    ${sample ? `<div class="sample">${sample}</div>` : ''}
+  </article>`;
+}
+async function runCheck(){
+  const btn=document.getElementById('runBtn'), status=document.getElementById('status'), summary=document.getElementById('summary'), issues=document.getElementById('issues'), empty=document.getElementById('empty');
+  btn.disabled=true;btn.textContent='Running...';status.textContent='Checking data quality...';status.className='status';summary.style.display='none';issues.innerHTML='';empty.style.display='none';
+  try{
+    const res=await fetch('/api/admin/data-quality');
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'Unable to run data quality check');
+    const list=Array.isArray(data.issues)?data.issues:[];
+    summary.innerHTML=[
+      metric('Issues Found',list.length),
+      metric('Critical',data.critical||0,'critical'),
+      metric('Watch',data.watch||0,'watch')
+    ].join('');
+    summary.style.display='grid';
+    if(!list.length){status.textContent='Checked successfully.';empty.style.display='block';return;}
+    issues.innerHTML=list.map(issueCard).join('');
+    status.textContent=`Checked ${escapeHtml(data.generated_at || 'now')}. Fix critical issues first, then re-run follow-ups and Client SLA.`;
+  }catch(e){status.textContent=e.message||'Unable to run data quality check';status.className='status error';}
+  finally{btn.disabled=false;btn.textContent='Run Check';}
+}
+</script>
+</body>
+</html>

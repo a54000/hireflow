@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Follow-ups - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7}
+main{width:min(1180px,100%);margin:0 auto;padding:22px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.brand{font-size:21px;font-weight:950;color:#fff}.brand span{color:#e8643a}.nav{display:flex;gap:8px;flex-wrap:wrap}.nav a,.btn{height:38px;border-radius:8px;border:1px solid #343b52;background:#252a3a;color:#fff;text-decoration:none;padding:0 13px;font:inherit;font-size:13px;font-weight:850;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.btn.primary{background:#e8643a;border-color:#e8643a}.btn.small{height:32px;font-size:12px;padding:0 10px}.btn:disabled{opacity:.65;cursor:not-allowed}
+.panel{border:1px solid #2a2f3a;background:#171c28;border-radius:10px;overflow:hidden}.head{padding:14px 16px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.head h1{font-size:22px;color:#fff}.head p{color:#9aa5c4;font-size:12px;margin-top:4px;line-height:1.4}.summary{border:1px solid #2f3f5f;background:#151d2d;border-radius:8px;padding:8px 10px;display:flex;gap:12px;align-items:center}.summary span{color:#aebde0;font-size:11px;font-weight:850}.summary strong{font-size:24px;color:#fff;line-height:1}.status{padding:10px 16px;color:#9aa5c4;font-size:12px}.status.error{color:#ffb4bd}
+.list{display:grid;gap:0;padding:0 16px 16px}.row{border:1px solid #2f3f5f;border-bottom:0;background:#151923;display:grid;grid-template-columns:minmax(260px,1.25fr) minmax(160px,.55fr) minmax(260px,.9fr) 170px;gap:10px;align-items:center;padding:9px 10px}.row:first-child{border-radius:8px 8px 0 0}.row:last-child{border-bottom:1px solid #2f3f5f;border-radius:0 0 8px 8px}.row:only-child{border-radius:8px;border-bottom:1px solid #2f3f5f}.name{font-size:13px;color:#fff;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.meta{color:#8b95b5;font-size:11px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.chip{display:inline-flex;max-width:100%;border-radius:999px;background:#173421;border:1px solid #2f7d48;color:#9af0b4;padding:4px 7px;font-size:10px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.age{display:inline-flex;border-radius:999px;background:#17243a;border:1px solid #31598d;color:#bfdbfe;padding:4px 7px;font-size:10px;font-weight:900;margin-left:6px}.status-cell{display:grid;gap:4px}.status-select{height:32px;width:100%;border:1px solid #343b52;background:#202636;color:#fff;border-radius:7px;padding:0 8px;font:inherit;font-size:12px}.empty{padding:28px 18px;color:#9aa5c4;text-align:center}
+.toast{position:fixed;right:18px;bottom:18px;z-index:90;display:none;max-width:420px;border-radius:8px;padding:12px 14px;font-size:13px;box-shadow:0 14px 32px rgba(0,0,0,.35)}.toast.active{display:block}.toast.error{background:#3a1d22;color:#ffb4bd;border:1px solid #6b2c36}.toast.success{background:#173421;color:#9af0b4;border:1px solid #2c6b3b}
+@media(max-width:900px){main{padding:16px 12px}.top,.head{display:grid}.summary{width:max-content}.row{grid-template-columns:1fr;gap:7px}.status-select{width:min(100%,260px)}}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div class="brand">HR <span>Guru</span></div>
+    <div class="nav">
+      <a href="/">Dashboard</a>
+      <a href="/candidates">Candidate List</a>
+      <button class="btn primary" type="button" onclick="loadFollowups()">Refresh</button>
+    </div>
+  </div>
+  <section class="panel">
+    <div class="head">
+      <div>
+        <h1>My Follow-ups</h1>
+        <p>Action candidates that are stale or need status cleanup. Update the latest status from this page.</p>
+      </div>
+      <div class="summary"><span>Pending follow-ups</span><strong id="followupCount">0</strong></div>
+    </div>
+    <div class="status" id="status">Loading follow-ups...</div>
+    <div class="list" id="list"></div>
+    <div class="empty" id="empty" style="display:none">No follow-ups pending right now.</div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+let statuses = [];
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function toast(message,type='error'){const el=document.getElementById('toast');el.textContent=message||'';el.className='toast active '+type;setTimeout(()=>el.className='toast',2800);}
+function actionText(reason){const text=String(reason||'').toLowerCase();if(text.includes('no update'))return'Update status or add latest feedback';if(text.includes('status'))return'Choose valid status';return reason;}
+function statusOptions(current){return statuses.map(s=>`<option value="${escapeHtml(s)}" ${s===current?'selected':''}>${escapeHtml(s)}</option>`).join('');}
+function renderCard(item){
+  const reason=actionText((item.reasons||[])[0] || 'Follow-up needed');
+  return `<article class="row" data-id="${escapeHtml(item.id)}">
+    <div>
+      <div class="name" title="${escapeHtml(item.candidate_name)}">${escapeHtml(item.candidate_name)} <span class="age">${escapeHtml(item.age_days||0)}d</span></div>
+      <div class="meta" title="${escapeHtml(item.requirement_title||'Requirement not mapped')}">${escapeHtml(item.requirement_title||'Requirement not mapped')}</div>
+    </div>
+    <div class="status-cell">
+      <span class="meta">Current status</span>
+      <span class="chip">${escapeHtml(item.status||'Blank')}</span>
+    </div>
+    <div><span class="chip">${escapeHtml(reason)}</span></div>
+    <select class="status-select" id="status_${item.id}" onchange="saveStatus(${item.id})">${statusOptions(item.status||'')}</select>
+  </article>`;
+}
+async function loadFollowups(){
+  const status=document.getElementById('status'), list=document.getElementById('list'), empty=document.getElementById('empty');
+  status.textContent='Loading follow-ups...';status.className='status';list.innerHTML='';empty.style.display='none';
+  try{
+    const res=await fetch('/api/my/followups?limit=200');
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'Unable to load follow-ups');
+    statuses=(data.valid_statuses||[]).map(s=>s.status||s).filter(Boolean);
+    const items=Array.isArray(data.items)?data.items:[];
+    document.getElementById('followupCount').textContent=items.length;
+    if(!items.length){status.textContent='';empty.style.display='block';return;}
+    list.innerHTML=items.map(renderCard).join('');
+    status.textContent='Update the rows below, then refresh to remove completed follow-ups.';
+  }catch(e){status.textContent=e.message||'Unable to load follow-ups';status.className='status error';}
+}
+async function saveStatus(id){
+  const value=document.getElementById(`status_${id}`)?.value||'';
+  if(!value)return toast('Select a status first');
+  const res=await fetch(`/api/candidate/${id}/status`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:value})});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok||data.error){toast(data.error||'Unable to update status');loadFollowups();return;}
+  toast('Status updated','success');loadFollowups();
+}
+document.addEventListener('DOMContentLoaded',loadFollowups);
+</script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Client SLA Dashboard - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7}
+main{width:min(1240px,100%);margin:0 auto;padding:22px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.brand{font-size:21px;font-weight:950;color:#fff}.brand span{color:#e8643a}.nav{display:flex;gap:8px;flex-wrap:wrap}.btn,.nav a{height:38px;border-radius:8px;border:1px solid #343b52;background:#252a3a;color:#fff;text-decoration:none;padding:0 13px;font:inherit;font-size:13px;font-weight:850;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.btn.primary{background:#e8643a;border-color:#e8643a}.btn:disabled{opacity:.65;cursor:not-allowed}
+.panel{border:1px solid #2a2f3a;background:#171c28;border-radius:10px;overflow:hidden}.head{padding:16px 18px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.head h1{font-size:24px;color:#fff}.head p{color:#9aa5c4;font-size:12px;margin-top:4px;line-height:1.4}.status{padding:12px 18px;color:#9aa5c4;font-size:13px}.status.error{color:#ffb4bd}
+.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:14px 18px;border-bottom:1px solid #2a2f3a}.metric{border:1px solid #343b52;background:#151d2d;border-radius:8px;padding:10px}.metric strong{display:block;color:#fff;font-size:26px;line-height:1}.metric span{display:block;color:#aebde0;font-size:11px;font-weight:850;margin-top:5px}.metric.critical{border-color:#7f2937;background:#2a141b}.metric.watch{border-color:#7c4a12;background:#2a2114}.metric.healthy{border-color:#1f6b45;background:#12281c}
+.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:1040px}.table th,.table td{padding:10px 12px;border-top:1px solid #2a2f3a;text-align:left;vertical-align:top}.table th{font-size:10px;color:#9aa5c4;text-transform:uppercase;letter-spacing:.06em;background:#151923}.table td{font-size:13px}.client{font-weight:950;color:#fff}.risk{display:inline-flex;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:950;border:1px solid #343b52}.risk.Healthy{background:#12281c;color:#9af0b4;border-color:#1f6b45}.risk.Watch{background:#2a2114;color:#ffd18a;border-color:#7c4a12}.risk.Critical{background:#2a141b;color:#ffb4bd;border-color:#7f2937}.reasons{display:flex;gap:5px;flex-wrap:wrap}.reason{border-radius:999px;background:#202636;border:1px solid #343b52;color:#bac4df;padding:4px 7px;font-size:10px;font-weight:850}.empty{padding:28px 18px;text-align:center;color:#9aa5c4}
+@media(max-width:850px){main{padding:16px 12px}.top,.head{display:grid}.summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.summary{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div class="brand">HR <span>Guru</span></div>
+    <div class="nav">
+      <a href="/admin">Dashboard</a>
+      <a href="/requirements">Requirements</a>
+      <button class="btn primary" id="loadBtn" type="button" onclick="loadSla()">Load SLA</button>
+    </div>
+  </div>
+  <section class="panel">
+    <div class="head">
+      <div>
+        <h1>Client SLA Dashboard</h1>
+        <p>Shows client-side bottlenecks: pending feedback, old open requirements, no recent submissions, load, and selection momentum.</p>
+      </div>
+    </div>
+    <div class="status" id="status">Dashboard is on demand. Click Load SLA to review current client risks.</div>
+    <div class="summary" id="summary" style="display:none"></div>
+    <div class="table-wrap">
+      <table class="table" id="table" style="display:none">
+        <thead>
+          <tr>
+            <th>Client</th>
+            <th>Active Requirements</th>
+            <th>Active Candidates</th>
+            <th>Pending Feedback</th>
+            <th>Oldest Feedback Age</th>
+            <th>No Recent Submission</th>
+            <th>Month Selections</th>
+            <th>Risk</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody id="body"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty" style="display:none">No client SLA data found.</div>
+  </section>
+</main>
+<script>
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function metric(label,value,cls=''){return `<div class="metric ${cls}"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`;}
+function row(item){
+  return `<tr>
+    <td class="client">${escapeHtml(item.client)}</td>
+    <td>${escapeHtml(item.active_requirements)}</td>
+    <td>${escapeHtml(item.active_candidates)}</td>
+    <td>${escapeHtml(item.pending_feedback)}</td>
+    <td>${escapeHtml(item.oldest_pending_feedback_age)} days</td>
+    <td>${escapeHtml(item.no_submission_requirements)}</td>
+    <td>${escapeHtml(item.current_month_selections)}</td>
+    <td><span class="risk ${escapeHtml(item.risk_level)}">${escapeHtml(item.risk_level)}</span></td>
+    <td><div class="reasons">${(item.risk_reasons||[]).map(r=>`<span class="reason">${escapeHtml(r)}</span>`).join('')}</div></td>
+  </tr>`;
+}
+async function loadSla(){
+  const btn=document.getElementById('loadBtn'), status=document.getElementById('status'), summary=document.getElementById('summary'), table=document.getElementById('table'), body=document.getElementById('body'), empty=document.getElementById('empty');
+  btn.disabled=true;btn.textContent='Loading...';status.textContent='Checking client SLA...';status.className='status';summary.style.display='none';table.style.display='none';empty.style.display='none';body.innerHTML='';
+  try{
+    const res=await fetch('/api/admin/client-sla');
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'Unable to load SLA');
+    const items=Array.isArray(data.items)?data.items:[];
+    const critical=items.filter(i=>i.risk_level==='Critical').length;
+    const watch=items.filter(i=>i.risk_level==='Watch').length;
+    const healthy=items.filter(i=>i.risk_level==='Healthy').length;
+    summary.innerHTML=[
+      metric('Clients Reviewed',items.length),
+      metric('Critical Clients',critical,'critical'),
+      metric('Watch Clients',watch,'watch'),
+      metric('Healthy Clients',healthy,'healthy')
+    ].join('');
+    summary.style.display='grid';
+    if(!items.length){empty.style.display='block';status.textContent='';return;}
+    body.innerHTML=items.map(row).join('');
+    table.style.display='table';
+    status.textContent=`Thresholds: feedback pending ${data.thresholds.feedback_pending_days} days, no recent submission ${data.thresholds.no_recent_submission_days} days, aging ${data.thresholds.requirement_aging_days}/${data.thresholds.critical_aging_days} days.`;
+  }catch(e){status.textContent=e.message||'Unable to load SLA';status.className='status error';}
+  finally{btn.disabled=false;btn.textContent='Load SLA';}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Candidate Follow-ups - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7}
+main{width:min(1220px,100%);margin:0 auto;padding:22px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.brand{font-size:21px;font-weight:950;color:#fff}.brand span{color:#e8643a}.nav{display:flex;gap:8px;flex-wrap:wrap}.btn,.nav a{height:38px;border-radius:8px;border:1px solid #343b52;background:#252a3a;color:#fff;text-decoration:none;padding:0 13px;font:inherit;font-size:13px;font-weight:850;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.btn.primary{background:#e8643a;border-color:#e8643a}.btn:disabled{opacity:.65;cursor:not-allowed}
+.panel{border:1px solid #2a2f3a;background:#171c28;border-radius:10px;overflow:hidden}.panel-head{padding:16px 18px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.panel-head h1{font-size:24px;color:#fff}.panel-head p{color:#9aa5c4;font-size:12px;margin-top:4px}.status{color:#9aa5c4;font-size:13px;padding:12px 18px}.status.error{color:#ffb4bd}.summary{display:flex;gap:8px;flex-wrap:wrap}.chip{border:1px solid #343b52;background:#202636;border-radius:999px;padding:7px 10px;color:#bac4df;font-size:12px;font-weight:850}.chip strong{color:#fff}
+.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:980px}.table th,.table td{padding:10px 12px;border-top:1px solid #2a2f3a;text-align:left;vertical-align:top}.table th{font-size:10px;color:#9aa5c4;text-transform:uppercase;letter-spacing:.06em;background:#151923}.table td{font-size:13px;color:#e8ecf7}.muted{color:#8b95b5;font-size:12px}.name{font-weight:900;color:#fff}.status-pill{display:inline-flex;border-radius:999px;border:1px solid #343b52;background:#202636;padding:5px 8px;font-size:12px;font-weight:850;color:#fff}.reason-list{display:flex;gap:6px;flex-wrap:wrap}.reason{border-radius:999px;background:#3a2418;border:1px solid #7a3b1d;color:#ffb98f;padding:5px 8px;font-size:11px;font-weight:850}.action-link{color:#7dd3fc;font-weight:900;text-decoration:none}.empty{padding:28px 18px;color:#9aa5c4;text-align:center}
+@media(max-width:760px){main{padding:16px 12px}.top,.panel-head{display:grid}.panel-head h1{font-size:22px}.nav{justify-content:flex-start}}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div class="brand">HR <span>Guru</span></div>
+    <div class="nav">
+      <a href="/admin">Dashboard</a>
+      <a href="/candidates">Candidates</a>
+      <button class="btn primary" type="button" id="loadBtn" onclick="loadQueue()">Load Queue</button>
+    </div>
+  </div>
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h1>Candidate Follow-up Queue</h1>
+        <p>Review stale active candidates, missing CVs, missing requirements, and statuses that are not in the master status list.</p>
+      </div>
+      <div class="summary" id="summary"></div>
+    </div>
+    <div class="status" id="status">Queue is on demand. Click Load Queue when you want to review follow-ups.</div>
+    <div class="table-wrap">
+      <table class="table" id="queueTable" style="display:none">
+        <thead>
+          <tr>
+            <th>Candidate</th>
+            <th>Requirement</th>
+            <th>Client</th>
+            <th>Recruiter</th>
+            <th>Status</th>
+            <th>Age</th>
+            <th>Reason</th>
+            <th>Open</th>
+          </tr>
+        </thead>
+        <tbody id="queueBody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty" style="display:none">No follow-ups found for the current rules.</div>
+  </section>
+</main>
+<script>
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function renderReasons(reasons){return `<div class="reason-list">${(reasons||[]).map(r=>`<span class="reason">${escapeHtml(r)}</span>`).join('')}</div>`;}
+function rowHtml(item){
+  return `<tr>
+    <td><div class="name">${escapeHtml(item.candidate_name)}</div><div class="muted">${escapeHtml(item.email_addr || item.phone || '')}</div></td>
+    <td>${escapeHtml(item.requirement_title || 'Not mapped')}</td>
+    <td>${escapeHtml(item.client_name || '-')}</td>
+    <td><div>${escapeHtml(item.recruiter_name || '-')}</div><div class="muted">${escapeHtml(item.recruiter_email || '')}</div></td>
+    <td><span class="status-pill">${escapeHtml(item.status || 'Blank')}</span></td>
+    <td>${escapeHtml(item.age_days)} days<div class="muted">${escapeHtml(item.updated_at || '')}</div></td>
+    <td>${renderReasons(item.reasons)}</td>
+    <td><a class="action-link" href="/candidates?candidate_id=${encodeURIComponent(item.id)}">Open</a></td>
+  </tr>`;
+}
+async function loadQueue(){
+  const btn=document.getElementById('loadBtn');
+  const status=document.getElementById('status');
+  const table=document.getElementById('queueTable');
+  const body=document.getElementById('queueBody');
+  const empty=document.getElementById('empty');
+  const summary=document.getElementById('summary');
+  btn.disabled=true; btn.textContent='Loading...';
+  status.textContent='Checking candidate follow-ups...'; status.className='status';
+  table.style.display='none'; empty.style.display='none'; body.innerHTML=''; summary.innerHTML='';
+  try{
+    const res=await fetch('/api/admin/candidate-followups');
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'Unable to load queue');
+    const items=Array.isArray(data.items)?data.items:[];
+    summary.innerHTML=`<span class="chip"><strong>${items.length}</strong> follow-ups</span><span class="chip"><strong>${escapeHtml((data.valid_statuses||[]).length)}</strong> master statuses</span>`;
+    if(!items.length){empty.style.display='block';status.textContent=`Checked ${escapeHtml(data.generated_at||'now')}.`;return;}
+    body.innerHTML=items.map(rowHtml).join('');
+    table.style.display='table';
+    status.textContent=`Checked ${escapeHtml(data.generated_at||'now')}.`;
+  }catch(e){
+    status.textContent=e.message||'Unable to load queue';
+    status.className='status error';
+  }finally{
+    btn.disabled=false; btn.textContent='Load Queue';
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Reports - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7;padding:18px 22px 34px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 auto 14px;max-width:1280px}
+.brand{font-size:20px;font-weight:900;color:#fff}.brand span{color:#e8643a}
+.top-title{color:#9aa5c4;font-size:12px;font-weight:850;letter-spacing:.02em}.top-actions,.actions,.filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.link-btn,.btn{height:40px;border:1px solid #e8643a;background:#e8643a;color:#fff;border-radius:8px;padding:0 14px;font:inherit;font-size:13px;font-weight:850;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.link-btn.secondary,.btn.secondary{background:#252a3a;border-color:#343b52;color:#d9dee8}.btn.ghost{background:transparent;border-color:#343b52;color:#c9d2e8}.btn:disabled{opacity:.6;cursor:not-allowed}.link-btn:hover,.btn:hover{filter:brightness(1.08)}
+.profile{position:relative}.profile-btn{width:38px;height:38px;border-radius:50%;border:1px solid #343b52;background:#252a3a;color:#fff;font-weight:900;cursor:pointer}.profile-menu{display:none;position:absolute;right:0;top:46px;z-index:40;min-width:170px;background:#1c2030;border:1px solid #343b52;border-radius:8px;box-shadow:0 16px 34px rgba(0,0,0,.35);overflow:hidden}.profile-menu.active{display:block}.profile-menu a,.profile-menu button{display:block;width:100%;border:0;background:transparent;color:#d9dee8;text-align:left;text-decoration:none;padding:12px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.profile-menu a:hover,.profile-menu button:hover{background:#252a3a;color:#fff}
+.wrap{max-width:1280px;margin:0 auto;background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;overflow:hidden}
+.head{padding:18px 22px;border-bottom:1px solid #2a2f3a;display:grid;gap:14px}.head-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.head h1{font-size:23px;color:#fff;margin-bottom:5px}.head p,.muted{color:#9aa5c4;font-size:13px;line-height:1.4}.filter-bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end}.filters{align-items:end}.actions{justify-content:flex-end}
+.field{display:grid;gap:6px;min-width:168px}.field label{color:#9aa5c4;font-size:11px;font-weight:900;text-transform:uppercase}.field input,.field select,.modal input{height:40px;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:13px;padding:0 12px}.field input:focus,.field select:focus,.modal input:focus{outline:none;border-color:#e8643a}.summary{padding:10px 22px;color:#9aa5c4;font-size:13px;border-bottom:1px solid #2a2f3a;min-height:42px}
+.table-wrap{overflow:auto;min-height:390px;max-height:620px}.report-table{width:100%;min-width:930px;border-collapse:collapse;table-layout:fixed}.report-table th,.report-table td{height:44px;padding:9px 11px;border-bottom:1px solid #2a2f3a;border-right:1px solid #2a2f3a;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.report-table th{position:sticky;top:0;z-index:2;background:#0d1017;color:#aab3c8;font-size:12px;font-weight:900}.report-table tr:hover td{background:#222838}.report-table input[type=checkbox]{width:auto}.col-check{width:46px;text-align:center}.col-name{width:220px}.col-desig{width:180px;white-space:normal!important;line-height:1.35}.col-req{width:240px}.col-client{width:150px}.col-status{width:130px}.col-rec{width:150px}.col-date{width:112px}.name{font-weight:850;color:#fff}.pill{display:inline-block;max-width:100%;padding:4px 12px;border-radius:999px;background:#252a3a;border:1px solid #343b52;color:#e0e0e0;overflow:hidden;text-overflow:ellipsis}.empty{padding:42px;text-align:center;color:#8b95b5}
+.toast{position:fixed;right:18px;bottom:18px;z-index:90;display:none;max-width:420px;border-radius:8px;padding:12px 14px;font-size:13px;box-shadow:0 14px 32px rgba(0,0,0,.35)}.toast.active{display:block}.toast.error{background:#3a1d22;color:#ffb4bd;border:1px solid #6b2c36}.toast.success{background:#173421;color:#9af0b4;border:1px solid #2c6b3b}
+.modal{display:none;position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);padding:22px;align-items:center;justify-content:center}.modal.active{display:flex}.modal-card{width:min(780px,100%);max-height:88vh;overflow:auto;background:#1c2030;border:1px solid #343b52;border-radius:10px;box-shadow:0 20px 48px rgba(0,0,0,.48)}.modal-head,.modal-foot{padding:16px 18px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:12px;align-items:center}.modal-foot{border-top:1px solid #2a2f3a;border-bottom:0;justify-content:flex-end}.modal-body{padding:18px;display:grid;gap:14px}.modal h2{font-size:19px}.close{width:32px;height:32px;border-radius:8px;border:1px solid #343b52;background:#252a3a;color:#fff;cursor:pointer;font-size:18px;line-height:1}.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.modal-grid .full{grid-column:1/-1}.columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px;border:1px solid #2a2f3a;border-radius:8px;padding:12px;background:#202636}.columns label{display:flex;gap:8px;align-items:center;color:#dbe2f1;font-size:13px}.columns input{width:auto}.alert{display:none;border-radius:8px;padding:11px 13px;font-size:13px}.alert.active{display:block}.alert.error{background:#3a1d22;color:#ffb4bd;border:1px solid #6b2c36}.alert.success{background:#173421;color:#9af0b4;border:1px solid #2c6b3b}.preview{display:none;border:1px solid #2a2f3a;border-radius:8px;background:#111722;padding:12px;max-height:300px;overflow:auto}.preview.active{display:block}.preview-subject{font-weight:850;color:#fff;margin:6px 0 10px}
+@media(max-width:980px){.filter-bar{grid-template-columns:1fr}.actions{justify-content:flex-start}}
+@media(max-width:760px){body{padding:14px}.top,.head-row{align-items:flex-start}.head-row{display:grid}.top-title{display:none}.modal-grid,.columns{grid-template-columns:1fr}.actions .btn,.top-actions .link-btn{flex:1}.field{min-width:calc(50vw - 24px)}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div>
+    <div class="brand">HR <span>Guru</span></div>
+    <div class="top-title">Daily Reports</div>
+  </div>
+  <div class="top-actions">
+    <a class="link-btn secondary" href="/">Dashboard</a>
+    <div class="profile">
+      <button class="profile-btn" type="button" onclick="toggleProfileMenu()" aria-label="Open profile menu">U</button>
+      <div class="profile-menu" id="profileMenu">
+        <a href="/profile">Profile</a>
+        {% if session.get("impersonation_active") %}<a href="/admin/restore-profile">Return to Admin</a>{% endif %}
+        <button type="button" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <section class="head">
+    <div class="head-row">
+      <div>
+        <h1>Daily Candidate Report</h1>
+        <p>By default this shows candidates added today. Select candidates, then send only those candidates to your manager.</p>
+      </div>
+      <button class="btn ghost" type="button" onclick="loadCandidates()">Refresh</button>
+    </div>
+    <div class="filter-bar">
+      <div class="filters">
+        <div class="field"><label>From</label><input id="dateFrom" type="date" onchange="loadCandidates()"></div>
+        <div class="field"><label>To</label><input id="dateTo" type="date" onchange="loadCandidates()"></div>
+        <div class="field" id="recruiterField"><label>Recruiter</label><select id="recruiterFilter" onchange="loadCandidates()"><option value="">All Recruiters</option></select></div>
+        <div class="field"><label>Client</label><select id="clientFilter" onchange="loadCandidates()"><option value="">All Clients</option></select></div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" type="button" onclick="exportSelected()">Download Tracker + CVs</button>
+        <button class="btn secondary" type="button" onclick="openEmailModal('feedback')">Request Feedback Email</button>
+        <button class="btn" type="button" onclick="openEmailModal('report')">Daily Work Report Email</button>
+      </div>
+    </div>
+  </section>
+  <div id="summary" class="summary">Loading candidates...</div>
+  <div class="table-wrap">
+    <table class="report-table" id="reportTable"></table>
+  </div>
+</main>
+
+<div class="modal" id="emailModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 id="modalTitle">Send Daily Submission Email</h2>
+      <button class="close" type="button" onclick="closeEmailModal()" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="modalAlert" class="alert"></div>
+      <p class="muted" id="modalSummary"></p>
+      <div class="modal-grid">
+        <div class="field full"><label>Send To</label><input id="emailTo" type="email" placeholder="manager@example.com"></div>
+        <div class="field full" id="ccField"><label>CC Email IDs</label><input id="emailCc" placeholder="optional, comma separated"></div>
+      </div>
+      <div>
+        <button class="btn secondary" type="button" onclick="toggleColumns()">Choose Email Columns</button>
+        <div class="columns" id="columnsPanel" style="display:none"></div>
+      </div>
+      <div class="preview" id="previewPanel">
+        <div class="muted" id="previewMeta"></div>
+        <div class="preview-subject" id="previewSubject"></div>
+        <div id="previewBody"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" type="button" onclick="previewEmail()" id="previewBtn">Preview</button>
+      <button class="btn" type="button" onclick="sendEmail()" id="sendBtn">Send</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let currentUser = {};
+let rows = [];
+let mode = 'report';
+let previewKey = '';
+const reportColumns = [
+  ['name','Name'], ['current_company','Current Company'], ['designation','Current Designation'],
+  ['requirement','Requirement'], ['client','Client'], ['email','Email-Id'], ['phone','Phone'],
+  ['experience','Experience'], ['current_salary','Current Salary'], ['expected_salary','Expected Salary'],
+  ['notice_period','Notice Period'], ['qualification','Qualification'], ['status','Status'],
+  ['recruiter','Recruiter'], ['location','Location']
+];
+const defaultColumns = ['name','current_company','designation','requirement','email','phone','experience','current_salary','expected_salary','notice_period'];
+
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function todayIso(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);}
+function toggleProfileMenu(){document.getElementById('profileMenu')?.classList.toggle('active');}
+document.addEventListener('click',e=>{if(!e.target.closest('.profile'))document.getElementById('profileMenu')?.classList.remove('active');});
+function selectedIds(){return [...document.querySelectorAll('.row-check:checked')].map(cb=>cb.dataset.id).filter(Boolean);}
+function showToast(message,type='error'){const el=document.getElementById('toast');el.textContent=message;el.className='toast active '+type;setTimeout(()=>{el.className='toast'},3200);}
+function setAlert(message,type='error'){const el=document.getElementById('modalAlert');el.textContent=message||'';el.className=message?'alert active '+type:'alert';}
+function filters(){const out={date_from:dateFrom.value,date_to:dateTo.value,sort:'newest'}; if(recruiterFilter.value)out.sender=recruiterFilter.value; if(clientFilter.value)out.client=clientFilter.value; return out;}
+function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim());}
+function parseEmails(raw){raw=String(raw||'').trim(); if(!raw)return []; const parts=raw.split(/[\n,;]+/).map(x=>x.trim()).filter(Boolean); return parts.every(validEmail)?parts:null;}
+
+async function loadMe(){
+  try{currentUser=await fetch('/api/me').then(r=>r.json());}catch(e){currentUser={};}
+  if(!currentUser.is_admin) document.getElementById('recruiterField').style.display='none';
+}
+async function loadFilters(){
+  try{
+    const data=await fetch('/api/candidate_search_filters').then(r=>r.json());
+    const clients=[...new Set((data.clients||[]).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+    clientFilter.innerHTML='<option value="">All Clients</option>'+clients.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    const sourcers=[...new Map((data.sourcers||[]).filter(s=>s.email).map(s=>[String(s.email).toLowerCase(),s])).values()];
+    recruiterFilter.innerHTML='<option value="">All Recruiters</option>'+sourcers.map(s=>`<option value="${escapeHtml(String(s.email).toLowerCase())}">${escapeHtml(s.name||s.email)}</option>`).join('');
+  }catch(e){}
+}
+async function loadCandidates(){
+  summary.textContent='Loading candidates...';
+  reportTable.innerHTML='<tbody><tr><td class="empty">Loading candidates...</td></tr></tbody>';
+  try{
+    const params=new URLSearchParams(filters());
+    params.set('all','1'); params.set('view','reporting');
+    const res=await fetch('/api/candidates?'+params.toString());
+    const data=await res.json().catch(()=>[]);
+    if(!res.ok)throw new Error(data.error||'Unable to load candidates.');
+    rows=Array.isArray(data)?data:[];
+    renderTable();
+  }catch(e){
+    summary.textContent='Unable to load candidates.';
+    reportTable.innerHTML='<tbody><tr><td class="empty">Unable to load candidates.</td></tr></tbody>';
+    showToast(e.message||'Unable to load candidates.');
+  }
+}
+function updateSummary(){
+  const count=rows.length, selected=selectedIds().length;
+  const label=dateFrom.value===dateTo.value?dateFrom.value:`${dateFrom.value} to ${dateTo.value}`;
+  summary.textContent=`${count} candidate${count===1?'':'s'} from ${label}. ${selected} selected for email.`;
+}
+function renderTable(){
+  if(!rows.length){reportTable.innerHTML='<tbody><tr><td class="empty">No candidates found for this view.</td></tr></tbody>';updateSummary();return;}
+  reportTable.innerHTML=`<thead><tr>
+    <th class="col-check"><input type="checkbox" onchange="toggleAll(this.checked)"></th>
+    <th class="col-name">Name</th><th class="col-desig">Designation</th><th class="col-req">Requirement</th>
+    <th class="col-client">Client</th><th class="col-status">Status</th><th class="col-rec">Recruiter</th><th class="col-date">Date</th>
+  </tr></thead><tbody>${rows.map(r=>`<tr onclick="const cb=this.querySelector('.row-check');if(cb){cb.checked=!cb.checked;updateSummary();}">
+    <td class="col-check" onclick="event.stopPropagation()"><input class="row-check" type="checkbox" data-id="${r.id}" onchange="updateSummary()"></td>
+    <td class="col-name"><span class="name">${escapeHtml(r.candidate_name||'-')}</span></td>
+    <td class="col-desig">${escapeHtml(r.current_role||'-')}</td>
+    <td class="col-req">${escapeHtml(r.requirement_title||r.role_name||'-')}</td>
+    <td class="col-client"><span class="pill">${escapeHtml(r.client_name||'-')}</span></td>
+    <td class="col-status">${escapeHtml(r.status||'New')}</td>
+    <td class="col-rec">${escapeHtml(r.recruiter_name||'-')}</td>
+    <td class="col-date muted">${escapeHtml(r.created_at?String(r.created_at).split(' ')[0]:'-')}</td>
+  </tr>`).join('')}</tbody>`;
+  updateSummary();
+}
+function toggleAll(checked){document.querySelectorAll('.row-check').forEach(cb=>cb.checked=checked);updateSummary();}
+function exportSelected(){const ids=selectedIds(); if(!ids.length)return showToast('Select at least one candidate to export.'); window.location.href='/api/candidates/daily_report_export?ids='+encodeURIComponent(ids.join(','));}
+
+function getColumns(){try{const saved=JSON.parse(localStorage.getItem('hrguru_daily_report_columns')||'[]'); const valid=new Set(reportColumns.map(c=>c[0])); const clean=saved.filter(c=>valid.has(c)); return clean.length?clean:defaultColumns.slice();}catch(e){return defaultColumns.slice();}}
+function setColumns(cols){localStorage.setItem('hrguru_daily_report_columns',JSON.stringify(cols));previewKey='';renderColumns();}
+function renderColumns(){const selected=getColumns(), set=new Set(selected); columnsPanel.innerHTML=reportColumns.map(([key,label])=>`<label><input type="checkbox" ${set.has(key)?'checked':''} onchange="toggleColumn('${key}',this.checked)"> ${escapeHtml(label)}</label>`).join('');}
+function toggleColumns(){renderColumns(); columnsPanel.style.display=columnsPanel.style.display==='none'?'grid':'none';}
+function toggleColumn(key,checked){const cols=getColumns(); if(checked&&!cols.includes(key))cols.push(key); if(!checked&&cols.includes(key))cols.splice(cols.indexOf(key),1); setColumns(cols.length?cols:['name']);}
+function payload(){const cc=parseEmails(emailCc.value); return {to:emailTo.value.trim(), cc:cc||[], columns:getColumns(), ids:selectedIds(), filters:filters()};}
+function keyFor(p){return JSON.stringify({mode,to:p.to,cc:p.cc,columns:p.columns,ids:p.ids,filters:p.filters});}
+function openEmailModal(nextMode){
+  const ids=selectedIds(); if(!ids.length)return showToast('Select at least one candidate first.');
+  mode=nextMode; previewKey=''; setAlert(''); previewPanel.classList.remove('active'); columnsPanel.style.display='none';
+  modalTitle.textContent=mode==='feedback'?'Request Candidate Feedback':'Send Daily Submission Email';
+  modalSummary.textContent=`${ids.length} selected candidate${ids.length===1?'':'s'} will be included.`;
+  ccField.style.display=mode==='feedback'?'none':'grid';
+  emailTo.value=localStorage.getItem(mode==='feedback'?'hrguru_feedback_email':'hrguru_daily_report_email')||'';
+  emailCc.value=mode==='feedback'?'':(localStorage.getItem('hrguru_daily_report_cc')||'');
+  sendBtn.textContent=mode==='feedback'?'Send Feedback Request':'Send Daily Submission';
+  emailModal.classList.add('active'); setTimeout(()=>emailTo.focus(),50);
+}
+function closeEmailModal(){emailModal.classList.remove('active');}
+async function previewEmail(){
+  const p=payload(); if(!validEmail(p.to)&&p.to)return setAlert('Please enter a valid email address.'); if(parseEmails(emailCc.value)===null)return setAlert('Please enter valid CC email addresses.');
+  previewBtn.disabled=true; previewBtn.textContent='Previewing...'; setAlert('');
+  try{
+    const endpoint=mode==='feedback'?'/api/candidates/feedback_request_preview':'/api/candidates/daily_report_preview';
+    const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+    const data=await res.json().catch(()=>({})); if(!res.ok||data.error)throw new Error(data.error||'Unable to preview email.');
+    previewMeta.textContent=`${data.count||0} candidate${data.count===1?'':'s'} included - ${data.attached_cvs||0} CV file${data.attached_cvs===1?'':'s'} will be attached`;
+    previewSubject.textContent='Subject: '+(data.subject||'');
+    previewBody.innerHTML=data.html_body||`<pre style="white-space:pre-wrap;margin:0">${escapeHtml(data.body||'')}</pre>`;
+    previewPanel.classList.add('active'); previewKey=keyFor(p);
+    if(data.missing_cvs&&data.missing_cvs.length)setAlert('Cannot send yet. Missing CV for: '+data.missing_cvs.join(', '));
+    else setAlert('Preview ready. Review it, then click Send.','success');
+  }catch(e){setAlert(e.message||'Unable to preview email.');}
+  finally{previewBtn.disabled=false; previewBtn.textContent='Preview';}
+}
+async function sendEmail(){
+  const p=payload(); if(!validEmail(p.to))return setAlert('Please enter a valid email address.'); if(parseEmails(emailCc.value)===null)return setAlert('Please enter valid CC email addresses.'); if(previewKey!==keyFor(p))return setAlert('Please preview this email before sending.');
+  sendBtn.disabled=true; sendBtn.textContent='Sending...'; setAlert('');
+  try{
+    const endpoint=mode==='feedback'?'/api/candidates/feedback_request_email':'/api/candidates/daily_report_email';
+    const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+    const data=await res.json().catch(()=>({})); if(!res.ok||data.error)throw new Error(data.error||'Unable to send email.');
+    localStorage.setItem(mode==='feedback'?'hrguru_feedback_email':'hrguru_daily_report_email',p.to);
+    if(mode!=='feedback')localStorage.setItem('hrguru_daily_report_cc',p.cc.join(', '));
+    setAlert(data.message||'Email sent successfully.','success'); showToast(data.message||'Email sent successfully.','success'); setTimeout(closeEmailModal,900);
+  }catch(e){setAlert(e.message||'Unable to send email.'); showToast(e.message||'Unable to send email.');}
+  finally{sendBtn.disabled=false; sendBtn.textContent=mode==='feedback'?'Send Feedback Request':'Send Daily Submission';}
+}
+async function signOut(){await fetch('/api/logout',{method:'POST'});localStorage.removeItem('hrguru_user');window.location.href='/login';}
+document.addEventListener('DOMContentLoaded',async()=>{dateFrom.value=todayIso();dateTo.value=todayIso();await loadMe();await loadFilters();loadCandidates();});
+</script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulk Upload Instructions - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e0e0e0}
+.sidebar{width:220px;background:#1c2030;padding:20px;height:100vh;position:fixed;border-right:1px solid #2a2f3a}
+.main{margin-left:220px;padding:26px 30px;min-height:100vh;max-width:1180px}
+.logo{font-size:24px;font-weight:800;color:#fff}.logo span{color:#e8643a}
+.subtitle,.muted{color:#8892b0;font-size:13px;line-height:1.5}
+.back-link{color:#8b949e;display:block;margin-top:20px;text-decoration:none;font-size:14px}
+.back-link:hover{color:#e8643a}
+.page-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:18px}
+h1{font-size:26px;color:#fff;margin-bottom:5px}
+h2{font-size:16px;color:#fff;margin-bottom:10px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.btn{background:#e8643a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:800;min-height:38px;padding:10px 14px;font-size:13px;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.btn:hover{background:#d5542c}.btn.secondary{background:#252a3a;border:1px solid #343b52;color:#d9dee8}.btn.secondary:hover{border-color:#e8643a;color:#fff;background:#2a3042}
+.notice{background:#4b3a23;border:1px solid #6a512b;color:#f3c35d;border-radius:8px;padding:12px 14px;margin:14px 0 18px;font-size:13px;line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:14px;margin-bottom:18px}
+.panel{background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;padding:16px}
+.panel.full{grid-column:1/-1}
+.number{display:inline-flex;width:24px;height:24px;border-radius:50%;align-items:center;justify-content:center;background:#e8643a;color:#fff;font-size:12px;font-weight:900;margin-right:8px}
+ol,ul{margin-left:20px;color:#cfd5df;font-size:13px;line-height:1.55}
+li{margin-bottom:8px}
+strong{color:#fff}
+code{background:#252a3a;border:1px solid #343b52;color:#fff;border-radius:5px;padding:2px 6px}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#151923;border:1px solid #2a2f3a;border-radius:8px;overflow:hidden;margin-top:10px}
+th,td{padding:10px 12px;border-bottom:1px solid #2a2f3a;text-align:left;font-size:13px;vertical-align:top;color:#d9dee8}
+th{background:#0d1017;color:#aab3c8;font-size:12px}
+tr:last-child td{border-bottom:none}
+.footer-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid #2a2f3a}
+@media(max-width:900px){
+  .sidebar{position:static;width:auto;height:auto}.main{margin-left:0;padding:22px}.page-head{flex-direction:column}.actions,.footer-actions{justify-content:flex-start}.grid{grid-template-columns:1fr}.panel.full{grid-column:auto}
+}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo">HR <span>Guru</span></div>
+  <div class="subtitle">Applicant Tracking System</div>
+  <a class="back-link" href="/">Back to Dashboard</a>
+</aside>
+
+<main class="main">
+  <div class="page-head">
+    <div>
+      <h1>Bulk Upload Instructions</h1>
+      <p class="subtitle">Review this checklist before opening the upload screen. It helps prevent blank-template uploads, wrong requirement mapping, and missing CV matches.</p>
+    </div>
+    <div class="actions">
+      <a class="btn secondary" href="/api/template">Download Spreadsheet Template</a>
+      <a class="btn" href="/upload">Open Bulk Upload</a>
+    </div>
+  </div>
+
+  <div class="notice">
+    Upload the completed candidate spreadsheet, not the blank template.
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <h2><span class="number">1</span>Prepare Requirements</h2>
+      <ol>
+        <li>Create the Requirement in ATS before bulk upload.</li>
+        <li>Use the same Requirement title in the spreadsheet.</li>
+        <li>For multiple roles, keep each candidate row mapped to the correct Requirement.</li>
+      </ol>
+    </section>
+
+    <section class="panel">
+      <h2><span class="number">2</span>Prepare Spreadsheet</h2>
+      <ol>
+        <li>Download the template and fill candidate details below the hint row.</li>
+        <li>Do not rename or remove the required columns.</li>
+        <li>Save the completed file with a clear name, for example <code>L&amp;D.xlsx</code>.</li>
+      </ol>
+    </section>
+
+    <section class="panel">
+      <h2><span class="number">3</span>Attach JD Files</h2>
+      <ol>
+        <li>Attach one JD file for each Requirement included in the spreadsheet.</li>
+        <li>Name the JD file so it includes the Requirement title or a clear abbreviation.</li>
+        <li>Example: <code>Learning Development JD.pdf</code> or <code>JD_LD_Taggd.pdf</code>.</li>
+      </ol>
+    </section>
+
+    <section class="panel">
+      <h2><span class="number">4</span>Attach CV Files</h2>
+      <ol>
+        <li>Attach CVs for all candidates in the spreadsheet.</li>
+        <li>CVs are matched by email, phone, or candidate name.</li>
+        <li>Use candidate names in CV filenames when possible.</li>
+      </ol>
+    </section>
+
+    <section class="panel full">
+      <h2>Before Clicking Upload Excel</h2>
+      <table>
+        <tr><th>Check</th><th>What to confirm</th></tr>
+        <tr><td>JD files</td><td>The selected JD files are for the same Requirements used in the spreadsheet.</td></tr>
+        <tr><td>Spreadsheet</td><td>The selected spreadsheet is the completed file, not <code>candidate_template.xlsx</code>.</td></tr>
+        <tr><td>CV files</td><td>Every candidate has a matching CV attached.</td></tr>
+        <tr><td>Requirement names</td><td>The Requirement column matches existing ATS Requirement titles.</td></tr>
+      </table>
+      <div class="footer-actions">
+        <a class="btn secondary" href="/">Back to Dashboard</a>
+        <a class="btn" href="/upload">I Have Prepared the Files</a>
+      </div>
+    </section>
+  </div>
+</main>
+</body>
+</html>

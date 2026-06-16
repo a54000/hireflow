@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Power Search - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7;padding:18px 22px 34px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 auto 14px;max-width:1280px}.brand{font-size:20px;font-weight:900;color:#fff}.brand span{color:#e8643a}.top-title{color:#9aa5c4;font-size:12px;font-weight:850}.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.link-btn,.btn{height:40px;border:1px solid #22d3ee;background:#22d3ee;color:#071018;border-radius:8px;padding:0 14px;font:inherit;font-size:13px;font-weight:900;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.link-btn.secondary,.btn.secondary{background:#252a3a;border-color:#343b52;color:#d9dee8}.btn.ghost{background:transparent;border-color:#343b52;color:#c9d2e8}.btn:disabled{opacity:.6;cursor:not-allowed}
+.wrap{max-width:1280px;margin:0 auto;background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;overflow:hidden}.head{padding:18px 22px;border-bottom:1px solid #2a2f3a;display:grid;gap:14px}.head-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.head h1{font-size:23px;color:#fff;margin-bottom:5px}.head p,.muted{color:#9aa5c4;font-size:13px;line-height:1.4}.searchbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.field{display:grid;gap:6px;min-width:0}.field label{color:#9aa5c4;font-size:11px;font-weight:900;text-transform:uppercase}.field input,.field textarea{width:100%;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:13px;padding:10px 12px}.field input{height:40px}.field textarea{min-height:76px;resize:vertical;grid-column:span 2}.field input:focus,.field textarea:focus{outline:none;border-color:#22d3ee}.actions{display:flex;gap:8px;align-items:end}
+.status{padding:10px 22px;color:#9aa5c4;font-size:13px;border-bottom:1px solid #2a2f3a;min-height:42px}.table-wrap{overflow:auto;min-height:390px}.results-table{width:100%;min-width:1040px;border-collapse:collapse;table-layout:fixed}.results-table th,.results-table td{height:44px;padding:9px 11px;border-bottom:1px solid #2a2f3a;border-right:1px solid #2a2f3a;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.results-table th{position:sticky;top:0;z-index:2;background:#0d1017;color:#aab3c8;font-size:12px;font-weight:900}.results-table tr:hover td{background:#222838}.col-name{width:230px}.col-role{width:180px}.col-req{width:250px}.col-client{width:150px}.col-skills{width:240px}.col-status{width:130px}.col-cv{width:76px;text-align:center}.name{font-weight:850;color:#fff}.pill{display:inline-block;max-width:100%;padding:4px 12px;border-radius:999px;background:#252a3a;border:1px solid #343b52;color:#e0e0e0;overflow:hidden;text-overflow:ellipsis}.cv-link{height:30px;border-radius:7px;border:1px solid #3a4050;background:#252a3a;color:#22d3ee;display:inline-flex;align-items:center;justify-content:center;padding:0 9px;text-decoration:none;font-size:12px;font-weight:850}.empty{padding:42px;text-align:center;color:#8b95b5}.pager{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 22px;border-top:1px solid #2a2f3a;background:#1c2030;color:#9aa5c4;font-size:13px}.pager-actions{display:flex;gap:8px}
+@media(max-width:900px){.searchbar{grid-template-columns:1fr 1fr}.field textarea{grid-column:span 2}}@media(max-width:640px){body{padding:14px}.head-row,.pager{display:grid}.searchbar{grid-template-columns:1fr}.field textarea{grid-column:auto}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><div class="brand">HR <span>Guru</span></div><div class="top-title">Power Search</div></div>
+  <div class="top-actions">
+    <a class="link-btn secondary" href="/admin">Dashboard</a>
+    <a class="link-btn secondary" href="/candidate-search">Candidate Search</a>
+    <a class="link-btn secondary" href="/candidates">Candidate List</a>
+  </div>
+</div>
+<main class="wrap">
+  <section class="head">
+    <div class="head-row">
+      <div>
+        <h1>Power Search</h1>
+        <p>Search internal candidate data by role, skills, experience notes, location, or Boolean keywords.</p>
+      </div>
+      <button class="btn ghost" type="button" onclick="clearSearch()">Clear</button>
+    </div>
+    <div class="searchbar">
+      <div class="field"><label>Job Title</label><input id="jobTitle" placeholder="Sales, Accountant, Engineer"></div>
+      <div class="field"><label>Skills / Keywords</label><input id="skills" placeholder="Java, SOX, retail"></div>
+      <div class="field"><label>Experience</label><input id="experience" placeholder="4 years, 2-3, senior"></div>
+      <div class="field"><label>Location</label><input id="location" placeholder="Delhi, Mumbai, remote"></div>
+      <div class="field"><label>Boolean Search</label><textarea id="booleanQuery" placeholder="Pentaho AND ETL AND P/SQL"></textarea></div>
+      <div class="actions"><button class="btn" type="button" onclick="searchFirstPage()">Search Internal DB</button></div>
+    </div>
+  </section>
+  <div class="status" id="statusText">Enter search terms to find candidates.</div>
+  <div class="table-wrap" id="tableWrap"><div class="empty">Search results will appear here.</div></div>
+  <div class="pager">
+    <span id="pageInfo">0-0 of 0</span>
+    <div class="pager-actions">
+      <button class="btn secondary" id="prevBtn" type="button" onclick="goPage(page - 1)">Previous</button>
+      <button class="btn secondary" id="nextBtn" type="button" onclick="goPage(page + 1)">Next</button>
+    </div>
+  </div>
+</main>
+<script>
+let page=1,totalPages=1;const pageSize=15;
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function searchTerms(){return [jobTitle.value,skills.value,experience.value,booleanQuery.value].map(v=>String(v||'').trim()).filter(Boolean).join(' ');}
+function params(){const p=new URLSearchParams({view:'list',page:String(page),page_size:String(pageSize),sort:'date_desc'});const q=searchTerms();if(q)p.set('q',q);if(location.value.trim())p.set('location',location.value.trim());return p;}
+function rowHtml(row){const cv=row.cv_url||'';return `<tr><td class="col-name"><span class="name">${escapeHtml(row.candidate_name||'-')}</span><div class="muted">${escapeHtml(row.email_addr||'')}</div></td><td class="col-role">${escapeHtml(row.current_role||row.role_name||'-')}</td><td class="col-req">${escapeHtml(row.requirement_title||row.role_name||'-')}</td><td class="col-client"><span class="pill">${escapeHtml(row.client_name||'-')}</span></td><td class="col-skills">${escapeHtml(row.key_skills||'-')}</td><td class="col-status">${escapeHtml(row.status||'New')}</td><td class="col-cv">${cv?`<a class="cv-link" href="${escapeHtml(cv)}" download>CV</a>`:'-'}</td></tr>`;}
+function render(rows){tableWrap.innerHTML=rows.length?`<table class="results-table"><thead><tr><th class="col-name">Candidate</th><th class="col-role">Role</th><th class="col-req">Requirement</th><th class="col-client">Client</th><th class="col-skills">Skills</th><th class="col-status">Status</th><th class="col-cv">CV</th></tr></thead><tbody>${rows.map(rowHtml).join('')}</tbody></table>`:'<div class="empty">No candidates found.</div>';}
+async function loadResults(){
+  if(!searchTerms()&&!location.value.trim()){statusText.textContent='Enter search terms to find candidates.';render([]);pageInfo.textContent='0-0 of 0';prevBtn.disabled=true;nextBtn.disabled=true;return;}
+  statusText.textContent='Searching candidates...';
+  try{const res=await fetch('/api/candidates?'+params().toString());const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'Unable to search candidates.');const rows=data.rows||[];page=Number(data.page||page);totalPages=Math.max(1,Number(data.total_pages||1));const total=Number(data.total||0),start=total?((page-1)*pageSize)+1:0,end=Math.min(total,page*pageSize);statusText.textContent=rows.length?`${rows.length} results shown`:'No candidates found';pageInfo.textContent=`${start}-${end} of ${total}`;prevBtn.disabled=page<=1;nextBtn.disabled=page>=totalPages;render(rows);}catch(e){statusText.textContent=e.message||'Unable to search candidates.';tableWrap.innerHTML='<div class="empty">Unable to search candidates.</div>';}
+}
+function searchFirstPage(){page=1;loadResults();}
+function goPage(next){page=Math.max(1,Math.min(totalPages,next));loadResults();}
+function clearSearch(){jobTitle.value='';skills.value='';experience.value='';location.value='';booleanQuery.value='';searchFirstPage();}
+document.addEventListener('DOMContentLoaded',()=>{prevBtn.disabled=true;nextBtn.disabled=true;});
+</script>
+</body>
+</html>

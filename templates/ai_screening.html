@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Screening - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7;padding:18px 22px 34px}.top{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 auto 14px;max-width:1100px}.brand{font-size:20px;font-weight:900;color:#fff}.brand span{color:#e8643a}.top-title{color:#9aa5c4;font-size:12px;font-weight:850}.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.link-btn,.btn{height:40px;border:1px solid #8b5cf6;background:#8b5cf6;color:#fff;border-radius:8px;padding:0 14px;font:inherit;font-size:13px;font-weight:900;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.link-btn.secondary,.btn.secondary{background:#252a3a;border-color:#343b52;color:#d9dee8}.wrap{max-width:1100px;margin:0 auto;background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;overflow:hidden}.head{padding:18px 22px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;align-items:flex-start;gap:14px}.head h1{font-size:23px;color:#fff;margin-bottom:5px}.head p,.muted{color:#9aa5c4;font-size:13px;line-height:1.4}.status{padding:10px 22px;color:#9aa5c4;font-size:13px;border-bottom:1px solid #2a2f3a;min-height:42px}.logs{display:grid;gap:10px;padding:14px 22px}.log{border:1px solid #343b52;background:#202636;border-radius:8px;padding:13px;display:grid;gap:10px}.log-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.log-grid label{display:block;color:#8b95b5;font-size:10px;font-weight:900;text-transform:uppercase;margin-bottom:3px}.log-grid strong{display:block;color:#fff;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.message{color:#dbe2f1;font-size:12px;line-height:1.4}.badge{display:inline-flex;width:max-content;max-width:100%;padding:4px 10px;border-radius:999px;border:1px solid #343b52;background:#252a3a;color:#e0e0e0}.badge.ok{border-color:#2a7440;background:#18351f;color:#8be09f}.badge.error{border-color:#8c4d4d;background:#3d2222;color:#ffb0b0}.badge.pending,.badge.running{border-color:#35557d;background:#20304a;color:#9ec3ff}.empty{padding:42px;text-align:center;color:#8b95b5}.actions{display:flex;gap:8px;justify-content:flex-end}.small-link{color:#a78bfa;text-decoration:none;font-weight:900;font-size:12px}.small-link:hover{text-decoration:underline}
+@media(max-width:760px){body{padding:14px}.top,.head{display:grid}.log-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><div class="brand">HR <span>Guru</span></div><div class="top-title">AI Screening</div></div>
+  <div class="top-actions">
+    <a class="link-btn secondary" href="/admin">Dashboard</a>
+    <a class="link-btn secondary" href="/candidates">Candidate List</a>
+  </div>
+</div>
+<main class="wrap">
+  <section class="head">
+    <div>
+      <h1>AI Screening</h1>
+      <p>Review recent AI screening activity without loading the full ATS workspace.</p>
+    </div>
+    <button class="btn" type="button" onclick="loadLogs()">Refresh</button>
+  </section>
+  <div class="status" id="statusText">Loading AI screening logs...</div>
+  <section class="logs" id="logs"></section>
+</main>
+<script>
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function stateClass(status){const s=String(status||'').toLowerCase();if(s.includes('ok')||s.includes('scored')||s.includes('complete'))return 'ok';if(s.includes('error')||s.includes('fail'))return 'error';if(s.includes('pending')||s.includes('running'))return s.includes('running')?'running':'pending';return '';}
+function logHtml(log){
+  const candidate=log.candidate_name || `Candidate #${log.candidate_id || '-'}`;
+  const requirement=log.requirement_title || `Requirement #${log.requirement_id || '-'}`;
+  const score=log.score!==null&&log.score!==undefined&&String(log.score).trim()!==''?`${log.score}%`:'-';
+  const time=log.created_at?String(log.created_at).replace('T',' ').replace('Z',''):'-';
+  const report=log.candidate_id?`<a class="small-link" href="/api/candidate/${encodeURIComponent(log.candidate_id)}/ai_screening_report" target="_blank" rel="noopener">Open report</a>`:'';
+  return `<article class="log"><div class="log-grid">
+    <div><label>Candidate</label><strong title="${escapeHtml(candidate)}">${escapeHtml(candidate)}</strong></div>
+    <div><label>Requirement</label><strong title="${escapeHtml(requirement)}">${escapeHtml(requirement)}</strong></div>
+    <div><label>Status</label><strong><span class="badge ${stateClass(log.status)}">${escapeHtml(log.status || '-')}</span></strong></div>
+    <div><label>Score</label><strong>${escapeHtml(score)}</strong></div>
+    <div><label>Stage</label><strong>${escapeHtml(log.stage || '-')}</strong></div>
+    <div><label>Time</label><strong>${escapeHtml(time)}</strong></div>
+    <div><label>Run</label><strong title="${escapeHtml(log.run_id || '-')}">${escapeHtml(log.run_id || '-')}</strong></div>
+    <div><label>Report</label><strong>${report || '-'}</strong></div>
+  </div><div class="message">${escapeHtml(log.message || '-')}</div></article>`;
+}
+async function loadLogs(){
+  statusText.textContent='Loading AI screening logs...';
+  logs.innerHTML='';
+  try{
+    const res=await fetch('/api/ai_screening_logs?limit=25');
+    const data=await res.json().catch(()=>[]);
+    if(!res.ok||!Array.isArray(data))throw new Error(data.error||'Unable to load AI screening logs.');
+    statusText.textContent=data.length?`${data.length} recent log entries`:'No AI screening logs found yet.';
+    logs.innerHTML=data.length?data.map(logHtml).join(''):'<div class="empty">No AI screening activity found yet.</div>';
+  }catch(e){
+    statusText.textContent=e.message||'Unable to load AI screening logs.';
+    logs.innerHTML='<div class="empty">Unable to load AI screening logs.</div>';
+  }
+}
+document.addEventListener('DOMContentLoaded',loadLogs);
+</script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Search Candidates - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7;padding:18px 22px 34px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 auto 14px;max-width:1280px}.brand{font-size:20px;font-weight:900;color:#fff}.brand span{color:#e8643a}.top-title{color:#9aa5c4;font-size:12px;font-weight:850}.top-actions{display:flex;gap:8px;align-items:center}.link-btn,.btn{height:40px;border:1px solid #e8643a;background:#e8643a;color:#fff;border-radius:8px;padding:0 14px;font:inherit;font-size:13px;font-weight:850;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.link-btn.secondary,.btn.secondary{background:#252a3a;border-color:#343b52;color:#d9dee8}.btn.ghost{background:transparent;border-color:#343b52;color:#c9d2e8}.link-btn:hover,.btn:hover{filter:brightness(1.08)}.btn:disabled{opacity:.6;cursor:not-allowed}
+.profile{position:relative}.profile-btn{width:38px;height:38px;border-radius:50%;border:1px solid #343b52;background:#252a3a;color:#fff;font-weight:900;cursor:pointer}.profile-menu{display:none;position:absolute;right:0;top:46px;z-index:40;min-width:170px;background:#1c2030;border:1px solid #343b52;border-radius:8px;box-shadow:0 16px 34px rgba(0,0,0,.35);overflow:hidden}.profile-menu.active{display:block}.profile-menu a,.profile-menu button{display:block;width:100%;border:0;background:transparent;color:#d9dee8;text-align:left;text-decoration:none;padding:12px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.profile-menu a:hover,.profile-menu button:hover{background:#252a3a;color:#fff}
+.wrap{max-width:1280px;margin:0 auto;background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;overflow:hidden}.head{padding:18px 22px;border-bottom:1px solid #2a2f3a;display:grid;gap:14px}.head-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.head h1{font-size:23px;color:#fff;margin-bottom:5px}.head p,.muted{color:#9aa5c4;font-size:13px;line-height:1.4}
+.searchbar{display:grid;grid-template-columns:minmax(260px,1fr) 190px 160px auto;gap:10px;align-items:end}.field{display:grid;gap:6px;min-width:0}.field label{color:#9aa5c4;font-size:11px;font-weight:900;text-transform:uppercase}.field input,.field select{height:40px;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:13px;padding:0 12px}.field input:focus,.field select:focus{outline:none;border-color:#e8643a}.status{padding:10px 22px;color:#9aa5c4;font-size:13px;border-bottom:1px solid #2a2f3a;min-height:42px}
+.table-wrap{overflow:auto;min-height:390px}.results-table{width:100%;min-width:1040px;border-collapse:collapse;table-layout:fixed}.results-table th,.results-table td{height:44px;padding:9px 11px;border-bottom:1px solid #2a2f3a;border-right:1px solid #2a2f3a;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.results-table th{position:sticky;top:0;z-index:2;background:#0d1017;color:#aab3c8;font-size:12px;font-weight:900}.results-table tr:hover td{background:#222838}.col-name{width:230px}.col-role{width:180px}.col-req{width:250px}.col-client{width:150px}.col-skills{width:240px}.col-status{width:130px}.col-cv{width:76px;text-align:center}.name{font-weight:850;color:#fff}.pill{display:inline-block;max-width:100%;padding:4px 12px;border-radius:999px;background:#252a3a;border:1px solid #343b52;color:#e0e0e0;overflow:hidden;text-overflow:ellipsis}.cv-link{height:30px;border-radius:7px;border:1px solid #3a4050;background:#252a3a;color:#e8643a;display:inline-flex;align-items:center;justify-content:center;padding:0 9px;text-decoration:none;font-size:12px;font-weight:850}.cv-link:hover{border-color:#e8643a;color:#fff}.empty{padding:42px;text-align:center;color:#8b95b5}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 22px;border-top:1px solid #2a2f3a;background:#1c2030;color:#9aa5c4;font-size:13px}.pager-actions{display:flex;gap:8px}
+@media(max-width:900px){.searchbar{grid-template-columns:1fr 1fr}.searchbar .btn{width:100%}}@media(max-width:640px){body{padding:14px}.top,.head-row,.pager{align-items:flex-start}.head-row,.pager{display:grid}.searchbar{grid-template-columns:1fr}.top-title{display:none}.top-actions{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><div class="brand">HR <span>Guru</span></div><div class="top-title">Candidate Search</div></div>
+  <div class="top-actions">
+    <a class="link-btn secondary" href="/">Dashboard</a>
+    <a class="link-btn secondary" href="/candidates">Candidate List</a>
+    <div class="profile">
+      <button class="profile-btn" type="button" onclick="toggleProfileMenu()" aria-label="Open profile menu">U</button>
+      <div class="profile-menu" id="profileMenu">
+        <a href="/profile">Profile</a>
+        {% if session.get("impersonation_active") %}<a href="/admin/restore-profile">Return to Admin</a>{% endif %}
+        <button type="button" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+<main class="wrap">
+  <section class="head">
+    <div class="head-row">
+      <div>
+        <h1>Search Candidates</h1>
+        <p>Search by name, email, phone, role, company, or skills. Keep filters light for fast results.</p>
+      </div>
+      <button class="btn ghost" type="button" onclick="clearSearch()">Clear</button>
+    </div>
+    <div class="searchbar">
+      <div class="field"><label>Search</label><input id="q" placeholder="Name, email, phone, role, skills" oninput="scheduleSearch()" autofocus></div>
+      <div class="field"><label>Client</label><select id="client" onchange="searchFirstPage()"><option value="">All Clients</option></select></div>
+      <div class="field"><label>Status</label><select id="statusFilter" onchange="searchFirstPage()"><option value="">Any Status</option></select></div>
+      <button class="btn" type="button" onclick="searchFirstPage()">Search</button>
+    </div>
+  </section>
+  <div class="status" id="statusText">Type to search candidates.</div>
+  <div class="table-wrap" id="tableWrap"><div class="empty">Search results will appear here.</div></div>
+  <div class="pager">
+    <span id="pageInfo">0-0 of 0</span>
+    <div class="pager-actions">
+      <button class="btn secondary" id="prevBtn" type="button" onclick="goPage(page - 1)">Previous</button>
+      <button class="btn secondary" id="nextBtn" type="button" onclick="goPage(page + 1)">Next</button>
+    </div>
+  </div>
+</main>
+<script>
+let page = 1;
+const pageSize = 15;
+let totalPages = 1;
+let timer = null;
+const statuses = ['New','Shortlisted','Screening Pending','Feedback Pending','Offered','On Hold','Joined','Rejected','Duplicate'];
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function toggleProfileMenu(){document.getElementById('profileMenu')?.classList.toggle('active');}
+document.addEventListener('click',e=>{if(!e.target.closest('.profile'))document.getElementById('profileMenu')?.classList.remove('active');});
+function scheduleSearch(){clearTimeout(timer);timer=setTimeout(searchFirstPage,300);}
+function searchFirstPage(){page=1;loadResults();}
+function clearSearch(){q.value='';client.value='';statusFilter.value='';page=1;loadResults();}
+function params(){const p=new URLSearchParams({page:String(page),page_size:String(pageSize),sort:'date_desc'}); if(q.value.trim())p.set('q',q.value.trim()); if(client.value)p.set('client',client.value); if(statusFilter.value)p.set('status',statusFilter.value); return p;}
+function cvUrl(row){return row.cv_url||'';}
+function rowHtml(row){
+  const cv=cvUrl(row);
+  return `<tr>
+    <td class="col-name"><span class="name">${escapeHtml(row.candidate_name||'-')}</span><div class="muted">${escapeHtml(row.email_addr||'')}</div></td>
+    <td class="col-role">${escapeHtml(row.current_role||row.role_name||'-')}</td>
+    <td class="col-req">${escapeHtml(row.requirement_title||row.role_name||'-')}</td>
+    <td class="col-client"><span class="pill">${escapeHtml(row.client_name||'-')}</span></td>
+    <td class="col-skills">${escapeHtml(row.key_skills||'-')}</td>
+    <td class="col-status">${escapeHtml(row.status||'New')}</td>
+    <td class="col-cv">${cv?`<a class="cv-link" href="${escapeHtml(cv)}" download>CV</a>`:'-'}</td>
+  </tr>`;
+}
+function render(rows){
+  if(!rows.length){tableWrap.innerHTML='<div class="empty">No candidates found.</div>';return;}
+  tableWrap.innerHTML=`<table class="results-table"><thead><tr>
+    <th class="col-name">Candidate</th><th class="col-role">Role</th><th class="col-req">Requirement</th>
+    <th class="col-client">Client</th><th class="col-skills">Skills</th><th class="col-status">Status</th><th class="col-cv">CV</th>
+  </tr></thead><tbody>${rows.map(rowHtml).join('')}</tbody></table>`;
+}
+async function loadResults(){
+  statusText.textContent='Loading candidates...';
+  try{
+    const res=await fetch('/api/candidates?'+params().toString());
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(data.error||'Unable to search candidates.');
+    const rows=data.rows||[];
+    page=Number(data.page||page); totalPages=Math.max(1,Number(data.total_pages||1));
+    const total=Number(data.total||rows.length||0), start=total?((page-1)*pageSize)+1:0, end=Math.min(total,page*pageSize);
+    statusText.textContent=rows.length?`${rows.length} results shown`:'No candidates found';
+    pageInfo.textContent=`${start}-${end} of ${total}`;
+    prevBtn.disabled=page<=1; nextBtn.disabled=page>=totalPages;
+    render(rows);
+  }catch(e){statusText.textContent='Unable to search candidates.';tableWrap.innerHTML='<div class="empty">Unable to search candidates.</div>';}
+}
+function goPage(next){page=Math.max(1,Math.min(totalPages,next));loadResults();}
+async function loadFilters(){
+  statusFilter.innerHTML='<option value="">Any Status</option>'+statuses.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+  try{
+    const data=await fetch('/api/candidate_search_filters').then(r=>r.json());
+    const clients=[...new Set((data.clients||[]).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+    client.innerHTML='<option value="">All Clients</option>'+clients.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  }catch(e){}
+}
+async function signOut(){await fetch('/api/logout',{method:'POST'});localStorage.removeItem('hrguru_user');window.location.href='/login';}
+document.addEventListener('DOMContentLoaded',async()=>{prevBtn.disabled=true;nextBtn.disabled=true;await loadFilters();loadResults();});
+</script>
+</body>
+</html>

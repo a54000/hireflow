@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Upload - HR Guru</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:sans-serif;background:#0d1017;color:#e0e0e0}
+.sidebar{width:220px;background:#161b22;padding:20px;height:100vh;position:fixed}
+.main{margin-left:220px;padding:30px}
+h1{color:#fff;margin-bottom:20px}
+.tabs{display:flex;gap:10px;margin-bottom:20px}
+.tab{padding:10px 20px;background:#21262d;border-radius:6px;cursor:pointer;color:#8b949e}
+.tab.active{background:#e8643a;color:#fff}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.upload-zone{border:2px dashed #21262d;padding:40px;text-align:center;border-radius:8px;cursor:pointer}
+.upload-zone:hover{border-color:#e8643a}
+.file-item{background:#21262d;padding:8px;border-radius:4px;margin:5px 0}
+.btn{background:#e8643a;color:#fff;padding:10px 20px;border:none;border-radius:6px;cursor:pointer}
+.btn:disabled{opacity:0.5}
+.alert{padding:10px;border-radius:6px;margin-top:10px;display:none}
+.alert.error{background:#f85149;display:block}
+.alert:not(.error){background:#2ea043;display:block}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div style="font-size:24px;font-weight:700;color:#fff">HR <span style="color:#e8643a">Guru</span></div>
+  <a href="/" style="color:#8b949e;display:block;margin-top:20px;text-decoration:none">← Back</a>
+</div>
+<div class="main">
+  <h1>Bulk Upload</h1>
+  <div class="tabs">
+    <div class="tab active" id="btn-excel" onclick="switchTab('excel')">Excel</div>
+    <div class="tab" id="btn-resumes" onclick="switchTab('resumes')">Resumes</div>
+  </div>
+  <div class="tab-content active" id="excel-content">
+    <div class="upload-zone" onclick="document.getElementById('excelFile').click()">
+      <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelSelect()">
+      <div>Click to select Excel file</div>
+      <div class="file-list" id="excelFileList"></div>
+    </div>
+    <button class="btn" id="excelBtn" style="margin-top:15px">Upload Excel</button>
+    <div class="alert" id="excelAlert"></div>
+  </div>
+  <div class="tab-content" id="resumes-content">
+    <div class="upload-zone" onclick="document.getElementById('resumeFiles').click()">
+      <input type="file" id="resumeFiles" accept=".pdf,.doc,.docx" multiple style="display:none" onchange="handleResumeSelect()">
+      <div>Click to select Resume files</div>
+      <div class="file-list" id="resumeFileList"></div>
+    </div>
+    <button class="btn" id="resumeBtn" style="margin-top:15px">Upload Resumes</button>
+    <div class="alert" id="resumeAlert"></div>
+  </div>
+</div>
+<script>
+var excelFiles = [], resumeFiles = [];
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});
+  document.querySelectorAll('.tab-content').forEach(function(x){x.classList.remove('active')});
+  document.getElementById('btn-' + t).classList.add('active');
+  document.getElementById(t + '-content').classList.add('active');
+}
+function handleExcelSelect() {
+  var f = document.getElementById('excelFile').files[0];
+  if (!f) return;
+  excelFiles = [f];
+  renderFileList('excelFileList', excelFiles);
+}
+function handleResumeSelect() {
+  var files = Array.from(document.getElementById('resumeFiles').files);
+  if (!files.length) return;
+  resumeFiles = files;
+  renderFileList('resumeFileList', resumeFiles);
+}
+function renderFileList(id, files) {
+  var list = document.getElementById(id);
+  list.textContent = '';
+  files.forEach(function(f) {
+    var item = document.createElement('div');
+    item.className = 'file-item';
+    item.textContent = f.name;
+    list.appendChild(item);
+  });
+}
+function showAlert(id, msg, isError) {
+  var el = document.getElementById(id);
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.className = 'alert' + (isError ? ' error' : '');
+}
+document.getElementById('excelBtn').onclick = function() {
+  var btn = this;
+  if (!excelFiles.length) {
+    alert('Select a file first');
+    return;
+  }
+  alert('Uploading ' + excelFiles[0].name);
+  var fd = new FormData();
+  fd.append('excel_file', excelFiles[0]);
+  btn.disabled = true;
+  btn.textContent = 'Uploading...';
+  fetch('/api/upload', {method: 'POST', body: fd})
+    .then(function(res){return res.json()})
+    .then(function(data){
+      alert('Result: ' + JSON.stringify(data));
+      var added = data.added || 0;
+      var dupes = data.duplicates || 0;
+      if (added > 0) {
+        showAlert('excelAlert', 'Uploaded ' + added + ' candidate' + (added > 1 ? 's' : '') + (dupes > 0 ? '. ' + dupes + ' duplicates.' : ''), false);
+        excelFiles = [];
+        document.getElementById('excelFileList').innerHTML = '';
+      } else if (dupes > 0) {
+        showAlert('excelAlert', dupes + ' candidates already exist.', true);
+      } else if (data.error) {
+        showAlert('excelAlert', data.error, true);
+      } else {
+        showAlert('excelAlert', 'Upload failed.', true);
+      }
+      btn.disabled = false;
+      btn.textContent = 'Upload Excel';
+    })
+    .catch(function(e){
+      alert('Error: ' + e.message);
+      btn.disabled = false;
+      btn.textContent = 'Upload Excel';
+    });
+};
+document.getElementById('resumeBtn').onclick = function() {
+  var btn = this;
+  if (!resumeFiles.length) {
+    alert('Select files first');
+    return;
+  }
+  var fd = new FormData();
+  resumeFiles.forEach(function(f){fd.append('file', f)});
+  btn.disabled = true;
+  btn.textContent = 'Uploading...';
+  fetch('/api/upload_cv', {method: 'POST', body: fd})
+    .then(function(res){return res.json()})
+    .then(function(data){
+      if (data.ok) {
+        showAlert('resumeAlert', 'Uploaded ' + resumeFiles.length + ' resumes', false);
+        resumeFiles = [];
+        document.getElementById('resumeFileList').innerHTML = '';
+      } else {
+        showAlert('resumeAlert', data.error || 'Failed', true);
+      }
+      btn.disabled = false;
+      btn.textContent = 'Upload Resumes';
+    })
+    .catch(function(e){
+      alert('Error: ' + e.message);
+      btn.disabled = false;
+      btn.textContent = 'Upload Resumes';
+    });
+};
+</script>
+</body>
+</html>

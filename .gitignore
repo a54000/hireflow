@@ -1,0 +1,58 @@
+# Python/runtime
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+.venv/
+.pycache_compile/
+
+# Secrets and local env
+.env
+.env.*
+!.env.example
+env1
+secrets/
+*.pem
+*.key
+*credentials*
+*client_secret*
+
+# Databases and locks
+*.db
+*.sqlite
+*.sqlite3
+*.lock
+sqlite/
+
+# Uploads, generated files, and local state
+uploads/
+instance/
+tmp/
+reports/
+backups/
+*.log
+*.out
+*.err
+output.json
+
+# Candidate/client documents and spreadsheets
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.csv
+
+# Local binaries/tools not needed in source control
+cloudflared.exe
+sqlite3.exe
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

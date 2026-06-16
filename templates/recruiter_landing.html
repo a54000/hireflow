@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR Guru ATS - Recruiter Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7}
+main{min-height:100vh;padding:22px 24px;display:grid;align-items:center}
+.launcher{width:min(1180px,100%);margin:0 auto}
+.page-top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:14px}
+.brand{font-size:21px;font-weight:950;color:#fff}.brand span{color:#e8643a}
+.workspace-label{font-size:10px;color:#8b95b5;text-transform:uppercase;font-weight:950;letter-spacing:.06em;margin-top:4px}
+.dashboard-layout{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(300px,.9fr);gap:14px;align-items:stretch}
+.primary-panel,.side-panel{border:1px solid #2a2f3a;background:#171c28;border-radius:10px}
+.primary-panel{padding:18px;min-height:470px}
+.primary-panel h1{font-size:24px;line-height:1.15;color:#fff;margin-bottom:5px}
+.primary-panel p{color:#9aa5c4;font-size:12px;margin-bottom:14px}
+.section-label{font-size:10px;color:#8b95b5;text-transform:uppercase;font-weight:950;letter-spacing:.06em;margin-bottom:8px}
+.primary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.side{display:grid;gap:10px}
+.side-panel{padding:12px}
+.side-panel h2{font-size:14px;color:#fff;margin-bottom:3px}.side-panel p{color:#8b95b5;font-size:11px;margin-bottom:9px}
+.utility-list{display:grid;gap:7px}
+.profile-menu{position:fixed;right:18px;top:16px;z-index:30}
+.profile-btn{width:40px;height:40px;border-radius:50%;border:1px solid #343b52;background:#252a3a;color:#fff;font-weight:900;cursor:pointer;box-shadow:0 10px 24px rgba(0,0,0,.24)}
+.profile-btn:hover{border-color:#e8643a}
+.profile-dropdown{display:none;position:absolute;right:0;top:48px;min-width:180px;background:#1c2030;border:1px solid #343b52;border-radius:8px;box-shadow:0 16px 34px rgba(0,0,0,.35);overflow:hidden;text-align:left}
+.profile-dropdown.active{display:block}
+.profile-dropdown a,.profile-dropdown button{display:block;width:100%;border:0;background:transparent;color:#d9dee8;text-decoration:none;padding:12px 14px;font:inherit;font-size:13px;font-weight:800;text-align:left;cursor:pointer}
+.profile-dropdown a:hover,.profile-dropdown button:hover{background:#252a3a;color:#fff}
+.action{--accent:#e8643a;--accent-rgb:232,100,58;min-height:138px;border-radius:10px;border:1px solid rgba(var(--accent-rgb),.36);background:linear-gradient(145deg,rgba(var(--accent-rgb),.18),rgba(var(--accent-rgb),.05) 50%),#202636;color:#fff;text-decoration:none;display:grid;align-content:space-between;gap:12px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.18);font:inherit;text-align:left;position:relative;overflow:hidden;transition:transform .16s ease,border-color .16s ease,background .16s ease}
+.action:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--accent)}
+.action:hover{border-color:rgba(var(--accent-rgb),.9);background:linear-gradient(145deg,rgba(var(--accent-rgb),.24),rgba(var(--accent-rgb),.07) 50%),#242b3b;transform:translateY(-2px)}
+.action.is-loading{pointer-events:none;opacity:.78;border-color:rgba(var(--accent-rgb),.85);transform:translateY(1px)}
+.action-icon{width:36px;height:36px;border-radius:9px;background:rgba(var(--accent-rgb),.18);border:1px solid rgba(var(--accent-rgb),.35);display:grid;place-items:center;font-size:13px;font-weight:950;color:var(--accent)}
+.action strong{display:block;font-size:18px;line-height:1.1;margin-bottom:5px}.action span{display:block;font-size:12px;color:#bac4df;font-weight:760;line-height:1.3}
+.utility{--accent:#a78bfa;min-height:42px;border-radius:8px;border:1px solid #2d3449;background:#202636;color:#e8ecf7;text-decoration:none;padding:0 10px;font:inherit;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;text-align:left}
+.utility:hover{border-color:var(--accent);background:#252c3e}.utility.is-loading{pointer-events:none;opacity:.78;border-color:var(--accent)}.utility em{font-style:normal;color:var(--accent);font-weight:950}
+.utility.requirements{--accent:#ffd166}.utility.list{--accent:#a78bfa}.utility.search{--accent:#6fd3d6}.utility.followups{--accent:#60a5fa}.utility.selfservice{--accent:#ff8fb8}.utility.taggd{--accent:#fb923c}.utility.analytics{--accent:#5eead4}.utility.weekly{--accent:#60a5fa}.utility.teamreports{--accent:#f472b6}.utility.teamanalytics{--accent:#5eead4}.utility.selections{--accent:#34d399}
+.action.candidate{--accent:#35a7ff;--accent-rgb:53,167,255}
+.action.bulk{--accent:#38c27f;--accent-rgb:56,194,127}
+.action.requirement{--accent:#f2b84b;--accent-rgb:242,184,75}
+.action.requirements{--accent:#ffd166;--accent-rgb:255,209,102}
+.action.reporting{--accent:#e8643a;--accent-rgb:232,100,58}
+.action.list{--accent:#a78bfa;--accent-rgb:167,139,250}
+.action.search{--accent:#6fd3d6;--accent-rgb:111,211,214}
+.action.selfservice{--accent:#ff8fb8;--accent-rgb:255,143,184}
+.action.taggd{--accent:#fb923c;--accent-rgb:251,146,60}
+.action.analytics{--accent:#5eead4;--accent-rgb:94,234,212}
+.action.teamreports{--accent:#f472b6;--accent-rgb:244,114,182}
+.action.selections{--accent:#34d399;--accent-rgb:52,211,153}
+.modal{display:none;position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);padding:22px;align-items:center;justify-content:center}.modal.active{display:flex}.modal-card{width:min(720px,100%);max-height:88vh;overflow:auto;background:#1c2030;border:1px solid #343b52;border-radius:10px;box-shadow:0 20px 48px rgba(0,0,0,.48);text-align:left}.modal-head,.modal-foot{padding:16px 18px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:12px;align-items:center}.modal-foot{border-top:1px solid #2a2f3a;border-bottom:0;justify-content:flex-end}.modal-body{padding:18px;display:grid;gap:14px}.modal h2{font-size:19px;color:#fff}.modal p,.muted{color:#9aa5c4;font-size:13px;line-height:1.4}.close{width:32px;height:32px;border-radius:8px;border:1px solid #343b52;background:#252a3a;color:#fff;cursor:pointer;font-size:18px;line-height:1}.field{display:grid;gap:6px}.field label{color:#9aa5c4;font-size:11px;font-weight:900;text-transform:uppercase}.field input,.field select{height:40px;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:13px;padding:0 12px}.modal-actions{display:flex;gap:10px;flex-wrap:wrap}.btn{height:40px;border:1px solid #e8643a;background:#e8643a;color:#fff;border-radius:8px;padding:0 14px;font:inherit;font-size:13px;font-weight:850;cursor:pointer}.btn.secondary{background:#252a3a;border-color:#343b52;color:#d9dee8}.client-list{display:flex;flex-wrap:wrap;gap:8px;min-height:48px;padding:10px;border:1px solid #2a2f3a;border-radius:8px;background:#151923}.client-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border-radius:999px;background:#252a3a;border:1px solid #343b52;color:#e8ecf7;font-size:12px;font-weight:800}.client-chip button{background:none;border:0;color:#fff;cursor:pointer;font-weight:900}.toast{position:fixed;right:18px;bottom:18px;z-index:90;display:none;max-width:420px;border-radius:8px;padding:12px 14px;font-size:13px;box-shadow:0 14px 32px rgba(0,0,0,.35)}.toast.active{display:block}.toast.error{background:#3a1d22;color:#ffb4bd;border:1px solid #6b2c36}.toast.success{background:#173421;color:#9af0b4;border:1px solid #2c6b3b}
+.analytics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.analytics-card{border:1px solid #343b52;background:#151923;border-radius:8px;padding:14px;min-height:92px;display:grid;align-content:center;gap:7px}.analytics-card strong{font-size:30px;line-height:1;color:#fff}.analytics-card span{font-size:12px;color:#bac4df;font-weight:850}.analytics-card em{font-style:normal;font-size:11px;color:#7f8bad}.analytics-status{min-height:20px;color:#9aa5c4;font-size:13px}.analytics-status.error{color:#ffb4bd}.weekly-chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;align-items:end;min-height:260px;border:1px solid #343b52;background:#151923;border-radius:8px;padding:16px}.weekly-bar{display:grid;grid-template-rows:1fr auto auto;gap:7px;align-items:end;min-width:0;text-align:center}.weekly-bar-fill{width:100%;min-height:8px;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,#60a5fa,#2563eb);box-shadow:0 0 0 1px rgba(96,165,250,.22) inset}.weekly-bar strong{font-size:13px;color:#fff}.weekly-bar span{font-size:11px;color:#8b95b5;font-weight:850;white-space:nowrap}.weekly-total{border:1px solid #343b52;background:#151923;border-radius:8px;padding:14px;display:flex;justify-content:space-between;gap:12px;align-items:center}.weekly-total strong{font-size:30px;color:#fff}.weekly-total span{font-size:12px;color:#bac4df;font-weight:850}
+.followup-intro{border:1px solid #3b82f6;background:#12223a;border-radius:8px;padding:12px 14px;display:grid;gap:7px}.followup-intro strong{color:#fff;font-size:14px}.followup-intro p{margin:0;color:#bfdbfe;font-size:12px;line-height:1.45}.followup-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.followup-step{border:1px solid #2f3f5f;background:#151d2d;border-radius:8px;padding:10px}.followup-step b{display:block;color:#fff;font-size:12px;margin-bottom:3px}.followup-step span{display:block;color:#aebde0;font-size:11px;line-height:1.35}.followup-summary{border:1px solid #2f3f5f;background:#151d2d;border-radius:8px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:16px}.followup-summary span{color:#aebde0;font-size:12px;font-weight:850}.followup-summary strong{color:#fff;font-size:28px;line-height:1}.followup-list{display:grid;gap:8px}.followup-row{border:1px solid #2f3f5f;background:#151923;border-radius:8px;padding:10px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}.followup-row strong{color:#fff;font-size:13px}.followup-row span{display:block;color:#8b95b5;font-size:12px;margin-top:3px}.followup-reasons{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}.followup-reason{border-radius:999px;background:#173421;border:1px solid #2f7d48;color:#9af0b4;padding:4px 7px;font-size:10px;font-weight:850}.followup-count{width:54px;min-height:44px;border-radius:10px;background:#17243a;border:1px solid #31598d;color:#bfdbfe;display:grid;place-items:center;text-align:center;font-size:10px;font-weight:950}.followup-count strong{font-size:18px;line-height:1;color:#fff}.followup-count span{display:block;color:#bfdbfe;font-size:10px;margin:0}
+@media(max-width:900px){main{padding:18px 14px;align-items:start}.dashboard-layout{grid-template-columns:1fr}.primary-panel{min-height:unset}.primary-grid{grid-template-columns:1fr}.action{min-height:120px}.page-top{align-items:flex-start}}
+@media(max-width:760px){.primary-panel h1{font-size:24px}.primary-panel,.side-panel{padding:14px}.page-top{margin-right:48px}}
+@media(max-width:620px){.analytics-grid{grid-template-columns:1fr}.followup-steps{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="profile-menu">
+  <button class="profile-btn" type="button" onclick="toggleProfileMenu()" aria-label="Open profile menu">U</button>
+  <div class="profile-dropdown" id="profileDropdown">
+    <a href="/profile">Profile</a>
+    {% if session.get("impersonation_active") %}<a href="/admin/restore-profile">Return to Admin</a>{% endif %}
+    <button type="button" onclick="signOut()">Sign Out</button>
+  </div>
+</div>
+<main>
+  <section class="launcher">
+    <div class="page-top">
+      <div>
+        <div class="brand">HR <span>Guru</span></div>
+        <div class="workspace-label">Recruiter Workspace</div>
+      </div>
+    </div>
+    <div class="dashboard-layout">
+      <div class="primary-panel">
+        <h1>Dashboard</h1>
+        <p>The daily actions stay large and obvious. Review and setup tools stay compact on the side.</p>
+        <div class="section-label">Start Work</div>
+        <div class="primary-grid">
+      {% if not is_client_viewer %}
+      <a class="action requirement" href="/add-requirement">
+        <div class="action-icon">+</div>
+        <div><strong>Add Requirement</strong><span>Create a new hiring requirement</span></div>
+      </a>
+      {% if can_bulk_upload %}
+      <a class="action bulk" href="/upload">
+        <div class="action-icon">XL</div>
+        <div><strong>Bulk Upload</strong><span>Import candidates with CV files</span></div>
+      </a>
+      {% endif %}
+      {% if not can_bulk_upload %}
+      <a class="action bulk" href="/upload" style="visibility:hidden;pointer-events:none" aria-hidden="true">
+        <div class="action-icon">XL</div>
+        <div><strong>Bulk Upload</strong><span>Import candidates with CV files</span></div>
+      </a>
+      {% endif %}
+      <a class="action candidate" href="/add-candidate">
+        <div class="action-icon">CV</div>
+        <div><strong>Add Candidate</strong><span>Create a single candidate profile</span></div>
+      </a>
+      <a class="action reporting" href="/daily-reports">
+        <div class="action-icon">-&gt;</div>
+        <div><strong>Send Daily Reports</strong><span>Prepare and email daily submissions</span></div>
+      </a>
+      {% endif %}
+        </div>
+      </div>
+      <aside class="side">
+        <div class="side-panel">
+          <h2>Review</h2>
+          <p>Open lists and search only when needed.</p>
+          <div class="utility-list">
+            {% if not is_client_viewer %}
+            <a class="utility requirements" href="/requirements"><span>Requirements</span><em>Open</em></a>
+            <a class="utility list" href="/candidates"><span>Candidate List</span><em>Open</em></a>
+            <a class="utility followups" href="/my-followups"><span>My Follow-ups</span><em>Action</em></a>
+            {% endif %}
+            <a class="utility search" href="/candidate-search"><span>Search Candidates</span><em>Open</em></a>
+          </div>
+        </div>
+      {% if not is_client_viewer %}
+        <div class="side-panel">
+          <h2>Snapshot</h2>
+          <p>Delivery numbers load only when you open analytics.</p>
+          <div class="utility-list">
+            <button class="utility analytics" type="button" onclick="openAnalyticsModal()"><span>Daily Performance Summary</span><em>View</em></button>
+            <button class="utility weekly" type="button" onclick="openWeeklyPerformanceModal()"><span>Weekly Performance</span><em>View</em></button>
+          </div>
+        </div>
+        <div class="side-panel">
+          <h2>Self Service Tools</h2>
+          <p>Update your client access and maintain Taggd recruiter names for mapped clients.</p>
+          <div class="utility-list">
+            <button class="utility selfservice" type="button" onclick="openMyClientAccessModal()"><span>My Clients Mapping</span><em>Manage</em></button>
+            <a class="utility taggd" href="/taggd-recruiters"><span>Taggd Recruiters</span><em>Manage</em></a>
+          </div>
+        </div>
+      {% if is_team_leader %}
+        <div class="side-panel">
+          <h2>Team</h2>
+          <p>Lightweight team reports for leads.</p>
+          <div class="utility-list">
+            <a class="utility teamreports" href="/team-reports"><span>Team Reports</span><em>Open</em></a>
+            <a class="utility teamanalytics" href="/team-analytics"><span>Team Analytics</span><em>Open</em></a>
+            <a class="utility selections" href="/team-selection-report"><span>Team Selection Report</span><em>Open</em></a>
+          </div>
+        </div>
+      {% endif %}
+      {% endif %}
+      </aside>
+    </div>
+  </section>
+</main>
+<div class="modal" id="analyticsModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h2>Analytics</h2>
+        <p>Your current delivery snapshot.</p>
+      </div>
+      <button class="close" type="button" onclick="closeAnalyticsModal()" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="analytics-status" id="analyticsStatus">Loading analytics...</div>
+      <div class="analytics-grid" id="analyticsGrid"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" type="button" onclick="closeAnalyticsModal()">Close</button>
+      <button class="btn" type="button" onclick="loadAnalytics()">Refresh</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="weeklyPerformanceModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h2>Weekly Performance</h2>
+        <p>Daily submissions for the last 7 days.</p>
+      </div>
+      <button class="close" type="button" onclick="closeWeeklyPerformanceModal()" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="analytics-status" id="weeklyPerformanceStatus">Loading weekly performance...</div>
+      <div class="weekly-total" id="weeklyPerformanceTotal" style="display:none"></div>
+      <div class="weekly-chart" id="weeklyPerformanceChart"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" type="button" onclick="closeWeeklyPerformanceModal()">Close</button>
+      <button class="btn" type="button" onclick="loadWeeklyPerformance()">Refresh</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="myClientAccessModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h2>My Client Access</h2>
+        <p>Choose the clients you work on. These mappings control which client requirements and candidates are available to you.</p>
+      </div>
+      <button class="close" type="button" onclick="closeMyClientAccessModal()" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Existing Client</label>
+        <select id="myClientSelect" onchange="syncMyClientNameInput()"><option value="">Loading clients...</option></select>
+        <div class="muted">Pick from the existing client list first.</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn secondary" type="button" onclick="addMySelectedClient()">Add Selected Client</button>
+        <button class="btn secondary" type="button" onclick="refreshMyClientAccess()">Refresh</button>
+      </div>
+      <div class="field">
+        <label>My Current Clients</label>
+        <div class="client-list" id="myClientSelectedList"></div>
+      </div>
+      <div id="myClientAccessStatus" class="muted"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" type="button" onclick="closeMyClientAccessModal()">Cancel</button>
+      <button class="btn" type="button" onclick="saveMyClientAccess()">Save My Clients</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="modal" id="followupAlertModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h2>Follow-ups Needed Today</h2>
+        <p>Please action these candidate follow-ups by today.</p>
+      </div>
+      <button class="close" type="button" onclick="closeFollowupAlert()" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="followup-intro">
+        <strong>Why you are seeing this</strong>
+        <p>Some active candidates have not been updated recently, or their record is missing important information such as CV or requirement mapping.</p>
+      </div>
+      <div class="followup-steps">
+        <div class="followup-step"><b>1. Open the queue</b><span>Review the candidates shown below or open your focused follow-up queue.</span></div>
+        <div class="followup-step"><b>2. Update today</b><span>Change status, add CV, or map the correct requirement as needed.</span></div>
+        <div class="followup-step"><b>3. Keep records clean</b><span>Mark dropped, duplicate, rejected, offered, or joined candidates correctly.</span></div>
+      </div>
+      <div class="followup-summary" id="followupAlertSummary"></div>
+      <div class="followup-list" id="followupAlertList"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" type="button" onclick="closeFollowupAlert()">Close</button>
+      <button class="btn" type="button" onclick="window.location.href='/my-followups'">Open My Follow-ups</button>
+    </div>
+  </div>
+</div>
+<script>
+function toggleProfileMenu() {
+  document.getElementById('profileDropdown')?.classList.toggle('active');
+}
+document.addEventListener('click', function(event) {
+  const menu = document.querySelector('.profile-menu');
+  if (menu && !menu.contains(event.target)) {
+    document.getElementById('profileDropdown')?.classList.remove('active');
+  }
+});
+document.querySelectorAll('a.action[href], a.utility[href]').forEach(action => {
+  action.addEventListener('click', () => {
+    action.classList.add('is-loading');
+    const label = action.querySelector('span') || action.querySelector('em');
+    if (label) label.textContent = 'Opening...';
+  });
+});
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function showToast(message, type='error') {
+  const el = document.getElementById('toast');
+  el.textContent = message || '';
+  el.className = 'toast active ' + type;
+  setTimeout(() => { el.className = 'toast'; }, 3200);
+}
+function closeFollowupAlert() {
+  document.getElementById('followupAlertModal')?.classList.remove('active');
+}
+function renderFollowupAlert(items) {
+  const wrap = document.getElementById('followupAlertList');
+  if (!wrap) return;
+  if (!items.length) {
+    wrap.innerHTML = '<div class="muted">No follow-ups found.</div>';
+    return;
+  }
+  const actionText = reason => {
+    const text = String(reason || '').toLowerCase();
+    if (text.includes('no update')) return 'Update status or add latest feedback';
+    if (text.includes('requirement')) return 'Map the candidate to a requirement';
+    if (text.includes('cv')) return 'Attach the candidate CV';
+    if (text.includes('status')) return 'Choose a valid candidate status';
+    return reason;
+  };
+  wrap.innerHTML = items.map(item => `
+    <div class="followup-row">
+      <div>
+        <strong>${escapeHtml(item.candidate_name || 'Unnamed candidate')}</strong>
+        <span>${escapeHtml(item.status || 'Blank status')} &middot; ${escapeHtml(item.requirement_title || 'Requirement not mapped')}</span>
+        <div class="followup-reasons">${(item.reasons || []).map(reason => `<span class="followup-reason">${escapeHtml(actionText(reason))}</span>`).join('')}</div>
+      </div>
+      <div class="followup-count"><strong>${escapeHtml(item.age_days || 0)}</strong><span>days old</span></div>
+    </div>
+  `).join('');
+}
+async function checkDailyFollowups() {
+  try {
+    const res = await fetch('/api/my/followups/today');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error || !data.show_alert || !Number(data.count || 0)) return;
+    const summary = document.getElementById('followupAlertSummary');
+    if (summary) {
+      summary.innerHTML = `<span>Candidate records requiring follow-up</span><strong>${escapeHtml(data.count || 0)}</strong>`;
+    }
+    renderFollowupAlert(Array.isArray(data.items) ? data.items : []);
+    document.getElementById('followupAlertModal')?.classList.add('active');
+  } catch(e) {
+    console.warn('Follow-up alert skipped', e);
+  }
+}
+function closeAnalyticsModal() {
+  document.getElementById('analyticsModal')?.classList.remove('active');
+}
+function closeWeeklyPerformanceModal() {
+  document.getElementById('weeklyPerformanceModal')?.classList.remove('active');
+}
+function analyticsCard(label, value, note) {
+  return `<div class="analytics-card"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span><em>${escapeHtml(note || '')}</em></div>`;
+}
+async function openAnalyticsModal() {
+  document.getElementById('analyticsModal')?.classList.add('active');
+  await loadAnalytics();
+}
+async function loadAnalytics() {
+  const status = document.getElementById('analyticsStatus');
+  const grid = document.getElementById('analyticsGrid');
+  if (status) {
+    status.textContent = 'Loading analytics...';
+    status.className = 'analytics-status';
+  }
+  if (grid) grid.innerHTML = '';
+  try {
+    const res = await fetch('/api/my/analytics');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || 'Unable to load analytics');
+    if (grid) {
+      grid.innerHTML = [
+        analyticsCard('Daily Submissions', data.daily_submissions ?? 0, 'Today'),
+        analyticsCard('Weekly Submissions', data.weekly_submissions ?? 0, 'Last 7 days'),
+        analyticsCard('Monthly Submissions', data.monthly_submissions ?? 0, 'Current month'),
+        analyticsCard('Monthly Selections', data.monthly_selections ?? 0, 'Selected, offered, joined'),
+        analyticsCard('Requirements Worked', data.monthly_requirements_worked ?? 0, 'Current month')
+      ].join('');
+    }
+    if (status) status.textContent = data.cached ? 'Loaded from recent snapshot.' : `Updated ${data.generated_at || 'now'}.`;
+  } catch(e) {
+    if (status) {
+      status.textContent = e.message || 'Unable to load analytics';
+      status.className = 'analytics-status error';
+    }
+    showToast(e.message || 'Unable to load analytics');
+  }
+}
+function renderWeeklyPerformance(data) {
+  const chart = document.getElementById('weeklyPerformanceChart');
+  const total = document.getElementById('weeklyPerformanceTotal');
+  const trend = Array.isArray(data.trend) ? data.trend : [];
+  const maxCount = Math.max(1, ...trend.map(row => Number(row.count || 0)));
+  if (total) {
+    total.style.display = 'flex';
+    total.innerHTML = `<div><span>Last 7 days</span><strong>${escapeHtml(data.weekly_submissions ?? 0)}</strong></div><span>${escapeHtml(data.generated_at || '')}</span>`;
+  }
+  if (!chart) return;
+  if (!trend.length) {
+    chart.innerHTML = '<div class="muted">No weekly performance data available.</div>';
+    return;
+  }
+  chart.innerHTML = trend.map(row => {
+    const count = Number(row.count || 0);
+    const height = Math.max(8, Math.round((count / maxCount) * 190));
+    return `<div class="weekly-bar">
+      <div class="weekly-bar-fill" style="height:${height}px"></div>
+      <strong>${escapeHtml(count)}</strong>
+      <span title="${escapeHtml(row.label || '')}">${escapeHtml(row.short_label || row.label || '')}</span>
+    </div>`;
+  }).join('');
+}
+async function openWeeklyPerformanceModal() {
+  document.getElementById('weeklyPerformanceModal')?.classList.add('active');
+  await loadWeeklyPerformance();
+}
+async function loadWeeklyPerformance() {
+  const status = document.getElementById('weeklyPerformanceStatus');
+  const chart = document.getElementById('weeklyPerformanceChart');
+  const total = document.getElementById('weeklyPerformanceTotal');
+  if (status) {
+    status.textContent = 'Loading weekly performance...';
+    status.className = 'analytics-status';
+  }
+  if (chart) chart.innerHTML = '';
+  if (total) {
+    total.style.display = 'none';
+    total.innerHTML = '';
+  }
+  try {
+    const res = await fetch('/api/my/weekly_performance');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || 'Unable to load weekly performance');
+    renderWeeklyPerformance(data);
+    if (status) status.textContent = `Updated ${data.generated_at || 'now'}.`;
+  } catch(e) {
+    if (status) {
+      status.textContent = e.message || 'Unable to load weekly performance';
+      status.className = 'analytics-status error';
+    }
+    if (chart) chart.innerHTML = '';
+    showToast(e.message || 'Unable to load weekly performance');
+  }
+}
+function closeMyClientAccessModal() {
+  document.getElementById('myClientAccessModal')?.classList.remove('active');
+}
+function renderMyClientAccessList() {
+  const state = window.myClientAccessState || {clients: []};
+  const wrap = document.getElementById('myClientSelectedList');
+  const status = document.getElementById('myClientAccessStatus');
+  if (!wrap) return;
+  if (status) status.textContent = '';
+  const items = Array.isArray(state.clients) ? state.clients : [];
+  if (!items.length) {
+    wrap.innerHTML = '<div class="muted">No clients selected yet. Add one or more client names, then save.</div>';
+    return;
+  }
+  wrap.innerHTML = items.map((client, idx) => `
+    <span class="client-chip">
+      ${escapeHtml(client.client_name || client.name || '')}
+      <button type="button" onclick="removeMyClientName(${idx})" aria-label="Remove client">&times;</button>
+    </span>
+  `).join('');
+}
+async function openMyClientAccessModal() {
+  const modal = document.getElementById('myClientAccessModal');
+  modal?.classList.add('active');
+  const status = document.getElementById('myClientAccessStatus');
+  if (status) status.textContent = 'Loading client access...';
+  try {
+    const [myRes, allRes] = await Promise.all([
+      fetch('/api/my/clients'),
+      fetch('/api/clients?all=1')
+    ]);
+    const data = await myRes.json().catch(() => ({}));
+    const allClients = await allRes.json().catch(() => []);
+    if (!myRes.ok || data.error) throw new Error(data.error || 'Unable to load your client access list');
+    const clients = Array.isArray(data.clients) ? data.clients.map(c => ({id: c.id, client_name: c.client_name})) : [];
+    window.myClientAccessState = {clients};
+    window.myClientAccessAllClients = Array.isArray(allClients) ? allClients : [];
+    const sel = document.getElementById('myClientSelect');
+    if (sel) {
+      const mapped = new Set(clients.map(c => String(c.client_name || '').trim().toLowerCase()));
+      sel.innerHTML = '<option value="">Select existing client...</option>' + (window.myClientAccessAllClients || []).map(c => {
+        const name = c.client_name || '';
+        const isMapped = mapped.has(String(name).trim().toLowerCase());
+        return `<option value="${escapeHtml(name)}" ${isMapped ? 'disabled' : ''}>${escapeHtml(name)}${isMapped ? ' (already added)' : ''}</option>`;
+      }).join('');
+    }
+    renderMyClientAccessList();
+  } catch(e) {
+    if (status) status.textContent = e.message || 'Unable to load your client access list';
+    showToast(e.message || 'Unable to load your client access list');
+  }
+}
+function syncMyClientNameInput() {}
+function addMySelectedClient() {
+  const sel = document.getElementById('myClientSelect');
+  const name = (sel && sel.value ? sel.value : '').trim();
+  if (!name) return showToast('Select an existing client first');
+  addMyClientName(name);
+  if (sel) sel.value = '';
+}
+function addMyClientName(name) {
+  const state = window.myClientAccessState || {clients: []};
+  const current = Array.isArray(state.clients) ? state.clients : [];
+  const raw = [String(name || '').trim()].filter(Boolean);
+  if (!raw.length) return;
+  const seen = new Set(current.map(c => String(c.client_name || c.name || '').trim().toLowerCase()));
+  raw.forEach(name => {
+    const key = name.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    current.push({client_name: name});
+  });
+  state.clients = current;
+  window.myClientAccessState = state;
+  renderMyClientAccessList();
+}
+function removeMyClientName(index) {
+  const state = window.myClientAccessState || {clients: []};
+  const current = Array.isArray(state.clients) ? state.clients : [];
+  current.splice(index, 1);
+  state.clients = current;
+  window.myClientAccessState = state;
+  renderMyClientAccessList();
+}
+async function refreshMyClientAccess() {
+  await openMyClientAccessModal();
+}
+async function saveMyClientAccess() {
+  const state = window.myClientAccessState || {clients: []};
+  const current = Array.isArray(state.clients) ? state.clients : [];
+  const clientNames = current.map(c => c.client_name || c.name || '').map(s => String(s || '').trim()).filter(Boolean);
+  if (!clientNames.length) return showToast('Add at least one client before saving');
+  const status = document.getElementById('myClientAccessStatus');
+  if (status) status.textContent = 'Saving client access...';
+  try {
+    const res = await fetch('/api/my/clients', {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({client_names: clientNames})
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || 'Unable to save client access');
+    if (status) status.textContent = `Saved ${data.count || clientNames.length} client${(data.count || clientNames.length) === 1 ? '' : 's'}.`;
+    showToast('Client access updated', 'success');
+  } catch(e) {
+    if (status) status.textContent = e.message || 'Unable to save client access';
+    showToast(e.message || 'Unable to save client access');
+  }
+}
+async function signOut() {
+  await fetch('/api/logout', {method: 'POST'});
+  localStorage.removeItem('hrguru_user');
+  window.location.href = '/login';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  checkDailyFollowups();
+  {% if open_weekly_performance %}
+  openWeeklyPerformanceModal();
+  {% endif %}
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taggd Recruiters - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7;padding:10px 12px 16px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 auto 10px;max-width:calc(100vw - 24px)}.brand{font-size:20px;font-weight:900;color:#fff}.brand span{color:#e8643a}.top-title{color:#9aa5c4;font-size:12px;font-weight:850}
+.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.link-btn,.btn{height:40px;border:1px solid #e8643a;background:#e8643a;color:#fff;border-radius:8px;padding:0 14px;font:inherit;font-size:13px;font-weight:850;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}.link-btn.secondary,.btn.secondary{background:#252a3a;border-color:#343b52;color:#d9dee8}.btn.ghost{background:transparent;border-color:#343b52;color:#c9d2e8}.btn.danger{background:#3a1d22;border-color:#6b2c36;color:#ffb4bd}.link-btn:hover,.btn:hover{filter:brightness(1.08)}.btn:disabled{opacity:.6;cursor:not-allowed}
+.profile{position:relative}.profile-btn{width:38px;height:38px;border-radius:50%;border:1px solid #343b52;background:#252a3a;color:#fff;font-weight:900;cursor:pointer}.profile-menu{display:none;position:absolute;right:0;top:46px;z-index:40;min-width:170px;background:#1c2030;border:1px solid #343b52;border-radius:8px;box-shadow:0 16px 34px rgba(0,0,0,.35);overflow:hidden}.profile-menu.active{display:block}.profile-menu a,.profile-menu button{display:block;width:100%;border:0;background:transparent;color:#d9dee8;text-align:left;text-decoration:none;padding:12px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.profile-menu a:hover,.profile-menu button:hover{background:#252a3a;color:#fff}
+.wrap{width:100%;max-width:calc(100vw - 24px);margin:0 auto;background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;overflow:hidden}.head{padding:14px 18px;border-bottom:1px solid #2a2f3a;display:grid;gap:10px}.head-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.head h1{font-size:22px;color:#fff;margin-bottom:4px}.head p,.muted{color:#9aa5c4;font-size:13px;line-height:1.35}.scope{display:inline-flex;align-items:center;height:28px;border:1px solid #343b52;background:#252a3a;color:#bac4df;border-radius:999px;padding:0 10px;font-size:12px;font-weight:900}
+.tools{display:grid;grid-template-columns:minmax(240px,320px) minmax(220px,1fr) auto auto;gap:10px;align-items:end}.field{display:grid;gap:6px;min-width:0}.field label{color:#9aa5c4;font-size:11px;font-weight:900;text-transform:uppercase}.field input,.field select{width:100%;height:40px;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:13px;padding:0 12px}.field input:focus,.field select:focus{outline:none;border-color:#e8643a}
+.status{padding:8px 18px;color:#9aa5c4;font-size:13px;border-bottom:1px solid #2a2f3a;min-height:36px}.table-wrap{overflow:auto;height:calc(100vh - 218px);min-height:430px}.data-table{width:100%;min-width:920px;border-collapse:collapse;table-layout:fixed}.data-table th,.data-table td{height:46px;padding:8px 10px;border-bottom:1px solid #2a2f3a;border-right:1px solid #2a2f3a;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.data-table th{position:sticky;top:0;z-index:2;background:#0d1017;color:#aab3c8;font-size:12px;font-weight:900}.data-table tr:hover td{background:#222838}.col-client{width:24%}.col-name{width:28%}.col-email{width:28%}.col-status{width:120px}.col-actions{width:190px}.pill{display:inline-block;max-width:100%;padding:4px 12px;border-radius:999px;background:#252a3a;border:1px solid #343b52;color:#e0e0e0;overflow:hidden;text-overflow:ellipsis}.pill.off{background:#3a1d22;border-color:#6b2c36;color:#ffb4bd}.row-actions{display:flex;gap:7px;flex-wrap:wrap}.empty{padding:42px;text-align:center;color:#8b95b5}
+.modal{display:none;position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);padding:22px;align-items:center;justify-content:center}.modal.active{display:flex}.modal-card{width:min(540px,100%);max-height:88vh;overflow:auto;background:#1c2030;border:1px solid #343b52;border-radius:10px;box-shadow:0 20px 48px rgba(0,0,0,.48)}.modal-head,.modal-foot{padding:16px 18px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:12px;align-items:center}.modal-foot{border-top:1px solid #2a2f3a;border-bottom:0;justify-content:flex-end}.modal-body{padding:18px;display:grid;gap:14px}.modal h2{font-size:19px;color:#fff}.close{width:32px;height:32px;border-radius:8px;border:1px solid #343b52;background:#252a3a;color:#fff;cursor:pointer;font-size:18px;line-height:1}
+.toast{position:fixed;right:18px;bottom:18px;z-index:90;display:none;max-width:420px;border-radius:8px;padding:12px 14px;font-size:13px;box-shadow:0 14px 32px rgba(0,0,0,.35)}.toast.active{display:block}.toast.error{background:#3a1d22;color:#ffb4bd;border:1px solid #6b2c36}.toast.success{background:#173421;color:#9af0b4;border:1px solid #2c6b3b}
+@media(max-width:900px){.tools{grid-template-columns:1fr 1fr}.tools .btn{width:100%}.data-table{min-width:780px}}
+@media(max-width:760px){body{padding:8px}.top,.head-row{align-items:flex-start}.top{max-width:calc(100vw - 16px)}.wrap{max-width:calc(100vw - 16px)}.top-title{display:none}.head{padding:12px}.head-row{display:grid}.tools{grid-template-columns:1fr}.status{padding:8px 12px}.table-wrap{height:calc(100vh - 315px);min-height:360px}.modal{padding:12px}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><div class="brand">HR <span>Guru</span></div><div class="top-title">Taggd Recruiters</div></div>
+  <div class="top-actions">
+    <a class="link-btn secondary" href="{{ dashboard_href }}">Dashboard</a>
+    <div class="profile">
+      <button class="profile-btn" type="button" onclick="toggleProfileMenu()" aria-label="Open profile menu">U</button>
+      <div class="profile-menu" id="profileMenu">
+        <a href="/profile">Profile</a>
+        {% if session.get("impersonation_active") %}<a href="/admin/restore-profile">Return to Admin</a>{% endif %}
+        <button type="button" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+<main class="wrap">
+  <div class="head">
+    <div class="head-row">
+      <div>
+        <h1>Taggd Recruiters</h1>
+        <p>Maintain Taggd recruiter names for mapped clients. These names are used while creating and editing requirements.</p>
+      </div>
+      <span class="scope">{{ page_scope }} View</span>
+    </div>
+    <div class="tools">
+      <div class="field"><label>Client</label><select id="clientFilter" onchange="loadRows()"><option value="">Loading clients...</option></select></div>
+      <div class="field"><label>Search</label><input id="searchInput" placeholder="Name, email, client" oninput="renderRows()"></div>
+      <button class="btn" type="button" onclick="openRecruiterModal()">Add Recruiter</button>
+      <button class="btn ghost" type="button" onclick="loadRows()">Refresh</button>
+    </div>
+  </div>
+  <div class="status" id="statusText">Loading Taggd recruiters...</div>
+  <div class="table-wrap" id="tableWrap"></div>
+</main>
+<div class="modal" id="recruiterModal">
+  <div class="modal-card">
+    <div class="modal-head"><h2 id="modalTitle">Add Taggd Recruiter</h2><button class="close" type="button" onclick="closeRecruiterModal()">&times;</button></div>
+    <div class="modal-body">
+      <input id="editId" type="hidden">
+      <div class="field"><label>Client</label><select id="modalClient"></select></div>
+      <div class="field"><label>Recruiter Name</label><input id="modalName" placeholder="Taggd recruiter name"></div>
+      <div class="field"><label>Email Optional</label><input id="modalEmail" placeholder="email@example.com"></div>
+      <p class="muted">A recruiter name must be unique within the selected client.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" type="button" onclick="closeRecruiterModal()">Cancel</button>
+      <button class="btn" id="saveBtn" type="button" onclick="saveModalRecruiter()">Save</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+let clientRows=[];
+let recruiterRows=[];
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function toggleProfileMenu(){document.getElementById('profileMenu')?.classList.toggle('active');}
+document.addEventListener('click',e=>{if(!e.target.closest('.profile'))document.getElementById('profileMenu')?.classList.remove('active');});
+function showToast(message,type='error'){const el=document.getElementById('toast');el.textContent=message||'';el.className='toast active '+type;setTimeout(()=>{el.className='toast';},3200);}
+function selectedClient(){return document.getElementById('clientFilter').value.trim();}
+function modalClientOptions(selected=''){
+  const rows=clientRows.filter(c=>c.client_name);
+  const options=rows.map(c=>`<option value="${escapeHtml(c.client_name)}" ${c.client_name===selected?'selected':''}>${escapeHtml(c.client_name)}</option>`).join('');
+  return '<option value="">Select client...</option>'+options;
+}
+async function loadClients(){
+  try{
+    const res=await fetch('/api/my/clients');
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'Unable to load clients.');
+    clientRows=Array.isArray(data.clients)?data.clients:[];
+    const options=clientRows.map(c=>`<option value="${escapeHtml(c.client_name||'')}">${escapeHtml(c.client_name||'')}</option>`).join('');
+    clientFilter.innerHTML='<option value="">All mapped clients</option>'+options;
+    modalClient.innerHTML=modalClientOptions();
+  }catch(e){
+    clientFilter.innerHTML='<option value="">Unable to load clients</option>';
+    modalClient.innerHTML='<option value="">Unable to load clients</option>';
+    showToast(e.message||'Unable to load clients');
+  }
+}
+function filteredRows(){
+  const q=searchInput.value.trim().toLowerCase();
+  if(!q)return recruiterRows;
+  return recruiterRows.filter(row=>[row.client_name,row.name,row.email].some(v=>String(v||'').toLowerCase().includes(q)));
+}
+function rowHtml(row){
+  const active=Number(row.is_active??1)===1;
+  return `<tr>
+    <td class="col-client"><span class="pill">${escapeHtml(row.client_name||'-')}</span></td>
+    <td class="col-name">${escapeHtml(row.name||'-')}</td>
+    <td class="col-email">${escapeHtml(row.email||'-')}</td>
+    <td class="col-status"><span class="pill ${active?'':'off'}">${active?'Active':'Inactive'}</span></td>
+    <td class="col-actions"><div class="row-actions">
+      <button class="btn secondary" type="button" onclick="openRecruiterModal(${row.id})">Edit</button>
+      <button class="btn ${active?'danger':'ghost'}" type="button" onclick="toggleRecruiter(${row.id},${active?0:1})">${active?'Deactivate':'Reactivate'}</button>
+    </div></td>
+  </tr>`;
+}
+function renderRows(){
+  const rows=filteredRows();
+  statusText.textContent=rows.length?`${rows.length} Taggd recruiters shown`:'No Taggd recruiters found';
+  if(!rows.length){
+    tableWrap.innerHTML='<div class="empty">No Taggd recruiters found for the selected client.</div>';
+    return;
+  }
+  tableWrap.innerHTML=`<table class="data-table"><thead><tr>
+    <th class="col-client">Client</th><th class="col-name">Recruiter Name</th><th class="col-email">Email</th><th class="col-status">Status</th><th class="col-actions">Actions</th>
+  </tr></thead><tbody>${rows.map(rowHtml).join('')}</tbody></table>`;
+}
+async function loadRows(){
+  statusText.textContent='Loading Taggd recruiters...';
+  try{
+    const params=new URLSearchParams({include_inactive:'1'});
+    const client=selectedClient();
+    if(client)params.set('client_name',client);
+    const res=await fetch('/api/taggd-recruiters?'+params.toString());
+    const rows=await res.json().catch(()=>[]);
+    if(!res.ok||rows.error)throw new Error(rows.error||'Unable to load Taggd recruiters.');
+    recruiterRows=Array.isArray(rows)?rows:[];
+    renderRows();
+  }catch(e){
+    statusText.textContent='Unable to load Taggd recruiters.';
+    tableWrap.innerHTML='<div class="empty">Unable to load Taggd recruiters.</div>';
+    showToast(e.message||'Unable to load Taggd recruiters');
+  }
+}
+function openRecruiterModal(id){
+  const row=id?recruiterRows.find(r=>Number(r.id)===Number(id)):null;
+  editId.value=row?row.id:'';
+  modalTitle.textContent=row?'Edit Taggd Recruiter':'Add Taggd Recruiter';
+  modalClient.innerHTML=modalClientOptions(row?row.client_name:selectedClient());
+  modalClient.disabled=!!row;
+  modalName.value=row?row.name||'':'';
+  modalEmail.value=row?row.email||'':'';
+  recruiterModal.classList.add('active');
+  setTimeout(()=>modalName.focus(),40);
+}
+function closeRecruiterModal(){recruiterModal.classList.remove('active');}
+async function saveModalRecruiter(){
+  const id=editId.value;
+  const client=modalClient.value.trim();
+  const name=modalName.value.trim();
+  const email=modalEmail.value.trim();
+  if(!client)return showToast('Select a client.');
+  if(!name)return showToast('Recruiter name is required.');
+  saveBtn.disabled=true;
+  try{
+    const url=id?'/api/taggd-recruiters/'+id:'/api/taggd-recruiters';
+    const method=id?'PATCH':'POST';
+    const body=id?{name,email}:{client_name:client,name,email};
+    const res=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'Unable to save Taggd recruiter.');
+    closeRecruiterModal();
+    showToast('Taggd recruiter saved.','success');
+    await loadRows();
+  }catch(e){
+    showToast(e.message||'Unable to save Taggd recruiter.');
+  }finally{
+    saveBtn.disabled=false;
+  }
+}
+async function toggleRecruiter(id,isActive){
+  try{
+    const res=await fetch('/api/taggd-recruiters/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({is_active:isActive})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'Unable to update recruiter.');
+    showToast(isActive?'Taggd recruiter reactivated.':'Taggd recruiter deactivated.','success');
+    await loadRows();
+  }catch(e){
+    showToast(e.message||'Unable to update recruiter.');
+  }
+}
+async function signOut(){await fetch('/api/logout',{method:'POST'});localStorage.removeItem('hrguru_user');window.location.href='/login';}
+document.addEventListener('DOMContentLoaded',async()=>{await loadClients();await loadRows();});
+</script>
+</body>
+</html>

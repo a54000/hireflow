@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e0e0e0;display:grid;place-items:center;padding:24px}
+.login-card{width:min(420px,100%);background:#1c2030;border:1px solid #2a2f3a;border-radius:14px;padding:32px;box-shadow:0 20px 50px rgba(0,0,0,.32)}
+h1{font-size:26px;line-height:1.2;color:#fff;margin-bottom:8px;font-weight:850}
+.subtitle{color:#9aa4bf;font-size:14px;line-height:1.5;margin-bottom:22px}
+.message,.error{border-radius:10px;padding:11px 12px;font-size:13px;line-height:1.4;margin-bottom:14px}
+.message{background:#173421;color:#8ee6aa;border:1px solid #275e38}
+.error{background:#3a1d22;color:#ff9ca8;border:1px solid #6b2c36}
+.login-form{display:grid;gap:12px;margin-bottom:16px}
+.login-form label{font-size:12px;font-weight:800;color:#9aa4bf}
+.login-form input{width:100%;border:1px solid #343b52;background:#252a3a;color:#fff;border-radius:10px;min-height:46px;padding:12px}
+.login-form input:focus{outline:none;border-color:#e8643a}
+.google-btn{width:100%;min-height:48px;border-radius:10px;border:1px solid #343b52;background:#252a3a;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;font-size:14px;font-weight:800;text-decoration:none;transition:all .15s ease}
+.google-btn:hover{border-color:#e8643a;background:#2a3043}
+.google-btn img{width:18px;height:18px}
+.divider{display:flex;align-items:center;gap:10px;color:#6b7494;font-size:12px;font-weight:800;margin:14px 0}
+.divider:before,.divider:after{content:"";height:1px;background:#2a2f3a;flex:1}
+.access-note{margin-top:18px;padding-top:16px;border-top:1px solid #2a2f3a;color:#8b95b5;font-size:12px;line-height:1.5}
+.access-note strong{color:#d9dee8}
+.reset-panel{display:grid;gap:12px}
+.reset-panel label{font-size:12px;font-weight:800;color:#9aa4bf}
+.reset-panel input{width:100%;border:1px solid #343b52;background:#252a3a;color:#fff;border-radius:10px;min-height:46px;padding:12px}
+.reset-panel input:focus{outline:none;border-color:#e8643a}
+.primary-btn{border:1px solid #e8643a;border-radius:10px;min-height:46px;background:#e8643a;color:#fff;font-weight:800;cursor:pointer}
+.primary-btn:hover{background:#d5542c}
+@media(max-width:520px){body{padding:16px}.login-card{padding:24px}}
+</style>
+</head>
+<body>
+<main class="login-card">
+  {% if reset_token %}
+  <h1>Reset password</h1>
+  <p class="subtitle">Create a new password for your existing account.</p>
+  {% if message %}<div class="message">{{ message }}</div>{% endif %}
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <form method="POST" action="/reset_password/{{ reset_token }}" class="reset-panel">
+    <div>
+      <label>New Password</label>
+      <input name="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" required>
+    </div>
+    <button class="primary-btn" type="submit">Reset Password</button>
+  </form>
+  {% else %}
+  <h1>Sign in</h1>
+  <p class="subtitle">Use your username and password, or continue with your provisioned Google account.</p>
+  {% if message %}<div class="message">{{ message }}</div>{% endif %}
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  {% if register_error %}<div class="error">{{ register_error }}</div>{% endif %}
+  <form method="POST" action="/login" class="login-form">
+    <div>
+      <label>Username or Email</label>
+      <input name="username" autocomplete="username" placeholder="username or email" required>
+    </div>
+    <div>
+      <label>Password</label>
+      <input name="password" type="password" autocomplete="current-password" placeholder="Password" required>
+    </div>
+    <button class="primary-btn" type="submit">Sign In</button>
+  </form>
+  <div class="divider">OR</div>
+  <a href="/login/google" class="google-btn">
+    <img src="/static/google-icon.svg" alt="">
+    Continue with Google
+  </a>
+  <div class="access-note">
+    <strong>Need access?</strong><br>
+    Ask your administrator to add your email in Team Setup.
+  </div>
+  {% endif %}
+</main>
+</body>
+</html>

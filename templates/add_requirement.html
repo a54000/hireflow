@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add Requirement - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7;padding:18px 22px 92px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 auto 14px;max-width:1040px}.brand{font-size:20px;font-weight:900;color:#fff}.brand span{color:#e8643a}
+.top-actions{display:flex;gap:8px;align-items:center}.btn,.link-btn{border:1px solid #e8643a;background:#e8643a;color:#fff;border-radius:8px;padding:10px 14px;font:inherit;font-size:13px;font-weight:800;text-decoration:none;cursor:pointer}.btn.secondary,.link-btn.secondary{background:#252a3a;border-color:#343b52;color:#d9dee8}.btn:disabled,.btn.loading{opacity:.72;cursor:wait;pointer-events:none}
+.profile{position:relative}.profile-btn{width:38px;height:38px;border-radius:50%;border:1px solid #343b52;background:#252a3a;color:#fff;font-weight:900;cursor:pointer}.profile-menu{display:none;position:absolute;right:0;top:46px;z-index:40;min-width:170px;background:#1c2030;border:1px solid #343b52;border-radius:8px;box-shadow:0 16px 34px rgba(0,0,0,.35);overflow:hidden}.profile-menu.active{display:block}.profile-menu a,.profile-menu button{display:block;width:100%;border:0;background:transparent;color:#d9dee8;text-align:left;text-decoration:none;padding:12px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.profile-menu a:hover,.profile-menu button:hover{background:#252a3a;color:#fff}
+.wrap{max-width:1040px;margin:0 auto;background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;overflow:visible}.head{padding:18px 22px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.head h1{font-size:23px;color:#fff;margin-bottom:5px}.head p{color:#9aa5c4;font-size:13px}.head-note{color:#8b95b5;font-size:12px;text-align:right;max-width:320px;line-height:1.35}
+.content{padding:20px 22px;display:grid;gap:16px}.panel{border:1px solid #2a2f3a;background:#202636;border-radius:8px;padding:16px;display:grid;gap:14px}.section-title{font-size:13px;font-weight:900;color:#e8643a;text-transform:uppercase;letter-spacing:.04em}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field.full{grid-column:1/-1}label{display:block;color:#cfd7ee;font-size:12px;font-weight:850;margin-bottom:6px}.req label:after{content:" *";color:#e8643a}
+input,select,textarea{width:100%;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:14px;padding:11px 12px;min-height:42px}textarea{min-height:116px;resize:vertical}input:focus,select:focus,textarea:focus{outline:none;border-color:#e8643a}.invalid input,.invalid select,.invalid textarea{border-color:#e86a6a}
+.help{display:block;color:#8b95b5;font-size:12px;margin-top:6px}.error-text{display:none;color:#ff9ca8;font-size:12px;margin-top:6px}.invalid .error-text{display:block}.file-row{display:flex;gap:10px;align-items:center}.file-row input{flex:1}
+.alert{display:none;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.4}.alert.error{display:block;background:#3a1d22;color:#ffb4bd;border:1px solid #6b2c36}.alert.success{display:block;background:#173421;color:#9af0b4;border:1px solid #2c6b3b}
+.modal{display:none;position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);padding:22px;align-items:center;justify-content:center}.modal.active{display:flex}.modal-card{width:min(520px,100%);max-height:88vh;overflow:auto;background:#1c2030;border:1px solid #343b52;border-radius:10px;box-shadow:0 20px 48px rgba(0,0,0,.48)}.modal-head,.modal-foot{padding:16px 18px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:12px;align-items:center}.modal-foot{border-top:1px solid #2a2f3a;border-bottom:0;justify-content:flex-end}.modal-body{padding:18px;display:grid;gap:14px}.modal h2{font-size:19px;color:#fff}.modal p{color:#9aa5c4;font-size:13px;line-height:1.4}.close{width:32px;height:32px;border-radius:8px;border:1px solid #343b52;background:#252a3a;color:#fff;cursor:pointer;font-size:18px;line-height:1}.modal-status{min-height:18px;color:#9aa5c4;font-size:13px}.modal-status.error{color:#ffb4bd}
+.footer{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:12px 22px;border-top:1px solid #2a2f3a;display:flex;justify-content:center;background:rgba(13,16,23,.96);box-shadow:0 -12px 28px rgba(0,0,0,.28)}.footer-inner{width:min(1040px,100%);display:flex;justify-content:flex-end;gap:10px}.success-actions{display:none;gap:10px;justify-content:flex-end;flex-wrap:wrap}.success-actions.active{display:flex}
+@media(max-width:760px){body{padding:14px 14px 96px}.grid{grid-template-columns:1fr}.top,.head{align-items:flex-start}.head{display:block}.head-note{text-align:left;margin-top:8px}.file-row{display:grid}.footer-inner{display:grid;grid-template-columns:1fr 1fr}.success-actions.active{display:grid;grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand">HR <span>Guru</span></div>
+  <div class="top-actions">
+    <a class="link-btn secondary" href="/" onclick="markNavigating(this, 'Opening dashboard...')">Dashboard</a>
+    <div class="profile">
+      <button class="profile-btn" type="button" onclick="toggleProfileMenu()" aria-label="Open profile menu">U</button>
+      <div class="profile-menu" id="profileMenu">
+        <a href="/profile" onclick="markNavigating(this, 'Opening profile...')">Profile</a>
+        {% if session.get("impersonation_active") %}<a href="/admin/restore-profile">Return to Admin</a>{% endif %}
+        <button type="button" id="signOutBtn" onclick="signOut(this)">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+<main class="wrap">
+  <div class="head">
+    <div>
+      <h1>Add Requirement</h1>
+      <p>Create a hiring requirement with client, location, experience, skills, and JD details.</p>
+    </div>
+    <div class="head-note">Paste JD text or attach a JD file. Parse can fill skills, experience, title, education, and location.</div>
+  </div>
+  <div class="content">
+    <div id="alert" class="alert"></div>
+    <section class="panel">
+      <div class="section-title">Requirement Details</div>
+      <div class="grid">
+        <div class="field req" id="fieldTitle"><label>Requirement Title</label><input id="title" placeholder="Java Developer"><span class="error-text">Requirement title is required.</span></div>
+        <div class="field"><label>Requisition ID</label><input id="requisitionId" placeholder="REQ-10482, 45821, M&M-2026-17"><span class="help">Optional. Use this when the same title exists for another location, BU, or recruiter.</span></div>
+        <div class="field req" id="fieldClient"><label>Client Name</label><select id="client"><option value="">Loading clients...</option></select><span class="error-text">Client is required.</span></div>
+        <div class="field req" id="fieldTaggdRecruiter"><label>Taggd Recruiter Name</label><select id="taggdRecruiter" onchange="handleTaggdRecruiterChange()"><option value="">Select client first...</option></select><span class="error-text">Taggd recruiter is required.</span><span class="help" id="taggdRecruiterHelp">Choose the Taggd recruiter mapped to this client.</span></div>
+        <div class="field req" id="fieldLocation"><label>Location</label><input id="location" placeholder="Pune, Bangalore, Remote"><span class="error-text">Location is required.</span></div>
+        <div class="field req" id="fieldExperience"><label>Experience</label><input id="experience" placeholder="5-8 years"><span class="error-text">Experience is required.</span></div>
+        <div class="field"><label>Degree / Education Criteria</label><input id="degree" placeholder="Any Graduate, B.Tech, MBA"></div>
+        <div class="field"><label>Daily Target</label><input id="dailyTarget" type="number" min="1" value="3"></div>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="section-title">Job Description</div>
+      <div class="grid">
+        <div class="field full req" id="fieldJd"><label>JD Text or File</label><textarea id="description" placeholder="Paste JD text here, or attach a JD file."></textarea><span class="error-text">Paste JD text or attach a JD file.</span></div>
+        <div class="field full">
+          <label>JD File</label>
+          <div class="file-row">
+            <input type="file" id="jdFile" accept=".pdf,.doc,.docx,.txt" onchange="setJdStatus(this.files && this.files[0] ? this.files[0].name : 'No JD uploaded.')">
+            <button class="btn secondary" type="button" id="parseBtn" onclick="parseJd()">Parse JD</button>
+          </div>
+          <span class="help" id="jdStatus">No JD uploaded.</span>
+          <span class="help" id="parseStatus">Parse JD text or attached JD file to fill fields automatically.</span>
+        </div>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="section-title">Skills</div>
+      <div class="grid">
+        <div class="field full"><label>Primary Skills</label><input id="primarySkills" placeholder="Java, Spring, Hibernate"></div>
+        <div class="field full"><label>Secondary Skills</label><input id="secondarySkills" placeholder="Kafka, Docker, React"></div>
+      </div>
+    </section>
+  </div>
+  <div class="footer">
+    <div class="footer-inner">
+      <div class="success-actions" id="successActions">
+        <a class="btn secondary" href="/add-requirement" onclick="markNavigating(this, 'Opening form...')">Add Another</a>
+        <a class="btn" href="/" onclick="markNavigating(this, 'Opening dashboard...')">Dashboard</a>
+      </div>
+      <a class="btn secondary" id="cancelBtn" href="/" onclick="markNavigating(this, 'Opening dashboard...')">Cancel</a>
+      <button class="btn" id="saveBtn" type="button" onclick="saveRequirement()">Save Requirement</button>
+    </div>
+  </div>
+</main>
+<div class="modal" id="taggdRecruiterModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h2>Add Taggd Recruiter</h2>
+        <p id="taggdRecruiterModalClient">Create a recruiter name for the selected client.</p>
+      </div>
+      <button class="close" type="button" onclick="closeTaggdRecruiterModal()" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field req" id="fieldNewTaggdName"><label>Recruiter Name</label><input id="newTaggdRecruiterName" placeholder="Recruiter name"><span class="error-text">Recruiter name is required.</span></div>
+      <div class="field"><label>Email</label><input id="newTaggdRecruiterEmail" placeholder="Optional email"></div>
+      <div class="modal-status" id="taggdRecruiterModalStatus"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" type="button" onclick="closeTaggdRecruiterModal()">Cancel</button>
+      <button class="btn" type="button" id="saveTaggdRecruiterBtn" onclick="saveNewTaggdRecruiter()">Save Recruiter</button>
+    </div>
+  </div>
+</div>
+<script>
+let currentUser = {};
+function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function val(id){return (document.getElementById(id)?.value||'').trim();}
+function setVal(id,value){const el=document.getElementById(id); if(el && value) el.value=String(value);}
+function showAlert(message,type='error'){const el=document.getElementById('alert'); el.textContent=message; el.className='alert '+type;}
+function clearAlert(){const el=document.getElementById('alert'); el.textContent=''; el.className='alert';}
+function markInvalid(id,invalid=true){document.getElementById(id)?.classList.toggle('invalid',invalid);}
+function clearValidation(){document.querySelectorAll('.field.invalid').forEach(el=>el.classList.remove('invalid')); clearAlert();}
+function setJdStatus(text){document.getElementById('jdStatus').textContent=text||'No JD uploaded.';}
+function toggleProfileMenu(){document.getElementById('profileMenu')?.classList.toggle('active');}
+function markNavigating(el,text){
+  if(!el)return true;
+  el.classList.add('loading');
+  el.textContent=text||'Opening...';
+  return true;
+}
+function formatExperienceRange(exp){if(!exp||typeof exp!=='object')return'';const min=exp.min_years??exp.min??'';const max=exp.max_years??exp.max??'';if(min!==''&&max!==''&&Number(min)!==Number(max))return `${min}-${max} years`;if(min!=='')return `${min}+ years`;if(max!=='')return `Up to ${max} years`;return'';}
+async function loadClients(){
+  const sel=document.getElementById('client');
+  try{
+    const rows=await fetch('/api/clients').then(r=>r.json());
+    sel.innerHTML='<option value="">Select Client...</option>';
+    (Array.isArray(rows)?rows:[]).forEach(c=>{sel.innerHTML+=`<option value="${escapeHtml(c.client_name||'')}">${escapeHtml(c.client_name||'')}</option>`;});
+    sel.addEventListener('change', loadTaggdRecruiters);
+    await loadTaggdRecruiters();
+  }catch(e){
+    sel.innerHTML='<option value="">Unable to load clients</option>';
+  }
+}
+async function loadTaggdRecruiters(){
+  const sel=document.getElementById('taggdRecruiter');
+  const client=val('client');
+  if(!client){
+    sel.innerHTML='<option value="">Select client first...</option>';
+    document.getElementById('taggdRecruiterHelp').textContent='Choose a client to load Taggd recruiters.';
+    return;
+  }
+  sel.innerHTML='<option value="">Loading Taggd recruiters...</option>';
+  try{
+    const rows=await fetch('/api/taggd-recruiters?client_name='+encodeURIComponent(client)).then(r=>r.json());
+    sel.innerHTML='<option value="">Select Taggd Recruiter...</option>';
+    (Array.isArray(rows)?rows:[]).forEach(r=>{sel.innerHTML+=`<option value="${Number(r.id)}">${escapeHtml(r.name||'')}</option>`;});
+    sel.innerHTML+='<option value="__add_new__">+ Add Taggd Recruiter...</option>';
+    document.getElementById('taggdRecruiterHelp').textContent=rows.length?'Choose the Taggd recruiter mapped to this client.':'No Taggd recruiters found for this client. Add one before saving.';
+  }catch(e){
+    sel.innerHTML='<option value="">Unable to load Taggd recruiters</option>';
+    document.getElementById('taggdRecruiterHelp').textContent='Unable to load Taggd recruiters.';
+  }
+}
+async function handleTaggdRecruiterChange(){
+  const sel=document.getElementById('taggdRecruiter');
+  if(sel.value!=='__add_new__')return;
+  const client=val('client');
+  if(!client){sel.value=''; showAlert('Select client before adding Taggd recruiter.'); return;}
+  openTaggdRecruiterModal();
+}
+function openTaggdRecruiterModal(){
+  const client=val('client');
+  document.getElementById('taggdRecruiterModalClient').textContent='Client: '+client;
+  document.getElementById('newTaggdRecruiterName').value='';
+  document.getElementById('newTaggdRecruiterEmail').value='';
+  document.getElementById('fieldNewTaggdName').classList.remove('invalid');
+  document.getElementById('taggdRecruiterModalStatus').textContent='';
+  document.getElementById('taggdRecruiterModalStatus').className='modal-status';
+  document.getElementById('taggdRecruiterModal').classList.add('active');
+  setTimeout(()=>document.getElementById('newTaggdRecruiterName')?.focus(),50);
+}
+function closeTaggdRecruiterModal(){
+  document.getElementById('taggdRecruiterModal')?.classList.remove('active');
+  const sel=document.getElementById('taggdRecruiter');
+  if(sel?.value==='__add_new__')sel.value='';
+}
+async function saveNewTaggdRecruiter(){
+  const client=val('client');
+  const name=val('newTaggdRecruiterName');
+  const email=val('newTaggdRecruiterEmail');
+  const status=document.getElementById('taggdRecruiterModalStatus');
+  const btn=document.getElementById('saveTaggdRecruiterBtn');
+  document.getElementById('fieldNewTaggdName').classList.toggle('invalid',!name);
+  if(!name)return;
+  status.textContent='Saving Taggd recruiter...';
+  status.className='modal-status';
+  btn.disabled=true;
+  btn.textContent='Saving...';
+  try{
+    const res=await fetch('/api/taggd-recruiters',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client_name:client,name,email})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'Unable to add Taggd recruiter.');
+    await loadTaggdRecruiters();
+    const sel=document.getElementById('taggdRecruiter');
+    if(data.taggd_recruiter&&data.taggd_recruiter.id)sel.value=String(data.taggd_recruiter.id);
+    closeTaggdRecruiterModal();
+    clearAlert();
+  }catch(e){
+    status.textContent=e.message||'Unable to add Taggd recruiter.';
+    status.className='modal-status error';
+  }finally{
+    btn.disabled=false;
+    btn.textContent='Save Recruiter';
+  }
+}
+async function parseJd(){
+  const jdFile=document.getElementById('jdFile')?.files?.[0];
+  const jdText=val('description');
+  if(!jdFile&&!jdText){showAlert('Paste JD text or attach a JD file first.'); markInvalid('fieldJd'); return;}
+  const btn=document.getElementById('parseBtn');
+  btn.disabled=true; btn.textContent='Parsing...'; document.getElementById('parseStatus').textContent='Parsing JD...';
+  const fd=new FormData();
+  if(jdFile)fd.append('jd_file',jdFile);
+  if(jdText)fd.append('jd_text',jdText);
+  try{
+    const res=await fetch('/api/parse_jd',{method:'POST',body:fd});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'Unable to parse JD.');
+    const parsed=data.parsed_jd||data;
+    const primary=parsed.must_have_skills||parsed.primary_skills||parsed.tools_technologies||[];
+    const secondary=parsed.nice_to_have_skills||parsed.secondary_skills||[];
+    const experience=formatExperienceRange(parsed.experience_required);
+    if(primary.length)setVal('primarySkills',primary.join(', '));
+    if(secondary.length)setVal('secondarySkills',secondary.join(', '));
+    if(experience)setVal('experience',experience);
+    if(parsed.location)setVal('location',parsed.location);
+    if(parsed.education_required)setVal('degree',Array.isArray(parsed.education_required)?parsed.education_required.join(', '):parsed.education_required);
+    if((parsed.title||parsed.role_title)&&!val('title'))setVal('title',parsed.title||parsed.role_title);
+    document.getElementById('parseStatus').textContent='Parsed successfully. Review fields before saving.';
+    clearAlert();
+  }catch(e){
+    showAlert(e.message||'Unable to parse JD.');
+    document.getElementById('parseStatus').textContent='Parsing failed.';
+  }finally{
+    btn.disabled=false; btn.textContent='Parse JD';
+  }
+}
+function validateForm(){
+  clearValidation();
+  const jdFile=document.getElementById('jdFile')?.files?.[0];
+  const checks=[
+    ['fieldTitle',()=>val('title')],
+    ['fieldClient',()=>val('client')],
+    ['fieldTaggdRecruiter',()=>val('taggdRecruiter')&&val('taggdRecruiter')!=='__add_new__'],
+    ['fieldLocation',()=>val('location')],
+    ['fieldExperience',()=>val('experience')],
+    ['fieldJd',()=>val('description')||jdFile]
+  ];
+  const missing=checks.filter(([,fn])=>!fn()).map(([id])=>id);
+  missing.forEach(id=>markInvalid(id));
+  if(missing.length)showAlert('Please complete all mandatory fields.');
+  return missing.length===0;
+}
+async function saveRequirement(){
+  if(!validateForm())return;
+  const btn=document.getElementById('saveBtn');
+  btn.disabled=true; btn.textContent='Saving...';
+  const jdFile=document.getElementById('jdFile')?.files?.[0];
+  const body={
+    title:val('title'),
+    requisition_id:val('requisitionId'),
+    client_name:val('client'),
+    taggd_recruiter_id:val('taggdRecruiter'),
+    location:val('location'),
+    daily_target:Number(val('dailyTarget')||3),
+    has_jd_text:Boolean(val('description')),
+    has_jd_file:Boolean(jdFile),
+    description:[
+      val('description'),
+      val('degree')?'Degree: '+val('degree'):'',
+      val('experience')?'Experience: '+val('experience'):'',
+      val('location')?'Location: '+val('location'):'',
+      val('primarySkills')?'Primary Skills: '+val('primarySkills'):'',
+      val('secondarySkills')?'Secondary Skills: '+val('secondarySkills'):''
+    ].filter(Boolean).join('\\n')
+  };
+  try{
+    const res=await fetch('/api/requirements',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||(!data.ok&&!data.id))throw new Error(data.error||'Unable to save requirement.');
+    const reqId=data.id;
+    if(jdFile&&reqId){
+      const fd=new FormData();
+      fd.append('file',jdFile);
+      const uploadRes=await fetch('/api/requirements/'+reqId+'/upload_jd',{method:'POST',body:fd});
+      const uploadData=await uploadRes.json().catch(()=>({}));
+      if(!uploadRes.ok||uploadData.error)throw new Error('Requirement saved, but JD upload failed: '+(uploadData.error||'Unknown error'));
+    }
+    showAlert('Requirement added successfully.','success');
+    btn.style.display='none';
+    document.getElementById('cancelBtn').style.display='none';
+    document.getElementById('successActions').classList.add('active');
+  }catch(e){
+    showAlert(e.message||'Unable to save requirement.');
+    btn.disabled=false; btn.textContent='Save Requirement';
+  }
+}
+async function signOut(btn){
+  if(btn){
+    btn.disabled=true;
+    btn.textContent='Signing out...';
+  }
+  await fetch('/api/logout',{method:'POST'});
+  localStorage.removeItem('hrguru_user');
+  window.location.href='/login';
+}
+document.addEventListener('click',event=>{if(!event.target.closest('.profile'))document.getElementById('profileMenu')?.classList.remove('active');});
+document.addEventListener('DOMContentLoaded',async()=>{
+  try{
+    const res=await fetch('/api/me');
+    currentUser=await res.json();
+    if(currentUser.is_client_viewer)window.location.href='/candidate-search';
+    await loadClients();
+  }catch(e){
+    showAlert('Unable to load your login profile. Please sign in again.');
+  }
+});
+</script>
+</body>
+</html>

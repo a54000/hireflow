@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Candidate Review - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7;padding:10px 12px 16px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 auto 10px;max-width:calc(100vw - 24px)}
+.brand{font-size:20px;font-weight:900;color:#fff}.brand span{color:#e8643a}.top-title{color:#9aa5c4;font-size:12px;font-weight:850}
+.top-actions{display:flex;gap:8px;align-items:center}.btn{height:40px;border:1px solid #e8643a;background:#e8643a;color:#fff;border-radius:8px;padding:0 14px;font:inherit;font-size:13px;font-weight:850;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.btn.secondary{background:#252a3a;border-color:#343b52;color:#d9dee8}.btn:hover{filter:brightness(1.08)}.btn:disabled{opacity:.65;cursor:not-allowed}
+.profile{position:relative}.profile-btn{width:38px;height:38px;border-radius:50%;border:1px solid #343b52;background:#252a3a;color:#fff;font-weight:900;cursor:pointer}.profile-menu{display:none;position:absolute;right:0;top:46px;z-index:40;min-width:170px;background:#1c2030;border:1px solid #343b52;border-radius:8px;box-shadow:0 16px 34px rgba(0,0,0,.35);overflow:hidden}.profile-menu.active{display:block}.profile-menu a,.profile-menu button{display:block;width:100%;border:0;background:transparent;color:#d9dee8;text-align:left;text-decoration:none;padding:12px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.profile-menu a:hover,.profile-menu button:hover{background:#252a3a;color:#fff}
+.wrap{width:100%;max-width:calc(100vw - 24px);margin:0 auto;background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;overflow:hidden}
+.head{padding:14px 18px;border-bottom:1px solid #2a2f3a;display:grid;gap:10px}.head h1{font-size:22px;color:#fff;margin-bottom:4px}.head p{color:#9aa5c4;font-size:13px;line-height:1.35}
+.tools{display:grid;grid-template-columns:minmax(260px,1fr) 190px auto;gap:10px;align-items:end}.field{display:grid;gap:6px}.field label{color:#9aa5c4;font-size:11px;font-weight:900;text-transform:uppercase}.field input,.field select,.field textarea{width:100%;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:13px;padding:9px 12px}.field input,.field select{height:40px}.field textarea{min-height:90px;resize:vertical}.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#e8643a}
+.status{padding:8px 18px;color:#9aa5c4;font-size:13px;border-bottom:1px solid #2a2f3a;min-height:36px}.table-wrap{overflow:auto;height:calc(100vh - 252px);min-height:430px}.candidate-table{width:100%;min-width:760px;border-collapse:collapse;table-layout:fixed}.candidate-table th,.candidate-table td{height:42px;padding:8px 10px;border-bottom:1px solid #2a2f3a;border-right:1px solid #2a2f3a;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.candidate-table th{position:sticky;top:0;z-index:2;background:#0d1017;color:#aab3c8;font-size:12px;font-weight:900}.candidate-table tr:hover td{background:#222838}
+.col-name{width:22%}.col-req{width:20%}.col-status{width:120px}.col-action{width:100px}.col-company{width:18%}.col-role{width:18%}.col-exp{width:80px}.col-location{width:120px}.name{font-weight:850;color:#fff}.muted{color:#8b95b5}.pill{display:inline-block;max-width:100%;padding:4px 12px;border-radius:999px;background:#252a3a;border:1px solid #343b52;color:#e0e0e0;overflow:hidden;text-overflow:ellipsis}.mini-btn{height:30px;border-radius:7px;border:1px solid #3a4050;background:#252a3a;color:#e8643a;display:inline-flex;align-items:center;justify-content:center;padding:0 9px;text-decoration:none;font-size:12px;font-weight:850;cursor:pointer}.mini-btn:hover{border-color:#e8643a;color:#fff}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 18px;border-top:1px solid #2a2f3a;background:#1c2030;color:#9aa5c4;font-size:13px}.pager-actions{display:flex;gap:8px}.empty{padding:42px;text-align:center;color:#8b95b5}.toast{position:fixed;right:18px;bottom:18px;z-index:90;display:none;max-width:420px;border-radius:8px;padding:12px 14px;font-size:13px;box-shadow:0 14px 32px rgba(0,0,0,.35)}.toast.active{display:block}.toast.error{background:#3a1d22;color:#ffb4bd;border:1px solid #6b2c36}.toast.success{background:#173421;color:#9af0b4;border:1px solid #2c6b3b}
+.modal{display:none;position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);padding:22px;align-items:center;justify-content:center}.modal.active{display:flex}.modal-card{width:min(620px,100%);max-height:88vh;overflow:auto;background:#1c2030;border:1px solid #343b52;border-radius:10px;box-shadow:0 20px 48px rgba(0,0,0,.48)}.modal-head,.modal-foot{padding:16px 18px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:12px;align-items:center}.modal-foot{border-top:1px solid #2a2f3a;border-bottom:0;justify-content:flex-end}.modal-body{padding:18px;display:grid;gap:14px}.modal h2{font-size:19px;color:#fff}.modal p{color:#9aa5c4;font-size:13px;line-height:1.4}.close{width:32px;height:32px;border-radius:8px;border:1px solid #343b52;background:#252a3a;color:#fff;cursor:pointer;font-size:18px;line-height:1}.modal-status{min-height:18px;color:#9aa5c4;font-size:13px}
+@media(max-width:980px){.candidate-table{min-width:640px}.col-company,.col-role,.col-location{display:none}.col-name{width:220px}.col-req{width:190px}.col-status{width:130px}.col-action{width:100px}}
+@media(max-width:760px){body{padding:8px}.top{align-items:flex-start;max-width:calc(100vw - 16px)}.top-title{display:none}.top-actions{flex-wrap:wrap}.wrap{max-width:calc(100vw - 16px)}.head{padding:12px}.tools{grid-template-columns:1fr}.status{padding:8px 12px}.table-wrap{height:calc(100vh - 286px);min-height:360px}.pager{display:grid;align-items:flex-start;padding:10px 12px}.pager-actions{flex-wrap:wrap}.btn{width:100%}.candidate-table{min-width:560px}.col-exp{display:none}.modal{padding:12px}.modal-head,.modal-foot{padding:14px}.modal-body{padding:14px}.modal-foot{display:grid;grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><div class="brand">HR <span>Guru</span></div><div class="top-title">Client Candidate Review</div></div>
+  <div class="top-actions">
+    <div class="profile">
+      <button class="profile-btn" id="profileBtn" type="button" onclick="toggleProfileMenu()" aria-label="Open profile menu">U</button>
+      <div class="profile-menu" id="profileMenu">
+        <a href="/profile">Profile</a>
+        {% if session.get("impersonation_active") %}<a href="/admin/restore-profile">Return to Admin</a>{% endif %}
+        <button type="button" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+<main class="wrap">
+  <div class="head">
+    <div>
+      <h1>Candidates</h1>
+      <p>Review candidates shared for your company and update their status or feedback.</p>
+    </div>
+    <div class="tools">
+      <div class="field"><label>Search</label><input id="searchInput" placeholder="Name, requirement, company, designation" oninput="scheduleLoad()"></div>
+      <div class="field"><label>Status</label><select id="statusFilter" onchange="reloadFirstPage()"><option value="">All statuses</option></select></div>
+      <button class="btn secondary" type="button" onclick="reloadFirstPage()">Refresh</button>
+    </div>
+  </div>
+  <div class="status" id="statusText">Loading candidates...</div>
+  <div class="table-wrap" id="tableWrap"></div>
+  <div class="pager">
+    <span id="pageInfo">0-0 of 0</span>
+    <div class="pager-actions">
+      <button class="btn secondary" id="prevBtn" type="button" onclick="goPage(page - 1)">Previous</button>
+      <button class="btn secondary" id="nextBtn" type="button" onclick="goPage(page + 1)">Next</button>
+    </div>
+  </div>
+</main>
+<div class="modal" id="reviewModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h2>Update Candidate</h2>
+        <p id="reviewMeta">Select a status and add feedback if needed.</p>
+      </div>
+      <button class="close" type="button" onclick="closeReviewModal()" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>Status</label><select id="reviewStatus"></select></div>
+      <div class="field"><label>Feedback</label><textarea id="reviewFeedback" placeholder="Optional feedback for this candidate"></textarea></div>
+      <div class="modal-status" id="reviewStatusText"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" type="button" onclick="closeReviewModal()">Cancel</button>
+      <button class="btn" id="saveReviewBtn" type="button" onclick="saveReview()">Save</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+let currentUser = {};
+let page = 1;
+const pageSize = 15;
+let totalPages = 1;
+let loadTimer = null;
+let currentRows = [];
+let currentReviewId = null;
+const statuses = ['New','Shortlisted','Screening Pending','Feedback Pending','Offered','On Hold','Joined','Rejected','Duplicate'];
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function toggleProfileMenu(){document.getElementById('profileMenu')?.classList.toggle('active')}
+document.addEventListener('click',event=>{if(!event.target.closest('.profile'))document.getElementById('profileMenu')?.classList.remove('active')});
+function showToast(message,type='error'){const el=document.getElementById('toast');el.textContent=message||'';el.className='toast active '+type;setTimeout(()=>{el.className='toast'},3200)}
+function statusOptions(value){const clean=String(value||'New');const all=statuses.includes(clean)?statuses:[clean,...statuses];return all.map(s=>`<option value="${escapeHtml(s)}" ${s===clean?'selected':''}>${escapeHtml(s)}</option>`).join('')}
+function fillStatusFilter(){document.getElementById('statusFilter').innerHTML='<option value="">All statuses</option>'+statuses.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+function rowHtml(row){
+  return `<tr>
+    <td class="col-name"><span class="name">${escapeHtml(row.candidate_name||'-')}</span><div class="muted">${escapeHtml(String(row.created_at||'').split(' ')[0])}</div></td>
+    <td class="col-req">${escapeHtml(row.requirement_title||'-')}</td>
+    <td class="col-status"><span class="pill">${escapeHtml(row.status||'New')}</span></td>
+    <td class="col-action"><button class="mini-btn" type="button" onclick="openReview(${Number(row.id)})">Update</button></td>
+    <td class="col-company">${escapeHtml(row.current_company||'-')}</td>
+    <td class="col-role">${escapeHtml(row.current_role||'-')}</td>
+    <td class="col-exp">${escapeHtml(row.experience_years||'-')}</td>
+    <td class="col-location">${escapeHtml(row.current_location||'-')}</td>
+  </tr>`;
+}
+function renderRows(rows){
+  if(!rows.length){document.getElementById('tableWrap').innerHTML='<div class="empty">No candidates found.</div>';return}
+  document.getElementById('tableWrap').innerHTML=`<table class="candidate-table"><thead><tr>
+    <th class="col-name">Candidate</th><th class="col-req">Requirement</th><th class="col-status">Status</th><th class="col-action">Action</th>
+    <th class="col-company">Company</th><th class="col-role">Designation</th><th class="col-exp">Experience</th><th class="col-location">Location</th>
+  </tr></thead><tbody>${rows.map(rowHtml).join('')}</tbody></table>`;
+}
+async function loadCandidates(){
+  const status=document.getElementById('statusText');
+  status.textContent='Loading candidates...';
+  try{
+    const params=new URLSearchParams({page:String(page),page_size:String(pageSize)});
+    const q=document.getElementById('searchInput').value.trim();
+    const st=document.getElementById('statusFilter').value;
+    if(q)params.set('q',q);
+    if(st)params.set('status',st);
+    const res=await fetch('/api/client/candidates?'+params.toString());
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'Unable to load candidates.');
+    currentRows=data.rows||[];
+    page=Number(data.page||page||1);
+    totalPages=Math.max(1,Number(data.total_pages||1));
+    const total=Number(data.total||currentRows.length||0);
+    const start=total?((page-1)*pageSize)+1:0;
+    const end=Math.min(total,page*pageSize);
+    status.textContent=currentRows.length?`${currentRows.length} candidates shown`:'No candidates found';
+    document.getElementById('pageInfo').textContent=`${start}-${end} of ${total}`;
+    document.getElementById('prevBtn').disabled=page<=1;
+    document.getElementById('nextBtn').disabled=page>=totalPages;
+    renderRows(currentRows);
+  }catch(e){
+    status.textContent='Unable to load candidates.';
+    document.getElementById('tableWrap').innerHTML='<div class="empty">Unable to load candidates.</div>';
+    showToast(e.message||'Unable to load candidates.');
+  }
+}
+function scheduleLoad(){clearTimeout(loadTimer);loadTimer=setTimeout(()=>{page=1;loadCandidates()},250)}
+function reloadFirstPage(){page=1;loadCandidates()}
+function goPage(nextPage){page=Math.max(1,Math.min(totalPages,nextPage));loadCandidates()}
+function candidateById(id){return currentRows.find(row=>String(row.id)===String(id))}
+function openReview(id){
+  const row=candidateById(id);
+  if(!row)return showToast('Candidate not found.');
+  currentReviewId=id;
+  document.getElementById('reviewMeta').textContent=`${row.candidate_name||'Candidate'} - ${row.requirement_title||'Requirement not set'}`;
+  document.getElementById('reviewStatus').innerHTML=statusOptions(row.status);
+  document.getElementById('reviewFeedback').value=row.candidate_feedback||'';
+  document.getElementById('reviewStatusText').textContent='';
+  document.getElementById('reviewModal').classList.add('active');
+}
+function closeReviewModal(){document.getElementById('reviewModal')?.classList.remove('active');currentReviewId=null}
+async function saveReview(){
+  if(!currentReviewId)return;
+  const btn=document.getElementById('saveReviewBtn');
+  btn.disabled=true;btn.textContent='Saving...';
+  document.getElementById('reviewStatusText').textContent='Saving...';
+  try{
+    const res=await fetch(`/api/client/candidate/${currentReviewId}/status`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({status:document.getElementById('reviewStatus').value,candidate_feedback:document.getElementById('reviewFeedback').value.trim()})
+    });
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'Unable to save candidate status.');
+    closeReviewModal();
+    showToast('Candidate updated.','success');
+    loadCandidates();
+  }catch(e){
+    document.getElementById('reviewStatusText').textContent=e.message||'Unable to save candidate status.';
+    showToast(e.message||'Unable to save candidate status.');
+  }finally{
+    btn.disabled=false;btn.textContent='Save';
+  }
+}
+async function signOut(){await fetch('/api/logout',{method:'POST'});localStorage.removeItem('hrguru_user');window.location.href='/login'}
+document.addEventListener('DOMContentLoaded',async()=>{
+  fillStatusFilter();
+  try{
+    const res=await fetch('/api/me');
+    currentUser=await res.json();
+    const btn=document.getElementById('profileBtn');
+    const name=currentUser.username||currentUser.recruiter_name||'U';
+    if(btn)btn.textContent=String(name).trim().slice(0,1).toUpperCase()||'U';
+  }catch(e){}
+  loadCandidates();
+});
+</script>
+</body>
+</html>

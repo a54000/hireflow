@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Leader Mapping - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7}
+main{min-height:100vh;padding:22px;display:grid;align-items:start}.page{width:min(1080px,100%);margin:0 auto}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.brand{font-size:21px;font-weight:950;color:#fff}.brand span{color:#e8643a}.nav{display:flex;gap:8px;flex-wrap:wrap}.nav a{border:1px solid #343b52;background:#202636;color:#e8ecf7;text-decoration:none;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:900}.nav a:hover{border-color:#34d399}
+.panel{border:1px solid #2a2f3a;background:#171c28;border-radius:10px;padding:18px}.panel h1{font-size:24px;color:#fff;margin-bottom:4px}.panel p{font-size:12px;color:#9aa5c4;line-height:1.4;margin-bottom:14px}.layout{display:grid;grid-template-columns:minmax(250px,.8fr) minmax(0,1.2fr);gap:14px}.field{display:grid;gap:6px;margin-bottom:12px}.field label{font-size:11px;color:#bac4df;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.field input,.field select{width:100%;border:1px solid #343b52;background:#111620;color:#fff;border-radius:8px;padding:11px 12px;font:inherit;font-size:13px;outline:none}.field input:focus,.field select:focus{border-color:#34d399}
+.summary{border:1px solid #343b52;background:#202636;border-radius:8px;padding:12px;min-height:120px}.summary strong{display:block;font-size:15px;color:#fff;margin-bottom:4px}.summary span{display:block;font-size:12px;color:#bac4df;line-height:1.35}.members{border:1px solid #343b52;background:#151923;border-radius:8px;padding:10px;max-height:520px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}.member{display:flex;gap:9px;align-items:flex-start;border:1px solid #2a2f3a;background:#202636;border-radius:8px;padding:9px}.member input{margin-top:3px}.member strong{font-size:13px;color:#fff}.member span{font-size:11px;color:#9aa5c4;line-height:1.35}.empty{border:1px dashed #343b52;border-radius:8px;padding:14px;color:#9aa5c4;font-size:12px}.actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:14px}.btn{border:1px solid #34d399;background:#34d399;color:#101820;border-radius:8px;padding:11px 15px;font:inherit;font-size:13px;font-weight:950;cursor:pointer}.btn.secondary{background:#202636;color:#e8ecf7;border-color:#343b52}.btn:disabled{opacity:.65;cursor:not-allowed}.status{min-height:20px;font-size:12px;color:#9aa5c4;margin-top:10px}.status.error{color:#ffb4bd}.status.ok{color:#61d394}
+@media(max-width:860px){.layout{grid-template-columns:1fr}.members{max-height:none}}
+</style>
+</head>
+<body>
+<main>
+  <section class="page">
+    <div class="top">
+      <div class="brand">HR <span>Guru</span></div>
+      <nav class="nav">
+        <a href="/admin">Dashboard</a>
+        <a href="/admin/team">Access Management</a>
+      </nav>
+    </div>
+    <section class="panel">
+      <h1>Team Leader Mapping</h1>
+      <p>Choose a team leader and select the team members whose candidates should be visible to that leader.</p>
+      <div class="layout">
+        <aside>
+          <div class="field">
+            <label for="leaderSearch">Search Leader</label>
+            <input id="leaderSearch" placeholder="Search by name, email, or role" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="leaderSelect">Team Leader</label>
+            <select id="leaderSelect"><option value="">Loading team...</option></select>
+          </div>
+          <div class="summary" id="leaderSummary">
+            <strong>Select a team leader</strong>
+            <span>Mapped members will appear on the right.</span>
+          </div>
+        </aside>
+        <section>
+          <div class="field">
+            <label for="memberSearch">Team Members</label>
+            <input id="memberSearch" placeholder="Filter team members" autocomplete="off">
+          </div>
+          <div class="members" id="memberList"><div class="empty">Select a team leader to map team members.</div></div>
+        </section>
+      </div>
+      <div class="status" id="status"></div>
+      <div class="actions">
+        <a class="btn secondary" href="/admin">Close</a>
+        <button class="btn" id="saveBtn" type="button">Save Mapping</button>
+      </div>
+    </section>
+  </section>
+</main>
+<script>
+let team=[];let mappingByLeader={};
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function setStatus(message,type=''){const el=document.getElementById('status');el.textContent=message||'';el.className='status '+type;}
+function displayName(row){return row.name || row.email || 'Team Member';}
+function renderLeaders(){
+  const search=document.getElementById('leaderSearch').value.trim().toLowerCase();
+  const selected=document.getElementById('leaderSelect').value;
+  const rows=team.filter(row=>`${row.name||''} ${row.email||''} ${row.role||''}`.toLowerCase().includes(search));
+  document.getElementById('leaderSelect').innerHTML='<option value="">Select Team Leader...</option>'+rows.map(row=>`<option value="${row.id}">${escapeHtml(displayName(row))}${row.email?' - '+escapeHtml(row.email):''}${row.role?' - '+escapeHtml(row.role):''}</option>`).join('');
+  if(selected)document.getElementById('leaderSelect').value=selected;
+  renderMembers();
+}
+function renderMembers(){
+  const leaderId=document.getElementById('leaderSelect').value;
+  const leader=team.find(row=>String(row.id)===String(leaderId));
+  const list=document.getElementById('memberList');
+  const summary=document.getElementById('leaderSummary');
+  setStatus('');
+  if(!leader){
+    summary.innerHTML='<strong>Select a team leader</strong><span>Mapped members will appear on the right.</span>';
+    list.innerHTML='<div class="empty">Select a team leader to map team members.</div>';
+    return;
+  }
+  const selected=new Set((mappingByLeader[String(leaderId)]||[]).map(row=>String(row.id)));
+  const search=document.getElementById('memberSearch').value.trim().toLowerCase();
+  const rows=team.filter(row=>String(row.id)!==String(leaderId)).filter(row=>`${row.name||''} ${row.email||''} ${row.role||''}`.toLowerCase().includes(search));
+  summary.innerHTML=`<strong>${escapeHtml(displayName(leader))}</strong><span>${escapeHtml(leader.email || 'No email')}</span><span>${selected.size} mapped team member${selected.size===1?'':'s'}</span>`;
+  list.innerHTML=rows.map(row=>`
+    <label class="member">
+      <input type="checkbox" class="member-check" value="${row.id}" ${selected.has(String(row.id))?'checked':''}>
+      <span><strong>${escapeHtml(displayName(row))}</strong><br>${escapeHtml(row.email || 'No email')}${row.role ? '<br>'+escapeHtml(row.role) : ''}</span>
+    </label>
+  `).join('') || '<div class="empty">No matching team members.</div>';
+}
+async function loadData(){
+  try{
+    const [teamRes,mapRes]=await Promise.all([fetch('/api/team'),fetch('/api/team-leader-mappings')]);
+    const teamData=await teamRes.json().catch(()=>[]);
+    const mapData=await mapRes.json().catch(()=>[]);
+    if(!teamRes.ok||!Array.isArray(teamData))throw new Error(teamData.error||'Unable to load team.');
+    if(!mapRes.ok||!Array.isArray(mapData))throw new Error(mapData.error||'Unable to load mappings.');
+    team=teamData;
+    mappingByLeader={};
+    mapData.forEach(item=>{mappingByLeader[String(item.leader_team_member_id)]=item.members||[];});
+    renderLeaders();
+  }catch(e){
+    document.getElementById('leaderSelect').innerHTML='<option value="">Unable to load team.</option>';
+    document.getElementById('memberList').innerHTML='<div class="empty">Unable to load mapping data.</div>';
+    setStatus(e.message||'Unable to load mapping data.','error');
+  }
+}
+async function saveMapping(){
+  const leaderId=document.getElementById('leaderSelect').value;
+  if(!leaderId){setStatus('Select a team leader first.','error');return;}
+  const memberIds=Array.from(document.querySelectorAll('.member-check:checked')).map(cb=>Number(cb.value));
+  const btn=document.getElementById('saveBtn');
+  btn.disabled=true;btn.textContent='Saving...';setStatus('Saving mapping...');
+  try{
+    const res=await fetch(`/api/team-leader/${leaderId}/members`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({member_ids:memberIds})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'Unable to save mapping.');
+    mappingByLeader[String(leaderId)]=memberIds.map(id=>team.find(row=>Number(row.id)===id)).filter(Boolean);
+    renderMembers();
+    setStatus(`Saved ${memberIds.length} mapped team member${memberIds.length===1?'':'s'}.`,'ok');
+  }catch(e){
+    setStatus(e.message||'Unable to save mapping.','error');
+  }finally{
+    btn.disabled=false;btn.textContent='Save Mapping';
+  }
+}
+document.getElementById('leaderSearch').addEventListener('input',renderLeaders);
+document.getElementById('leaderSelect').addEventListener('change',renderMembers);
+document.getElementById('memberSearch').addEventListener('input',renderMembers);
+document.getElementById('saveBtn').addEventListener('click',saveMapping);
+document.addEventListener('DOMContentLoaded',loadData);
+</script>
+</body>
+</html>

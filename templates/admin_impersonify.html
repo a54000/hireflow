@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Impersonify User - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7}
+main{min-height:100vh;padding:22px;display:grid;align-items:center}
+.page{width:min(880px,100%);margin:0 auto}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.brand{font-size:21px;font-weight:950;color:#fff}.brand span{color:#e8643a}.nav{display:flex;gap:8px;flex-wrap:wrap}.nav a{border:1px solid #343b52;background:#202636;color:#e8ecf7;text-decoration:none;border-radius:8px;padding:9px 12px;font-size:12px;font-weight:900}.nav a:hover{border-color:#e8643a}
+.panel{border:1px solid #2a2f3a;background:#171c28;border-radius:10px;padding:18px}.panel h1{font-size:24px;color:#fff;margin-bottom:4px}.panel p{font-size:12px;color:#9aa5c4;line-height:1.4;margin-bottom:14px}.grid{display:grid;gap:12px}.field{display:grid;gap:6px}.field label{font-size:11px;color:#bac4df;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.field input,.field select{width:100%;border:1px solid #343b52;background:#111620;color:#fff;border-radius:8px;padding:11px 12px;font:inherit;font-size:13px;outline:none}.field input:focus,.field select:focus{border-color:#f59e0b}
+.profile-card{border:1px solid #343b52;background:#202636;border-radius:8px;padding:12px;display:none}.profile-card.active{display:grid;gap:4px}.profile-card strong{font-size:16px;color:#fff}.profile-card span{font-size:12px;color:#bac4df}.actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:14px}.btn{border:1px solid #f59e0b;background:#f59e0b;color:#111620;border-radius:8px;padding:11px 15px;font:inherit;font-size:13px;font-weight:950;cursor:pointer}.btn.secondary{background:#202636;color:#e8ecf7;border-color:#343b52}.btn:disabled{opacity:.65;cursor:not-allowed}.status{min-height:20px;font-size:12px;color:#9aa5c4;margin-top:10px}.status.error{color:#ffb4bd}.status.ok{color:#61d394}
+</style>
+</head>
+<body>
+<main>
+  <section class="page">
+    <div class="top">
+      <div class="brand">HR <span>Guru</span></div>
+      <nav class="nav">
+        <a href="/admin">Dashboard</a>
+        <a href="/admin/users">User Management</a>
+      </nav>
+    </div>
+    <section class="panel">
+      <h1>Impersonify User</h1>
+      <p>Switch into a team member profile for support and troubleshooting. You can return to Admin from the profile menu or the Return to Admin link shown on user pages.</p>
+      <div class="grid">
+        <div class="field">
+          <label for="profileSearch">Search Profile</label>
+          <input id="profileSearch" placeholder="Search by name, email, or role" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="profileSelect">Profile</label>
+          <select id="profileSelect"><option value="">Loading profiles...</option></select>
+        </div>
+        <div class="profile-card" id="selectedProfile"></div>
+      </div>
+      <div class="status" id="status"></div>
+      <div class="actions">
+        <a class="btn secondary" href="/admin">Cancel</a>
+        <button class="btn" id="switchBtn" type="button">Switch Profile</button>
+      </div>
+    </section>
+  </section>
+</main>
+<script>
+let profiles=[];
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function setStatus(message,type=''){const el=document.getElementById('status');el.textContent=message||'';el.className='status '+type;}
+function optionLabel(row){return `${row.name || row.email || 'Team Member'}${row.email ? ' - '+row.email : ''}${row.role ? ' - '+row.role : ''}`;}
+function renderOptions(){
+  const search=document.getElementById('profileSearch').value.trim().toLowerCase();
+  const select=document.getElementById('profileSelect');
+  const filtered=profiles.filter(row=>`${row.name||''} ${row.email||''} ${row.role||''}`.toLowerCase().includes(search));
+  select.innerHTML='<option value="">Select profile...</option>'+filtered.map(row=>`<option value="${row.id}">${escapeHtml(optionLabel(row))}</option>`).join('');
+  renderSelected();
+}
+function renderSelected(){
+  const selectedId=Number(document.getElementById('profileSelect').value||0);
+  const row=profiles.find(item=>Number(item.id)===selectedId);
+  const card=document.getElementById('selectedProfile');
+  if(!row){card.classList.remove('active');card.innerHTML='';return;}
+  card.classList.add('active');
+  card.innerHTML=`<strong>${escapeHtml(row.name || 'Team Member')}</strong><span>${escapeHtml(row.email || 'No email')}</span><span>${escapeHtml(row.role || 'No role')}</span>`;
+}
+async function loadProfiles(){
+  try{
+    const res=await fetch('/api/team');
+    const data=await res.json().catch(()=>[]);
+    if(!res.ok||!Array.isArray(data))throw new Error(data.error||'Unable to load profiles.');
+    profiles=data;
+    renderOptions();
+    setStatus('');
+  }catch(e){
+    document.getElementById('profileSelect').innerHTML='<option value="">Unable to load profiles.</option>';
+    setStatus(e.message||'Unable to load profiles.','error');
+  }
+}
+async function switchProfile(){
+  const teamMemberId=Number(document.getElementById('profileSelect').value||0);
+  if(!teamMemberId){setStatus('Please select a profile first.','error');return;}
+  const btn=document.getElementById('switchBtn');
+  btn.disabled=true;btn.textContent='Switching...';setStatus('');
+  try{
+    const res=await fetch('/api/admin/switch-profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({team_member_id:teamMemberId})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'Unable to switch profile.');
+    setStatus('Profile switched. Opening user dashboard...','ok');
+    window.location.href='/';
+  }catch(e){
+    setStatus(e.message||'Unable to switch profile.','error');
+  }finally{
+    btn.disabled=false;btn.textContent='Switch Profile';
+  }
+}
+document.getElementById('profileSearch').addEventListener('input',renderOptions);
+document.getElementById('profileSelect').addEventListener('change',renderSelected);
+document.getElementById('switchBtn').addEventListener('click',switchProfile);
+document.addEventListener('DOMContentLoaded',loadProfiles);
+</script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HR Guru ATS - User Guide</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#d9dee8;line-height:1.6}
+    .shell{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+    .side{background:#1c2030;border-right:1px solid #2a2f3a;padding:24px;position:sticky;top:0;height:100vh;overflow:auto}
+    .logo{color:#e8643a;font-size:24px;font-weight:800;margin-bottom:6px}.logo span{color:#fff}
+    .subtitle{color:#6b7494;font-size:12px;margin-bottom:26px}
+    .side a{display:block;color:#8892b0;text-decoration:none;padding:9px 10px;border-radius:8px;font-size:13px;margin-bottom:4px}
+    .side a:hover{background:#252a3a;color:#fff}
+    .main{padding:32px 42px;max-width:1120px}
+    .back{color:#e8643a;text-decoration:none;font-size:13px;font-weight:700}
+    h1{font-size:30px;color:#fff;margin:18px 0 8px}
+    .lead{color:#8892b0;max-width:860px;margin-bottom:26px}
+    h2{font-size:20px;color:#fff;margin:30px 0 12px;padding-top:14px;border-top:1px solid #2a2f3a}
+    h3{font-size:15px;color:#e8643a;margin:18px 0 8px}
+    p{margin-bottom:12px;color:#cfd5df}
+    ol,ul{margin:0 0 14px 22px}
+    li{margin-bottom:8px}
+    .card{background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;padding:16px;margin:14px 0}
+    .card-title{color:#fff;font-weight:800;margin-bottom:6px}
+    .note{background:#252a3a;border:1px solid #343b52;border-radius:10px;padding:12px 14px;color:#cfd5df;margin:12px 0}
+    table{width:100%;border-collapse:separate;border-spacing:0;background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;overflow:hidden;margin:12px 0 20px}
+    th,td{padding:11px 13px;border-bottom:1px solid #2a2f3a;text-align:left;font-size:13px;vertical-align:top}
+    th{background:#141824;color:#aab3c8;font-size:12px;font-weight:800;text-transform:none;letter-spacing:0}
+    tr:last-child td{border-bottom:none}
+    code{background:#252a3a;color:#fff;padding:2px 6px;border-radius:5px}
+    .checklist li{list-style:disc}
+    @media(max-width:820px){.shell{grid-template-columns:1fr}.side{position:static;height:auto}.main{padding:24px}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="side">
+      <div class="logo">HR <span>Guru</span></div>
+      <div class="subtitle">ATS User Guide</div>
+      <a href="/">Back to ATS</a>
+      <a href="#quick-start">Quick Start</a>
+      <a href="#requirements">Add New Requirement</a>
+      <a href="#single-candidate">Add Single Candidate</a>
+      <a href="#bulk-upload">Bulk Candidate Upload</a>
+      <a href="#google-sheet-upload">Google Sheet Upload</a>
+      <a href="#daily-reporting">Daily Reporting</a>
+      <a href="#power-search">Power Search</a>
+    </aside>
+    <main class="main">
+      <a class="back" href="/">Back to HR Guru ATS</a>
+      <h1>HR Guru ATS User Guide</h1>
+      <p class="lead">Use this guide for day-to-day recruiter workflows: creating clean requirements, adding candidates, uploading in bulk, sending daily reports, and searching the internal database.</p>
+
+      <h2 id="quick-start">Quick Start</h2>
+      <ol>
+        <li>Start from the Dashboard action boxes.</li>
+        <li>Create or select the correct requirement before adding candidates.</li>
+        <li>Check candidate details after parsing, especially email, phone, skills, experience, notice period, and requirement mapping.</li>
+        <li>Use Daily Reporting to share selected candidates for the current day or previous days.</li>
+        <li>Use Power Search when you need to find candidates already in the database.</li>
+      </ol>
+
+      <h2 id="requirements">Add New Requirement</h2>
+      <ol>
+        <li>From Dashboard, click <strong>Add Requirement</strong>.</li>
+        <li>Select the correct client.</li>
+        <li>Enter a clean requirement title using the naming standard.</li>
+        <li>Fill Location, Experience, and Degree / Education Criteria. Location is mandatory.</li>
+        <li>Add detailed JD text or attach the JD file. One of these is mandatory.</li>
+        <li>Click <strong>Parse JD</strong> if you want the system to fill skills from the JD.</li>
+        <li>Primary Skills is optional, but recommended when the JD parser cannot identify skills clearly.</li>
+        <li>Click <strong>Save Requirement</strong>.</li>
+      </ol>
+
+      <h3>Requirement naming standard</h3>
+      <table>
+        <tr><th>Rule</th><th>Example</th></tr>
+        <tr><td>Use role name only.</td><td><code>Java Developer</code>, <code>Finance Analyst</code>, <code>Data Engineer</code></td></tr>
+        <tr><td>Do not include client name in the title.</td><td>Use Client field for <code>Taggd-Siemens</code>; title should be <code>Java Developer</code>.</td></tr>
+        <tr><td>Do not include numbers.</td><td>Use <code>Java Developer</code>, not <code>Java Developer 2</code> or <code>Java 5 Developer</code>.</td></tr>
+        <tr><td>Do not use generic words.</td><td>Avoid <code>JD</code>, <code>Requirement</code>, <code>Urgent</code>, <code>Opening</code>, <code>Hiring</code>.</td></tr>
+        <tr><td>Keep spelling and punctuation clean.</td><td>Use common separators only, such as <code>-</code>, <code>/</code>, <code>&</code>, <code>+</code>, <code>#</code>.</td></tr>
+      </table>
+
+      <h2 id="single-candidate">Add Single Candidate</h2>
+      <ol>
+        <li>From Dashboard, click <strong>Add Candidate</strong>.</li>
+        <li>Upload the candidate CV and parse it.</li>
+        <li>Select the requirement before saving the candidate.</li>
+        <li>Review parsed details: candidate name, email, phone, current company, designation, total experience, current location, preferred location, notice period, salary, and skills.</li>
+        <li>Correct any missing or wrongly parsed information.</li>
+        <li>Save the candidate.</li>
+      </ol>
+      <h3>Things to check before saving</h3>
+      <ul class="checklist">
+        <li>Email and phone number are correct.</li>
+        <li>Requirement and client mapping are correct.</li>
+        <li>Primary skills match the requirement.</li>
+        <li>Experience and notice period are realistic.</li>
+        <li>CV is attached and visible.</li>
+      </ul>
+
+      <h2 id="bulk-upload">Bulk Candidate Upload</h2>
+      <h3>Excel + CV upload</h3>
+      <ol>
+        <li>From Dashboard, click <strong>Bulk Candidate Upload</strong>.</li>
+        <li>Create the Requirement first from <strong>Add Requirement</strong>, including the mandatory <strong>Taggd Recruiter Name</strong>.</li>
+        <li>Download or use the approved Excel template.</li>
+        <li>Fill candidate details carefully in the template.</li>
+        <li>Ensure Requirement title and Client in the spreadsheet match an existing Requirement.</li>
+        <li>Keep CV files ready and ensure filenames match the template references where required.</li>
+        <li>Upload the Excel file and CVs.</li>
+        <li>Review the upload result for skipped rows, duplicates, or missing information.</li>
+      </ol>
+      <div class="note">Bulk upload does not create Requirements. If a Requirement is missing, that row is skipped with a Requirement not found reason. Taggd Recruiter is selected on the Requirement, not in the candidate spreadsheet.</div>
+
+      <h3 id="google-sheet-upload">Google Sheet import</h3>
+      <p>Use Google Sheet import when a team maintains candidate data in shared sheets. The ATS reads the selected tabs, maps sheet headings to ATS candidate fields, and imports candidates without CV files. Position Title must match an existing Requirement.</p>
+      <ol>
+        <li>From Dashboard, click <strong>Bulk Candidate Upload</strong>.</li>
+        <li>Create each Requirement first from <strong>Add Requirement</strong>, including <strong>Taggd Recruiter Name</strong>.</li>
+        <li>Select <strong>Google Sheet Import</strong>.</li>
+        <li>Paste the Google Sheet URL.</li>
+        <li>Enter the tabs to import, such as <code>May, April</code>. Leave blank only when you intentionally want all tabs.</li>
+        <li>Enter <strong>Default Client</strong> if the sheet does not have a Client column.</li>
+        <li>Keep <strong>Only read new rows since last import</strong> checked for regular imports.</li>
+        <li>Click <strong>Preview</strong>.</li>
+        <li>Review <strong>Column Mapping</strong>. Change any incorrect mapping before import.</li>
+        <li>After changing a mapping, click <strong>Preview</strong> again.</li>
+        <li>Click <strong>Import Ready Candidates</strong>.</li>
+      </ol>
+      <table>
+        <tr><th>Sheet heading</th><th>ATS mapping / behavior</th></tr>
+        <tr><td><code>Position Title</code></td><td>Used to find an existing Requirement. If the Requirement does not exist, the row is skipped until the Requirement is created.</td></tr>
+        <tr><td><code>Client</code> or <code>Client Name</code></td><td>Used for requirement/client mapping.</td></tr>
+        <tr><td><code>Status</code></td><td>Imported as candidate status.</td></tr>
+        <tr><td><code>Added Date</code></td><td>Imported as candidate added date.</td></tr>
+        <tr><td><code>Industry/Domain</code></td><td>Imported into candidate Industry / Domain.</td></tr>
+        <tr><td><code>Sourcer/Recruiter Name</code></td><td>Imported as Sourcer / Recruiter Name.</td></tr>
+      </table>
+      <h3>Smart new-row import</h3>
+      <ul class="checklist">
+        <li>The first import reads the selected sheet tabs normally.</li>
+        <li>After each successful batch, ATS remembers the last processed row number for each tab.</li>
+        <li>Next time, ATS reads only rows added after the last processed row, which is faster for large sheets.</li>
+        <li>If the import stops midway, click <strong>Import Ready Candidates</strong> again. Already imported rows from that batch are skipped.</li>
+        <li>Turn off <strong>Only read new rows since last import</strong> only when you need a full re-scan, such as when old rows were edited or rows were inserted in the middle.</li>
+      </ul>
+      <div class="note">Best practice: add new records at the bottom of the Google Sheet. Avoid inserting candidate rows above already imported rows unless you plan to run a full re-scan.</div>
+
+      <h2 id="daily-reporting">Daily Reporting</h2>
+      <ol>
+        <li>From Dashboard, click <strong>Daily Reporting</strong>.</li>
+        <li>Click <strong>Export</strong> to download selected candidates locally.</li>
+        <li>The export downloads a zipped file containing the Excel report and the respective CVs.</li>
+        <li>Click <strong>Send Report</strong> to email selected candidates to the Taggd team.</li>
+      </ol>
+      <h3>Daily reporting checks</h3>
+      <ul class="checklist">
+        <li>Only selected candidates are exported or emailed.</li>
+        <li>Use the correct date when sending reports for previous days.</li>
+        <li>Confirm candidate status and requirement before sending.</li>
+        <li>Check that CV links/files are available for selected candidates.</li>
+      </ul>
+
+      <h2 id="power-search">Power Search</h2>
+      <ol>
+        <li>Open <strong>Power Search</strong> from Dashboard or the left menu.</li>
+        <li>Enter job title, skills/keywords, years of experience, and location.</li>
+        <li>Use focused keywords, for example <code>Java Spring SQL</code> or <code>Finance SOX Audit</code>.</li>
+        <li>Run the search and review matching candidates from the internal database.</li>
+        <li>Open candidate details before shortlisting or contacting.</li>
+      </ol>
+      <div class="note">Power Search works best when you combine role, skills, experience, and location. Avoid very broad searches unless you want a large result set.</div>
+    </main>
+  </div>
+</body>
+</html>

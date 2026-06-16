@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Requirements - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7;padding:10px 12px 16px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 auto 10px;max-width:calc(100vw - 24px)}.brand{font-size:20px;font-weight:900;color:#fff}.brand span{color:#e8643a}.top-title{color:#9aa5c4;font-size:12px;font-weight:850}
+.top-actions{display:flex;gap:8px;align-items:center}.link-btn,.btn{height:40px;border:1px solid #e8643a;background:#e8643a;color:#fff;border-radius:8px;padding:0 14px;font:inherit;font-size:13px;font-weight:850;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.link-btn.secondary,.btn.secondary{background:#252a3a;border-color:#343b52;color:#d9dee8}.btn.ghost{background:transparent;border-color:#343b52;color:#c9d2e8}.link-btn:hover,.btn:hover{filter:brightness(1.08)}.btn:disabled{opacity:.6;cursor:not-allowed}
+.profile{position:relative}.profile-btn{width:38px;height:38px;border-radius:50%;border:1px solid #343b52;background:#252a3a;color:#fff;font-weight:900;cursor:pointer}.profile-menu{display:none;position:absolute;right:0;top:46px;z-index:40;min-width:170px;background:#1c2030;border:1px solid #343b52;border-radius:8px;box-shadow:0 16px 34px rgba(0,0,0,.35);overflow:hidden}.profile-menu.active{display:block}.profile-menu a,.profile-menu button{display:block;width:100%;border:0;background:transparent;color:#d9dee8;text-align:left;text-decoration:none;padding:12px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.profile-menu a:hover,.profile-menu button:hover{background:#252a3a;color:#fff}
+.wrap{width:100%;max-width:calc(100vw - 24px);margin:0 auto;background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;overflow:hidden}.head{padding:14px 18px;border-bottom:1px solid #2a2f3a;display:grid;gap:10px}.head-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.head h1{font-size:22px;color:#fff;margin-bottom:4px}.head p,.muted{color:#9aa5c4;font-size:13px;line-height:1.35}
+.tools{display:grid;grid-template-columns:minmax(260px,1fr) 170px auto;gap:10px;align-items:end}.field{display:grid;gap:6px;min-width:0}.field label{color:#9aa5c4;font-size:11px;font-weight:900;text-transform:uppercase}.field input,.field select,.field textarea{width:100%;height:40px;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:13px;padding:0 12px}.field textarea{height:auto;min-height:150px;padding:10px 12px;resize:vertical}.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#e8643a}
+.status{padding:8px 18px;color:#9aa5c4;font-size:13px;border-bottom:1px solid #2a2f3a;min-height:36px}.table-wrap{overflow:auto;height:calc(100vh - 252px);min-height:430px}.req-table{width:100%;min-width:980px;border-collapse:collapse;table-layout:fixed}.req-table th,.req-table td{height:42px;padding:8px 10px;border-bottom:1px solid #2a2f3a;border-right:1px solid #2a2f3a;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.req-table th{position:sticky;top:0;z-index:2;background:#0d1017;color:#aab3c8;font-size:12px;font-weight:900}.req-table tr:hover td{background:#222838}
+.col-reqid{width:120px}.col-title{width:19%}.col-client{width:12%}.col-taggd{width:13%}.col-status{width:105px}.col-sourcer{width:11%}.col-recruiter{width:11%}.col-jd{width:76px;text-align:center}.col-actions{width:84px}.col-desc{width:18%}.title{font-weight:850;color:#fff}.pill{display:inline-block;max-width:100%;padding:4px 12px;border-radius:999px;background:#252a3a;border:1px solid #343b52;color:#e0e0e0;overflow:hidden;text-overflow:ellipsis}.req-id{font-weight:900;color:#8fd3ff}.jd-link,.mini-btn{height:30px;border-radius:7px;border:1px solid #3a4050;background:#252a3a;color:#e8643a;display:inline-flex;align-items:center;justify-content:center;padding:0 9px;text-decoration:none;font-size:12px;font-weight:850;cursor:pointer}.jd-link:hover,.mini-btn:hover{border-color:#e8643a;color:#fff}.empty{padding:42px;text-align:center;color:#8b95b5}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 18px;border-top:1px solid #2a2f3a;background:#1c2030;color:#9aa5c4;font-size:13px}.pager-actions{display:flex;gap:8px}
+.modal{display:none;position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);padding:22px;align-items:center;justify-content:center}.modal.active{display:flex}.modal-card{width:min(820px,100%);max-height:88vh;overflow:auto;background:#1c2030;border:1px solid #343b52;border-radius:10px;box-shadow:0 20px 48px rgba(0,0,0,.48)}.modal-head,.modal-foot{padding:16px 18px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:12px;align-items:center}.modal-foot{border-top:1px solid #2a2f3a;border-bottom:0;justify-content:flex-end}.modal-body{padding:18px;display:grid;gap:14px}.modal h2{font-size:19px;color:#fff}.modal p{color:#9aa5c4;font-size:13px;line-height:1.4}.close{width:32px;height:32px;border-radius:8px;border:1px solid #343b52;background:#252a3a;color:#fff;cursor:pointer;font-size:18px;line-height:1}.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.modal-grid .full{grid-column:1/-1}.modal-status{min-height:18px;color:#9aa5c4;font-size:13px}.modal-status.error{color:#ffb4bd}.toast{position:fixed;right:18px;bottom:18px;z-index:90;display:none;max-width:420px;border-radius:8px;padding:12px 14px;font-size:13px;box-shadow:0 14px 32px rgba(0,0,0,.35)}.toast.active{display:block}.toast.error{background:#3a1d22;color:#ffb4bd;border:1px solid #6b2c36}.toast.success{background:#173421;color:#9af0b4;border:1px solid #2c6b3b}
+@media(max-width:900px){.req-table{min-width:860px}.col-sourcer,.col-recruiter{display:none}.col-title{width:26%}.col-client{width:18%}.col-desc{width:28%}}
+@media(max-width:760px){body{padding:8px}.top,.head-row{align-items:flex-start}.top{max-width:calc(100vw - 16px)}.wrap{max-width:calc(100vw - 16px)}.top-title{display:none}.top-actions{flex-wrap:wrap}.head{padding:12px}.head-row,.pager{display:grid}.tools{grid-template-columns:1fr}.status{padding:8px 12px}.table-wrap{height:calc(100vh - 286px);min-height:360px}.pager{align-items:flex-start;padding:10px 12px}.pager-actions{flex-wrap:wrap}.modal{padding:12px}.modal-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><div class="brand">HR <span>Guru</span></div><div class="top-title">Requirement List</div></div>
+  <div class="top-actions">
+    <a class="link-btn secondary" href="/">Dashboard</a>
+    <a class="link-btn" href="/add-requirement">Add Requirement</a>
+    <div class="profile">
+      <button class="profile-btn" type="button" onclick="toggleProfileMenu()" aria-label="Open profile menu">U</button>
+      <div class="profile-menu" id="profileMenu">
+        <a href="/profile">Profile</a>
+        {% if session.get("impersonation_active") %}<a href="/admin/restore-profile">Return to Admin</a>{% endif %}
+        <button type="button" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+<main class="wrap">
+  <div class="head">
+    <div class="head-row">
+      <div>
+        <h1>Requirements</h1>
+        <p>Review mapped requirements and open JD files without loading the full dashboard.</p>
+      </div>
+    </div>
+    <div class="tools">
+      <div class="field"><label>Search</label><input id="searchInput" placeholder="Requirement, requisition ID, client, or ATS ID" oninput="scheduleLoad()"></div>
+      <div class="field"><label>Status</label><select id="statusFilter" onchange="reloadFirstPage()"><option value="">All Statuses</option><option>Open</option><option>In Progress</option><option>Closed</option><option>New</option></select></div>
+      <button class="btn ghost" type="button" onclick="reloadFirstPage()">Refresh</button>
+    </div>
+  </div>
+  <div class="status" id="statusText">Loading requirements...</div>
+  <div class="table-wrap" id="tableWrap"></div>
+  <div class="pager">
+    <span id="pageInfo">0-0 of 0</span>
+    <div class="pager-actions">
+      <button class="btn secondary" id="prevBtn" type="button" onclick="goPage(page - 1)">Previous</button>
+      <button class="btn secondary" id="nextBtn" type="button" onclick="goPage(page + 1)">Next</button>
+    </div>
+  </div>
+</main>
+<div class="modal" id="editModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h2>Edit Requirement</h2>
+        <p id="editMeta">Update requirement details and Taggd recruiter mapping.</p>
+      </div>
+      <button class="close" type="button" onclick="closeEditModal()" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-grid">
+        <div class="field"><label>Requirement Title</label><input id="editTitle"></div>
+        <div class="field"><label>Requisition ID</label><input id="editRequisitionId" placeholder="Optional requisition ID"></div>
+        <div class="field"><label>Client</label><select id="editClient" onchange="loadEditTaggdRecruiters()"></select></div>
+        <div class="field"><label>Taggd Recruiter</label><select id="editTaggdRecruiter"></select></div>
+        <div class="field"><label>Status</label><select id="editStatusValue"><option>New</option><option>Open</option><option>In Progress</option><option>Closed</option></select></div>
+        <div class="field"><label>Location</label><input id="editLocation" placeholder="Pune, Bangalore, Remote"></div>
+        <div class="field"><label>Daily Target</label><input id="editDailyTarget" type="number" min="1"></div>
+        <div class="field full"><label>Description / JD Text</label><textarea id="editDescription"></textarea></div>
+      </div>
+      <div class="modal-status" id="editStatusText"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" type="button" onclick="closeEditModal()">Cancel</button>
+      <button class="btn" type="button" id="saveEditBtn" onclick="saveRequirementEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+let page = 1;
+const pageSize = 15;
+let totalPages = 1;
+let loadTimer = null;
+let currentRows = [];
+let currentEditRequirementId = null;
+let clientRows = [];
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function toggleProfileMenu(){document.getElementById('profileMenu')?.classList.toggle('active');}
+document.addEventListener('click',e=>{if(!e.target.closest('.profile'))document.getElementById('profileMenu')?.classList.remove('active');});
+function showToast(message,type='error'){const el=document.getElementById('toast');el.textContent=message||'';el.className='toast active '+type;setTimeout(()=>{el.className='toast';},3200);}
+function setModalStatus(message,type='info'){editStatusText.textContent=message||'';editStatusText.className='modal-status'+(type==='error'?' error':'');}
+function rowHtml(row){
+  const jd = row.jd_url || '';
+  return `<tr>
+    <td class="col-reqid"><span class="req-id">${escapeHtml(row.requisition_id || '-')}</span></td>
+    <td class="col-title"><span class="title">${escapeHtml(row.title || '-')}</span></td>
+    <td class="col-client"><span class="pill">${escapeHtml(row.client_name || '-')}</span></td>
+    <td class="col-taggd">${escapeHtml(row.taggd_recruiter_name || '-')}</td>
+    <td class="col-status">${escapeHtml(row.status || 'Open')}</td>
+    <td class="col-sourcer">${escapeHtml(row.sourcer_name || '-')}</td>
+    <td class="col-recruiter">${escapeHtml(row.recruiter_name || '-')}</td>
+    <td class="col-jd">${jd ? `<a class="jd-link" href="${escapeHtml(jd)}" target="_blank" rel="noopener">JD</a>` : '-'}</td>
+    <td class="col-actions"><button class="mini-btn" type="button" onclick="openRequirementEdit(${Number(row.id)})">Edit</button></td>
+    <td class="col-desc muted">${escapeHtml(row.description || '-')}</td>
+  </tr>`;
+}
+function renderRows(rows){
+  if(!rows.length){tableWrap.innerHTML='<div class="empty">No requirements found.</div>';return;}
+  tableWrap.innerHTML=`<table class="req-table"><thead><tr>
+    <th class="col-reqid">Req ID</th><th class="col-title">Requirement</th><th class="col-client">Client</th><th class="col-taggd">Taggd Recruiter</th><th class="col-status">Status</th>
+    <th class="col-sourcer">Sourcer</th><th class="col-recruiter">Recruiter</th><th class="col-jd">JD</th><th class="col-actions">Action</th><th class="col-desc">Description</th>
+  </tr></thead><tbody>${rows.map(rowHtml).join('')}</tbody></table>`;
+}
+function buildParams(){
+  const params = new URLSearchParams({page:String(page), page_size:String(pageSize)});
+  const q = searchInput.value.trim();
+  const status = statusFilter.value.trim();
+  if(q) params.set('q', q);
+  if(status) params.set('status', status);
+  return params;
+}
+async function loadRequirements(){
+  statusText.textContent='Loading requirements...';
+  try{
+    const res = await fetch('/api/requirements?' + buildParams().toString());
+    const payload = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(payload.error || 'Unable to load requirements.');
+    const rows = payload.rows || (Array.isArray(payload) ? payload : []);
+    currentRows = rows;
+    page = Number(payload.page || page || 1);
+    totalPages = Math.max(1, Number(payload.total_pages || 1));
+    const total = Number(payload.total || rows.length || 0);
+    const start = total ? ((page - 1) * pageSize) + 1 : 0;
+    const end = Math.min(total, page * pageSize);
+    statusText.textContent = rows.length ? `${rows.length} requirements shown` : 'No requirements found';
+    pageInfo.textContent = `${start}-${end} of ${total}`;
+    prevBtn.disabled = page <= 1;
+    nextBtn.disabled = page >= totalPages;
+    renderRows(rows);
+  }catch(e){
+    statusText.textContent='Unable to load requirements.';
+    tableWrap.innerHTML='<div class="empty">Unable to load requirements.</div>';
+  }
+}
+function scheduleLoad(){clearTimeout(loadTimer);loadTimer=setTimeout(()=>{page=1;loadRequirements();},250);}
+function reloadFirstPage(){page=1;loadRequirements();}
+function goPage(nextPage){page=Math.max(1,Math.min(totalPages,nextPage));loadRequirements();}
+function clientOptions(selected=''){
+  return '<option value="">Select client...</option>'+clientRows.map(c=>`<option value="${escapeHtml(c.client_name||'')}" ${(c.client_name||'')===selected?'selected':''}>${escapeHtml(c.client_name||'')}</option>`).join('');
+}
+async function loadClients(){
+  try{
+    const res=await fetch('/api/clients');
+    const data=await res.json().catch(()=>[]);
+    clientRows=Array.isArray(data)?data:[];
+  }catch(e){
+    clientRows=[];
+  }
+}
+async function loadEditTaggdRecruiters(selectedId=''){
+  const client=editClient.value.trim();
+  if(!client){
+    editTaggdRecruiter.innerHTML='<option value="">Select client first...</option>';
+    return;
+  }
+  editTaggdRecruiter.innerHTML='<option value="">Loading Taggd recruiters...</option>';
+  try{
+    const res=await fetch('/api/taggd-recruiters?client_name='+encodeURIComponent(client));
+    const rows=await res.json().catch(()=>[]);
+    if(!res.ok||rows.error)throw new Error(rows.error||'Unable to load Taggd recruiters.');
+    editTaggdRecruiter.innerHTML='<option value="">Select Taggd Recruiter...</option>'+(Array.isArray(rows)?rows:[]).map(r=>`<option value="${Number(r.id)}" ${String(r.id)===String(selectedId)?'selected':''}>${escapeHtml(r.name||'')}</option>`).join('');
+    if(selectedId) editTaggdRecruiter.value=String(selectedId);
+  }catch(e){
+    editTaggdRecruiter.innerHTML='<option value="">Unable to load Taggd recruiters</option>';
+    setModalStatus(e.message||'Unable to load Taggd recruiters.','error');
+  }
+}
+function fillEditForm(row){
+  currentEditRequirementId=row.id;
+  editMeta.textContent=`#${row.id} ${row.client_name||''}`.trim();
+  editTitle.value=row.title||'';
+  editRequisitionId.value=row.requisition_id||'';
+  editClient.innerHTML=clientOptions(row.client_name||'');
+  editClient.value=row.client_name||'';
+  editStatusValue.value=row.status||'New';
+  editLocation.value=row.location||'';
+  editDailyTarget.value=row.daily_target||3;
+  editDescription.value=row.description||'';
+}
+async function openRequirementEdit(id){
+  currentEditRequirementId=id;
+  editModal.classList.add('active');
+  setModalStatus('Loading requirement...');
+  saveEditBtn.disabled=true;
+  const fallback=currentRows.find(row=>String(row.id)===String(id));
+  if(fallback){
+    fillEditForm(fallback);
+  }
+  try{
+    if(!clientRows.length) await loadClients();
+    const res=await fetch('/api/requirements/'+id);
+    const row=await res.json().catch(()=>({}));
+    if(!res.ok||row.error)throw new Error(row.error||'Unable to load requirement.');
+    fillEditForm(row);
+    await loadEditTaggdRecruiters(row.taggd_recruiter_id||'');
+    setModalStatus('');
+  }catch(e){
+    if(!fallback){
+      closeEditModal();
+      showToast(e.message||'Unable to load requirement.');
+      return;
+    }
+    await loadEditTaggdRecruiters(fallback.taggd_recruiter_id||'');
+    setModalStatus('Using current row details. Refresh if anything looks stale.','error');
+  }finally{
+    saveEditBtn.disabled=false;
+  }
+}
+function closeEditModal(){
+  editModal.classList.remove('active');
+  currentEditRequirementId=null;
+}
+async function saveRequirementEdit(){
+  if(!currentEditRequirementId)return;
+  const body={
+    title:editTitle.value.trim(),
+    requisition_id:editRequisitionId.value.trim(),
+    client_name:editClient.value.trim(),
+    taggd_recruiter_id:editTaggdRecruiter.value.trim(),
+    status:editStatusValue.value.trim(),
+    location:editLocation.value.trim(),
+    daily_target:Number(editDailyTarget.value||3),
+    description:editDescription.value.trim(),
+    has_jd_text:Boolean(editDescription.value.trim())
+  };
+  if(!body.title)return setModalStatus('Requirement title is required.','error');
+  if(!body.client_name)return setModalStatus('Client is required.','error');
+  if(!body.taggd_recruiter_id)return setModalStatus('Taggd recruiter is required.','error');
+  if(!body.location)return setModalStatus('Location is required.','error');
+  const btn=saveEditBtn;
+  btn.disabled=true;
+  btn.textContent='Saving...';
+  setModalStatus('Saving requirement...');
+  try{
+    const res=await fetch('/api/requirements/'+currentEditRequirementId,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error||data.ok===false)throw new Error(data.error||'Unable to update requirement.');
+    showToast('Requirement updated.','success');
+    closeEditModal();
+    loadRequirements();
+  }catch(e){
+    setModalStatus(e.message||'Unable to update requirement.','error');
+    showToast(e.message||'Unable to update requirement.');
+  }finally{
+    btn.disabled=false;
+    btn.textContent='Save Changes';
+  }
+}
+async function signOut(){await fetch('/api/logout',{method:'POST'});localStorage.removeItem('hrguru_user');window.location.href='/login';}
+document.addEventListener('DOMContentLoaded',async()=>{await loadClients();loadRequirements();});
+</script>
+</body>
+</html>

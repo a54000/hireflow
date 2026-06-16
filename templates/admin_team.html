@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Setup - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7;padding:10px 12px 16px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 auto 10px;max-width:calc(100vw - 24px)}.brand{font-size:20px;font-weight:900;color:#fff}.brand span{color:#e8643a}.top-title{color:#9aa5c4;font-size:12px;font-weight:850}
+.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.link-btn,.btn{height:40px;border:1px solid #e8643a;background:#e8643a;color:#fff;border-radius:8px;padding:0 14px;font:inherit;font-size:13px;font-weight:850;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}.link-btn.secondary,.btn.secondary{background:#252a3a;border-color:#343b52;color:#d9dee8}.btn.ghost{background:transparent;border-color:#343b52;color:#c9d2e8}.btn.danger{background:#3a1d22;border-color:#6b2c36;color:#ffb4bd}.btn:hover,.link-btn:hover{filter:brightness(1.08)}.btn:disabled{opacity:.6;cursor:not-allowed}
+.profile{position:relative}.profile-btn{width:38px;height:38px;border-radius:50%;border:1px solid #343b52;background:#252a3a;color:#fff;font-weight:900;cursor:pointer}.profile-menu{display:none;position:absolute;right:0;top:46px;z-index:40;min-width:170px;background:#1c2030;border:1px solid #343b52;border-radius:8px;box-shadow:0 16px 34px rgba(0,0,0,.35);overflow:hidden}.profile-menu.active{display:block}.profile-menu a,.profile-menu button{display:block;width:100%;border:0;background:transparent;color:#d9dee8;text-align:left;text-decoration:none;padding:12px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.profile-menu a:hover,.profile-menu button:hover{background:#252a3a;color:#fff}
+.wrap{width:100%;max-width:calc(100vw - 24px);margin:0 auto;background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;overflow:hidden}.head{padding:14px 18px;border-bottom:1px solid #2a2f3a;display:grid;gap:10px}.head-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.head h1{font-size:22px;color:#fff;margin-bottom:4px}.head p,.muted{color:#9aa5c4;font-size:13px;line-height:1.35}
+.tools{display:grid;grid-template-columns:minmax(260px,1fr) auto auto auto;gap:10px;align-items:end}.field{display:grid;gap:6px;min-width:0}.field label{color:#9aa5c4;font-size:11px;font-weight:900;text-transform:uppercase}.field input,.field select{width:100%;height:40px;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:13px;padding:0 12px}.field input:focus,.field select:focus{outline:none;border-color:#e8643a}
+.status{padding:8px 18px;color:#9aa5c4;font-size:13px;border-bottom:1px solid #2a2f3a;min-height:36px}.table-wrap{overflow:auto;height:calc(100vh - 226px);min-height:430px}.data-table{width:100%;min-width:900px;border-collapse:collapse;table-layout:fixed}.data-table th,.data-table td{height:40px;padding:7px 9px;border-bottom:1px solid #2a2f3a;border-right:1px solid #2a2f3a;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.data-table th{position:sticky;top:0;z-index:2;background:#0d1017;color:#aab3c8;font-size:12px;font-weight:900}.data-table tr:hover td{background:#222838}
+.col-name{width:21%}.col-email{width:26%}.col-phone{width:13%}.col-role{width:15%}.col-access{width:12%}.col-actions{width:190px}.pill{display:inline-block;max-width:100%;padding:3px 9px;border-radius:999px;background:#252a3a;border:1px solid #343b52;color:#e0e0e0;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:850}.pill.ok{background:#173421;border-color:#2c6b3b;color:#9af0b4}.actions{display:flex;gap:5px;flex-wrap:nowrap}.row-btn{height:28px;border-radius:7px;padding:0 8px;font-size:11px;min-width:0}.empty{padding:42px;text-align:center;color:#8b95b5}
+.modal{display:none;position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);padding:22px;align-items:center;justify-content:center}.modal.active{display:flex}.modal-card{width:min(560px,100%);max-height:88vh;overflow:auto;background:#1c2030;border:1px solid #343b52;border-radius:10px;box-shadow:0 20px 48px rgba(0,0,0,.48)}.modal-head,.modal-foot{padding:16px 18px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:12px;align-items:center}.modal-foot{border-top:1px solid #2a2f3a;border-bottom:0;justify-content:flex-end}.modal-body{padding:18px;display:grid;gap:14px}.modal h2{font-size:19px;color:#fff}.close{width:32px;height:32px;border-radius:8px;border:1px solid #343b52;background:#252a3a;color:#fff;cursor:pointer;font-size:18px;line-height:1}.check{display:flex;align-items:center;gap:8px;color:#d9dee8;font-size:13px;font-weight:850}.check input{width:auto;height:auto}
+.toast{position:fixed;right:18px;bottom:18px;z-index:90;display:none;max-width:420px;border-radius:8px;padding:12px 14px;font-size:13px;box-shadow:0 14px 32px rgba(0,0,0,.35)}.toast.active{display:block}.toast.error{background:#3a1d22;color:#ffb4bd;border:1px solid #6b2c36}.toast.success{background:#173421;color:#9af0b4;border:1px solid #2c6b3b}
+@media(max-width:820px){body{padding:8px}.top,.head-row{align-items:flex-start}.wrap,.top{max-width:calc(100vw - 16px)}.top-title{display:none}.head{padding:12px}.head-row{display:grid}.tools{grid-template-columns:1fr}.status{padding:8px 12px}.table-wrap{height:calc(100vh - 340px);min-height:360px}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><div class="brand">HR <span>Guru</span></div><div class="top-title">Team Setup</div></div>
+  <div class="top-actions">
+    <a class="link-btn secondary" href="/admin">Dashboard</a>
+    <div class="profile">
+      <button class="profile-btn" type="button" onclick="toggleProfileMenu()" aria-label="Open profile menu">A</button>
+      <div class="profile-menu" id="profileMenu">
+        <a href="/profile">Profile</a>
+        <button type="button" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+<main class="wrap">
+  <div class="head">
+    <div class="head-row">
+      <div>
+        <h1>Team Setup</h1>
+        <p>Manage team members and bulk upload access without loading the full admin dashboard.</p>
+      </div>
+    </div>
+    <div class="tools">
+      <div class="field"><label>Search</label><input id="searchInput" placeholder="Name, email, phone, role" oninput="renderRows()"></div>
+      <button class="btn secondary" type="button" onclick="loadRows()">Refresh</button>
+      <label class="btn secondary" style="cursor:pointer">Bulk Upload CSV<input type="file" accept=".csv,.xlsx" style="display:none" onchange="bulkUploadTeam(this.files[0])"></label>
+      <button class="btn" type="button" onclick="openTeamModal()">Add Team Member</button>
+    </div>
+  </div>
+  <div class="status" id="statusText">Loading team...</div>
+  <div class="table-wrap" id="tableWrap"></div>
+</main>
+<div class="modal" id="teamModal">
+  <div class="modal-card">
+    <div class="modal-head"><h2 id="teamModalTitle">Add Team Member</h2><button class="close" type="button" onclick="closeTeamModal()">&times;</button></div>
+    <div class="modal-body">
+      <input id="teamId" type="hidden">
+      <div class="field"><label>Name</label><input id="teamName"></div>
+      <div class="field"><label>Email</label><input id="teamEmail" type="email"></div>
+      <div class="field"><label>Phone</label><input id="teamPhone"></div>
+      <div class="field"><label>Role</label><select id="teamRole"><option>Recruiter</option><option>Team Leader</option><option>Bulk Admin</option><option>Admin</option><option>Client Viewer</option></select></div>
+      <label class="check"><input id="teamBulk" type="checkbox"> Bulk Upload Access</label>
+    </div>
+    <div class="modal-foot"><button class="btn secondary" type="button" onclick="closeTeamModal()">Cancel</button><button class="btn" type="button" onclick="saveTeamMember()">Save Team Member</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+let members=[];
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function toggleProfileMenu(){document.getElementById('profileMenu')?.classList.toggle('active');}
+document.addEventListener('click',e=>{if(!e.target.closest('.profile'))document.getElementById('profileMenu')?.classList.remove('active');});
+function showToast(message,type='error'){const el=document.getElementById('toast');el.textContent=message||'';el.className='toast active '+type;setTimeout(()=>{el.className='toast';},3200);}
+function filteredRows(){const q=searchInput.value.trim().toLowerCase();if(!q)return members;return members.filter(m=>[m.name,m.email,m.phone,m.role].some(v=>String(v||'').toLowerCase().includes(q)));}
+function rowHtml(m){return `<tr>
+  <td class="col-name"><strong>${escapeHtml(m.name||'-')}</strong></td>
+  <td class="col-email">${escapeHtml(m.email||'-')}</td>
+  <td class="col-phone">${escapeHtml(m.phone||'-')}</td>
+  <td class="col-role"><span class="pill">${escapeHtml(m.role||'Member')}</span></td>
+  <td class="col-access">${m.can_bulk_upload?'<span class="pill ok">Bulk Upload</span>':'-'}</td>
+  <td class="col-actions"><div class="actions">
+    <button class="btn secondary row-btn" type="button" onclick="editTeam(${m.id})">Edit</button>
+    <button class="btn secondary row-btn" type="button" onclick="toggleBulk(${m.id},${m.can_bulk_upload?0:1})">${m.can_bulk_upload?'Remove':'Bulk'}</button>
+    <button class="btn danger row-btn" type="button" onclick="deleteTeam(${m.id})">Delete</button>
+  </div></td>
+</tr>`;}
+function renderRows(){const rows=filteredRows();statusText.textContent=rows.length?`${rows.length} team members shown`:'No team members found';tableWrap.innerHTML=rows.length?`<table class="data-table"><thead><tr><th class="col-name">Name</th><th class="col-email">Email</th><th class="col-phone">Phone</th><th class="col-role">Role</th><th class="col-access">Access</th><th class="col-actions">Actions</th></tr></thead><tbody>${rows.map(rowHtml).join('')}</tbody></table>`:'<div class="empty">No team members found.</div>';}
+async function loadRows(){statusText.textContent='Loading team...';try{const res=await fetch('/api/team');const data=await res.json().catch(()=>[]);if(!res.ok||data.error)throw new Error(data.error||'Unable to load team');members=Array.isArray(data)?data:[];renderRows();}catch(e){statusText.textContent='Unable to load team.';tableWrap.innerHTML='<div class="empty">Unable to load team.</div>';showToast(e.message||'Unable to load team');}}
+function openTeamModal(){teamModalTitle.textContent='Add Team Member';teamId.value='';teamName.value='';teamEmail.value='';teamPhone.value='';teamRole.value='Recruiter';teamBulk.checked=false;document.getElementById('teamModal').classList.add('active');}
+function editTeam(id){const m=members.find(row=>Number(row.id)===Number(id));if(!m)return showToast('Team member not found');teamModalTitle.textContent='Edit Team Member';teamId.value=m.id;teamName.value=m.name||'';teamEmail.value=m.email||'';teamPhone.value=m.phone||'';teamRole.value=m.role||'Recruiter';teamBulk.checked=!!m.can_bulk_upload;document.getElementById('teamModal').classList.add('active');}
+function closeTeamModal(){document.getElementById('teamModal').classList.remove('active');}
+async function saveTeamMember(){const id=teamId.value;const body={name:teamName.value.trim(),email:teamEmail.value.trim(),phone:teamPhone.value.trim(),role:teamRole.value,can_bulk_upload:teamBulk.checked};if(!body.name||!body.email)return showToast('Name and Email are required');const res=await fetch(id?'/api/team/'+id:'/api/team',{method:id?'PATCH':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await res.json().catch(()=>({}));if(!res.ok||data.error)return showToast(data.error||'Unable to save team member');closeTeamModal();showToast(id?'Team member updated':'Team member added','success');loadRows();}
+async function toggleBulk(id,enabled){const res=await fetch('/api/team/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({can_bulk_upload:!!enabled})});const data=await res.json().catch(()=>({}));if(!res.ok||data.error)return showToast(data.error||'Unable to update bulk upload access');showToast('Bulk upload access updated','success');loadRows();}
+async function deleteTeam(id){if(!confirm('Delete this team member?'))return;const res=await fetch('/api/team/'+id,{method:'DELETE'});const data=await res.json().catch(()=>({}));if(!res.ok||data.error)return showToast(data.error||'Unable to delete team member');showToast('Team member deleted','success');loadRows();}
+async function bulkUploadTeam(file){if(!file)return;const fd=new FormData();fd.append('file',file);const res=await fetch('/api/team/bulk',{method:'POST',body:fd});const data=await res.json().catch(()=>({}));if(!res.ok||data.error)return showToast(data.error||'Unable to import team file');showToast(`Added ${data.added||0}, skipped ${data.skipped||0}`,'success');loadRows();}
+async function signOut(){await fetch('/api/logout',{method:'POST'});localStorage.removeItem('hrguru_user');window.location.href='/login';}
+document.addEventListener('DOMContentLoaded',loadRows);
+</script>
+</body>
+</html>

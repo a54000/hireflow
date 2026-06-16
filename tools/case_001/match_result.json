@@ -1,0 +1,2007 @@
+{
+  "final_score": 65,
+  "structured_score": 45,
+  "semantic_score": 74,
+  "hard_filter_score": 100,
+  "hard_filters": {
+    "hard_filter_score": 100,
+    "passed": true,
+    "filters": [
+      {
+        "name": "Minimum experience",
+        "passed": true,
+        "severity": "pass",
+        "reason": "Candidate has 19.1 years; requirement is 15+ years. Shortfall up to 6 months is acceptable."
+      }
+    ]
+  },
+  "custom_hard_filters": "",
+  "semantic_similarity_score": 74,
+  "score_breakdown": {
+    "must_have_skills": {
+      "score": 0,
+      "reason": "Weighted must-have skill coverage with related-skill credit",
+      "matched_items": [],
+      "missing_items": [
+        "POC"
+      ]
+    },
+    "role_alignment": {
+      "score": 60,
+      "reason": "The resume has some similar job experience, but the current role is not clearly the same as this opening.",
+      "matched_items": [
+        "DevOps"
+      ],
+      "missing_items": [
+        "DevOps",
+        "Product Management",
+        "Data Science",
+        "Quality Assurance",
+        "Cybersecurity",
+        "Production / Manufacturing"
+      ]
+    },
+    "experience_fit": {
+      "score": 95,
+      "reason": "Experience fits the JD range",
+      "matched_items": [
+        "19.1 years"
+      ],
+      "missing_items": []
+    },
+    "domain_fit": {
+      "score": 90,
+      "reason": "Strong domain fit: the resume shows experience in the same work area as the job.",
+      "matched_items": [
+        "Cloud Infrastructure"
+      ],
+      "missing_items": [
+        "Manufacturing",
+        "Observability"
+      ]
+    },
+    "seniority_fit": {
+      "score": 95,
+      "reason": "Seniority aligns",
+      "matched_items": [
+        "Principal/Architect"
+      ],
+      "missing_items": []
+    },
+    "nice_to_have": {
+      "score": 67,
+      "reason": "Nice-to-have skill coverage",
+      "matched_items": [
+        "Cloud Platform",
+        "Platform Scalability",
+        "Kubernetes",
+        "DevOps",
+        "Microsoft Azure",
+        "CI/CD",
+        ".NET",
+        "REST API"
+      ],
+      "missing_items": [
+        "Cloud Security",
+        "Observability Tooling",
+        "GraphQL",
+        "Docker"
+      ]
+    }
+  },
+  "strengths": [
+    "Strong domain fit: the resume shows experience in the same work area as the job.",
+    "Experience fits the JD range",
+    "Shows ownership signals: Led, Managed, Designed, Architected, Optimized"
+  ],
+  "concerns": [
+    "Missing required skills: POC",
+    "Weighted must-have skill coverage with related-skill credit"
+  ],
+  "penalties_applied": [
+    {
+      "reason": "Missing must-have skills",
+      "impact": 8
+    }
+  ],
+  "matched_must_have_skills": [],
+  "missing_must_have_skills": [
+    "POC"
+  ],
+  "parsed_jd": {
+    "id": "13d8a5c31eac",
+    "role_title": "",
+    "title": "",
+    "primary_role": "DevOps",
+    "role_category": "DevOps",
+    "employment_type": "",
+    "experience_required": {
+      "min_years": 15.0,
+      "max_years": 0
+    },
+    "must_have_skills": [
+      "POC"
+    ],
+    "nice_to_have_skills": [
+      "Cloud Security",
+      "Observability Tooling",
+      "Cloud Platform",
+      "Platform Scalability",
+      "Kubernetes",
+      "GraphQL",
+      "Docker",
+      "DevOps",
+      "Microsoft Azure",
+      "CI/CD",
+      ".NET",
+      "REST API"
+    ],
+    "tools_technologies": [
+      "Cloud Security",
+      "Observability Tooling",
+      "Cloud Platform",
+      "Platform Scalability",
+      "Kubernetes",
+      "GraphQL",
+      "Docker",
+      "DevOps",
+      "Microsoft Azure",
+      "CI/CD",
+      ".NET",
+      "API",
+      "AWS",
+      "Google Cloud Platform",
+      "POC"
+    ],
+    "domain": "Cloud Infrastructure",
+    "sub_domain": "",
+    "responsibilities": [
+      "to lead the architectural vision and technical direction of our group. This is a high-impact, senior technical role comb",
+      "Design models, frameworks, and patterns that guide the evolution of APIs, data flows, domain boundaries, and service int",
+      "System Design & Engineering Leadership",
+      "Lead end-to-end architectural design for complex features, cross-cutting systems, and high-scale service components.",
+      "Provide hands-on architectural guidance and support during system design, implementation, and optimization.",
+      "Develop architectural models for control-plane systems, configuration management, policy engines, and distributed workfl",
+      "Ensure system designs incorporate strong observability, fault tolerance, security controls, dependency isolation, and op",
+      "Partner with security teams to design secure APIs, containment logic, and robust",
+      "Serve as a senior technical advisor to engineering leadership, product owners, security leads, and cross-functional stak",
+      "Lead architecture reviews, platform-wide design discussions, and strategic engineering initiatives."
+    ],
+    "seniority_level": "Principal/Architect",
+    "certifications_required": [],
+    "location": "",
+    "keywords_expanded": [
+      "POC",
+      "Cloud Security",
+      "Observability Tooling",
+      "Cloud Platform",
+      "Platform Scalability",
+      "Kubernetes",
+      "GraphQL",
+      "Docker",
+      "DevOps",
+      "Microsoft Azure",
+      "CI/CD",
+      ".NET",
+      "REST API"
+    ],
+    "must_have_skills_weighted": [
+      {
+        "skill": "POC",
+        "weight": 80,
+        "aliases": [
+          "poc",
+          "pocs",
+          "proof of concept",
+          "proofs of concept"
+        ],
+        "confidence": 0.72
+      }
+    ],
+    "role_taxonomy": [
+      {
+        "role": "DevOps",
+        "confidence": 0.79,
+        "matched_signals": [
+          "devops",
+          "kubernetes"
+        ]
+      },
+      {
+        "role": "Product Management",
+        "confidence": 0.79,
+        "matched_signals": [
+          "roadmap",
+          "poc"
+        ]
+      },
+      {
+        "role": "Data Science",
+        "confidence": 0.67,
+        "matched_signals": [
+          "modeling"
+        ]
+      },
+      {
+        "role": "Quality Assurance",
+        "confidence": 0.67,
+        "matched_signals": [
+          "quality"
+        ]
+      },
+      {
+        "role": "Cybersecurity",
+        "confidence": 0.67,
+        "matched_signals": [
+          "security"
+        ]
+      },
+      {
+        "role": "Production / Manufacturing",
+        "confidence": 0.67,
+        "matched_signals": [
+          "production"
+        ]
+      }
+    ],
+    "domain_taxonomy": [
+      {
+        "domain": "Cloud Infrastructure",
+        "confidence": 0.64,
+        "matched_signals": [
+          "kubernetes"
+        ]
+      },
+      {
+        "domain": "Observability",
+        "confidence": 0.64,
+        "matched_signals": [
+          "observability"
+        ]
+      },
+      {
+        "domain": "Manufacturing",
+        "confidence": 0.64,
+        "matched_signals": [
+          "production"
+        ]
+      }
+    ],
+    "embedding_keywords": [
+      "POC",
+      "Cloud Security",
+      "Observability Tooling",
+      "Cloud Platform",
+      "Platform Scalability",
+      "Kubernetes",
+      "GraphQL",
+      "Docker",
+      "DevOps",
+      "Microsoft Azure",
+      "CI/CD",
+      ".NET",
+      "REST API",
+      "Cloud Infrastructure"
+    ],
+    "embedding_vector": [],
+    "confidence_scores": {
+      "skills": 0.88,
+      "role": 0.79,
+      "domain": 0.64,
+      "experience": 0.85
+    }
+  },
+  "parsed_candidate": {
+    "id": "bb9142776a75",
+    "candidate_name": "Mr. Dnyaneshwar Pawar",
+    "total_experience_years": 19.1,
+    "current_role": "Results-Driven Senior Solution Architect & Technical Project Manager",
+    "current_company": "",
+    "current_employment_status": "Currently Employed",
+    "last_employed_date": "May 2026",
+    "career_gap_periods": [],
+    "role_history": [
+      {
+        "title": "Results-Driven Senior Solution Architect & Technical Project Manager",
+        "company": "",
+        "duration_years": 0.4,
+        "responsibilities": [
+          "WCF, Entity Framework, SOLID Principles, Design Patterns, NUnit, CQRS",
+          "Led LoanOps intermediary middleware integration frameworks coordinating high-volume messaging pipelines",
+          "Designed high-accuracy Oracle FDR server data streams translating backend configurations to automated XML",
+          "BMW COFIS: Managed functional blueprints, customer clarity matrices, and multi-national release code testing"
+        ],
+        "skills_used": [
+          "Microservices",
+          "Google Cloud Platform",
+          "Cloud Platform",
+          "Platform Scalability",
+          "JavaScript",
+          "Automation",
+          "Kubernetes",
+          "Logistics",
+          "React",
+          "Angular",
+          "ASP.NET",
+          "MongoDB"
+        ]
+      }
+    ],
+    "primary_skills": [
+      "Microservices",
+      "SQL"
+    ],
+    "secondary_skills": [
+      "Google Cloud Platform",
+      "Cloud Platform",
+      "Platform Scalability",
+      "JavaScript",
+      "Automation",
+      "Kubernetes",
+      "Logistics",
+      "React",
+      "Angular",
+      "ASP.NET",
+      "MongoDB",
+      "Jenkins"
+    ],
+    "tools_technologies": [
+      "Microservices",
+      "Google Cloud Platform",
+      "Cloud Platform",
+      "Platform Scalability",
+      "JavaScript",
+      "Automation",
+      "Kubernetes",
+      "Logistics",
+      "React",
+      "Angular",
+      "ASP.NET",
+      "MongoDB",
+      "Jenkins",
+      "Payroll",
+      "DevOps",
+      "Microsoft Azure",
+      "CI/CD",
+      ".NET",
+      "SQL",
+      "AWS"
+    ],
+    "domain_experience": [
+      "Web Application Development",
+      "SaaS",
+      "Human Resources / Staffing",
+      "Finance / Accounting",
+      "Banking / Financial Services",
+      "Healthcare"
+    ],
+    "certifications": [
+      "Azure PaaS",
+      "Azure DevOps",
+      "Azure cloud native architectures to",
+      "Azure DevOps and optimize backend SQL Server",
+      "Azure Solutions Architect",
+      "Azure DevOps Engineer",
+      "Azure Developer",
+      "Azure Fundamentals"
+    ],
+    "education": [
+      "B.E"
+    ],
+    "location": "Pune",
+    "career_stability_score": 70,
+    "red_flags": [],
+    "project_complexity_indicators": [
+      "Microservices",
+      "Architecture",
+      "Pipeline",
+      "Automation",
+      "Performance",
+      "Cloud"
+    ],
+    "ownership_signals": [
+      "Led",
+      "Managed",
+      "Designed",
+      "Architected",
+      "Optimized"
+    ],
+    "contact": {
+      "email": "pawar.dnyaneshwar@gmail.com",
+      "phone": "+918010351566",
+      "linkedin": "",
+      "github": ""
+    },
+    "experience_metrics": {
+      "total_years_experience": 19.1,
+      "total_months_experience": 229,
+      "explicit_years_experience": 0,
+      "chronology_years_experience": 19.1,
+      "chronology_capped_by_explicit_summary": false,
+      "experience_confidence": "high"
+    },
+    "normalized_roles": [
+      "Web / Full Stack Engineering",
+      "DevOps",
+      "Platform Product Management",
+      "Supply Chain / Procurement"
+    ],
+    "normalized_skills": [
+      "Microservices",
+      "Google Cloud Platform",
+      "Cloud Platform",
+      "Platform Scalability",
+      "JavaScript",
+      "Automation",
+      "Kubernetes",
+      "Logistics",
+      "React",
+      "Angular",
+      "ASP.NET",
+      "MongoDB",
+      "Jenkins",
+      "Payroll",
+      "DevOps",
+      "Microsoft Azure",
+      "CI/CD",
+      ".NET",
+      "SQL",
+      "AWS",
+      "REST API",
+      "EDM",
+      "C#"
+    ],
+    "production_skills": [
+      "Microservices",
+      "SQL"
+    ],
+    "beginner_or_exposure_skills": [
+      "Google Cloud Platform",
+      "Cloud Platform",
+      "Platform Scalability",
+      "JavaScript",
+      "Automation",
+      "Kubernetes",
+      "Logistics",
+      "React",
+      "Angular",
+      "ASP.NET",
+      "MongoDB",
+      "Jenkins",
+      "Payroll",
+      "DevOps",
+      "Microsoft Azure",
+      "CI/CD",
+      ".NET",
+      "AWS",
+      "REST API",
+      "EDM",
+      "C#"
+    ],
+    "skill_confidence_scores": [
+      {
+        "skill": "Microservices",
+        "confidence": 0.75
+      },
+      {
+        "skill": "Google Cloud Platform",
+        "confidence": 0.7
+      },
+      {
+        "skill": "Cloud Platform",
+        "confidence": 0.85
+      },
+      {
+        "skill": "Platform Scalability",
+        "confidence": 0.8
+      },
+      {
+        "skill": "JavaScript",
+        "confidence": 0.7
+      },
+      {
+        "skill": "Automation",
+        "confidence": 0.7
+      },
+      {
+        "skill": "Kubernetes",
+        "confidence": 0.7
+      },
+      {
+        "skill": "Logistics",
+        "confidence": 0.7
+      },
+      {
+        "skill": "React",
+        "confidence": 0.7
+      },
+      {
+        "skill": "Angular",
+        "confidence": 0.7
+      },
+      {
+        "skill": "ASP.NET",
+        "confidence": 0.7
+      },
+      {
+        "skill": "MongoDB",
+        "confidence": 0.7
+      },
+      {
+        "skill": "Jenkins",
+        "confidence": 0.7
+      },
+      {
+        "skill": "Payroll",
+        "confidence": 0.7
+      },
+      {
+        "skill": "DevOps",
+        "confidence": 0.85
+      },
+      {
+        "skill": "Microsoft Azure",
+        "confidence": 0.7
+      },
+      {
+        "skill": "CI/CD",
+        "confidence": 0.75
+      },
+      {
+        "skill": ".NET",
+        "confidence": 0.9
+      },
+      {
+        "skill": "SQL",
+        "confidence": 0.8
+      },
+      {
+        "skill": "AWS",
+        "confidence": 0.7
+      },
+      {
+        "skill": "REST API",
+        "confidence": 0.65
+      },
+      {
+        "skill": "EDM",
+        "confidence": 0.75
+      },
+      {
+        "skill": "C#",
+        "confidence": 0.7
+      },
+      {
+        "skill": "REST API",
+        "confidence": 0.65
+      },
+      {
+        "skill": "Artificial Intelligence",
+        "confidence": 0.65
+      }
+    ],
+    "skill_recency_scores": [
+      {
+        "skill": "Microservices",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Google Cloud Platform",
+        "recency_score": 0.55
+      },
+      {
+        "skill": "Cloud Platform",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Platform Scalability",
+        "recency_score": 0.55
+      },
+      {
+        "skill": "JavaScript",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Automation",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Kubernetes",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Logistics",
+        "recency_score": 0.55
+      },
+      {
+        "skill": "React",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Angular",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "ASP.NET",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "MongoDB",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Jenkins",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Payroll",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "DevOps",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Microsoft Azure",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "CI/CD",
+        "recency_score": 0.8
+      },
+      {
+        "skill": ".NET",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "SQL",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "AWS",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "REST API",
+        "recency_score": 0.25
+      },
+      {
+        "skill": "EDM",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "C#",
+        "recency_score": 0.25
+      }
+    ],
+    "project_evidence_scores": [
+      {
+        "skill": "Microservices",
+        "evidence_score": 0.47
+      },
+      {
+        "skill": "Google Cloud Platform",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "Cloud Platform",
+        "evidence_score": 0.59
+      },
+      {
+        "skill": "Platform Scalability",
+        "evidence_score": 0.47
+      },
+      {
+        "skill": "JavaScript",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "Automation",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "Kubernetes",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "Logistics",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "React",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "Angular",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "ASP.NET",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "MongoDB",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "Jenkins",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "Payroll",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "DevOps",
+        "evidence_score": 0.59
+      },
+      {
+        "skill": "Microsoft Azure",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "CI/CD",
+        "evidence_score": 0.47
+      },
+      {
+        "skill": ".NET",
+        "evidence_score": 0.53
+      },
+      {
+        "skill": "SQL",
+        "evidence_score": 0.83
+      },
+      {
+        "skill": "AWS",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "REST API",
+        "evidence_score": 0.35
+      },
+      {
+        "skill": "EDM",
+        "evidence_score": 0.47
+      },
+      {
+        "skill": "C#",
+        "evidence_score": 0.35
+      }
+    ],
+    "ai_optimization_risk": {
+      "score": 26,
+      "label": "Low",
+      "signals": [
+        "results-driven",
+        "proven track record"
+      ]
+    },
+    "domain_confidence_scores": [
+      {
+        "domain": "Web Application Development",
+        "confidence": 0.95,
+        "matched_signals": [
+          "frontend",
+          "backend",
+          "angular",
+          "javascript",
+          "html5"
+        ]
+      },
+      {
+        "domain": "SaaS",
+        "confidence": 0.78,
+        "matched_signals": [
+          "multi-tenant",
+          "tenant"
+        ]
+      },
+      {
+        "domain": "Human Resources / Staffing",
+        "confidence": 0.78,
+        "matched_signals": [
+          "hr",
+          "payroll"
+        ]
+      },
+      {
+        "domain": "Finance / Accounting",
+        "confidence": 0.78,
+        "matched_signals": [
+          "accounts",
+          "tax"
+        ]
+      },
+      {
+        "domain": "Banking / Financial Services",
+        "confidence": 0.64,
+        "matched_signals": [
+          "bank"
+        ]
+      },
+      {
+        "domain": "Healthcare",
+        "confidence": 0.64,
+        "matched_signals": [
+          "patient"
+        ]
+      },
+      {
+        "domain": "Cloud Infrastructure",
+        "confidence": 0.64,
+        "matched_signals": [
+          "kubernetes"
+        ]
+      },
+      {
+        "domain": "Tool Room / Die Manufacturing",
+        "confidence": 0.64,
+        "matched_signals": [
+          "edm"
+        ]
+      },
+      {
+        "domain": "Supply Chain / Logistics",
+        "confidence": 0.64,
+        "matched_signals": [
+          "logistics"
+        ]
+      },
+      {
+        "domain": "Logistics / Transportation",
+        "confidence": 0.64,
+        "matched_signals": [
+          "logistics"
+        ]
+      },
+      {
+        "domain": "Education",
+        "confidence": 0.64,
+        "matched_signals": [
+          "education"
+        ]
+      }
+    ],
+    "seniority_level": "Principal/Architect",
+    "role_normalized": "Results-Driven Senior Solution Architect & Technical Project Manager",
+    "chronology_ranges": [
+      {
+        "start_month": 24089,
+        "end_month": 24181
+      },
+      {
+        "start_month": 24182,
+        "end_month": 24252
+      },
+      {
+        "start_month": 24253,
+        "end_month": 24317
+      }
+    ],
+    "embedding_vector": []
+  },
+  "explainability": {
+    "strengths": [
+      "Strong domain fit: the resume shows experience in the same work area as the job.",
+      "Experience fits the JD range",
+      "Shows ownership signals: Led, Managed, Designed, Architected, Optimized"
+    ],
+    "concerns": [
+      "Missing required skills: POC",
+      "Weighted must-have skill coverage with related-skill credit"
+    ],
+    "penalties_applied": [
+      {
+        "reason": "Missing must-have skills",
+        "impact": 8
+      }
+    ],
+    "matched_skills": [],
+    "missing_skills": [
+      "POC"
+    ],
+    "role_alignment_reasoning": [
+      "The resume has some similar job experience, but the current role is not clearly the same as this opening."
+    ],
+    "semantic_match_insights": [
+      "Some parts of the resume are related to this job, but the match is not consistent across the whole profile.",
+      "Domain fit is partial because the resume shows Cloud Infrastructure experience, but the job also needs Manufacturing, Observability."
+    ]
+  },
+  "semantic_match_insights": [
+    "Some parts of the resume are related to this job, but the match is not consistent across the whole profile.",
+    "Domain fit is partial because the resume shows Cloud Infrastructure experience, but the job also needs Manufacturing, Observability."
+  ],
+  "role_alignment_reasoning": [
+    "The resume has some similar job experience, but the current role is not clearly the same as this opening."
+  ],
+  "verdict": "Moderate Match",
+  "score": 65,
+  "summary": "Missing required skills: POC; Weighted must-have skill coverage with related-skill credit",
+  "gaps": [
+    "Missing required skills: POC",
+    "Weighted must-have skill coverage with related-skill credit"
+  ],
+  "jd_json": {
+    "id": "13d8a5c31eac",
+    "role_title": "",
+    "title": "",
+    "primary_role": "DevOps",
+    "role_category": "DevOps",
+    "employment_type": "",
+    "experience_required": {
+      "min_years": 15.0,
+      "max_years": 0
+    },
+    "must_have_skills": [
+      "POC"
+    ],
+    "nice_to_have_skills": [
+      "Cloud Security",
+      "Observability Tooling",
+      "Cloud Platform",
+      "Platform Scalability",
+      "Kubernetes",
+      "GraphQL",
+      "Docker",
+      "DevOps",
+      "Microsoft Azure",
+      "CI/CD",
+      ".NET",
+      "REST API"
+    ],
+    "tools_technologies": [
+      "Cloud Security",
+      "Observability Tooling",
+      "Cloud Platform",
+      "Platform Scalability",
+      "Kubernetes",
+      "GraphQL",
+      "Docker",
+      "DevOps",
+      "Microsoft Azure",
+      "CI/CD",
+      ".NET",
+      "API",
+      "AWS",
+      "Google Cloud Platform",
+      "POC"
+    ],
+    "domain": "Cloud Infrastructure",
+    "sub_domain": "",
+    "responsibilities": [
+      "to lead the architectural vision and technical direction of our group. This is a high-impact, senior technical role comb",
+      "Design models, frameworks, and patterns that guide the evolution of APIs, data flows, domain boundaries, and service int",
+      "System Design & Engineering Leadership",
+      "Lead end-to-end architectural design for complex features, cross-cutting systems, and high-scale service components.",
+      "Provide hands-on architectural guidance and support during system design, implementation, and optimization.",
+      "Develop architectural models for control-plane systems, configuration management, policy engines, and distributed workfl",
+      "Ensure system designs incorporate strong observability, fault tolerance, security controls, dependency isolation, and op",
+      "Partner with security teams to design secure APIs, containment logic, and robust",
+      "Serve as a senior technical advisor to engineering leadership, product owners, security leads, and cross-functional stak",
+      "Lead architecture reviews, platform-wide design discussions, and strategic engineering initiatives."
+    ],
+    "seniority_level": "Principal/Architect",
+    "certifications_required": [],
+    "location": "",
+    "keywords_expanded": [
+      "POC",
+      "Cloud Security",
+      "Observability Tooling",
+      "Cloud Platform",
+      "Platform Scalability",
+      "Kubernetes",
+      "GraphQL",
+      "Docker",
+      "DevOps",
+      "Microsoft Azure",
+      "CI/CD",
+      ".NET",
+      "REST API"
+    ],
+    "must_have_skills_weighted": [
+      {
+        "skill": "POC",
+        "weight": 80,
+        "aliases": [
+          "poc",
+          "pocs",
+          "proof of concept",
+          "proofs of concept"
+        ],
+        "confidence": 0.72
+      }
+    ],
+    "role_taxonomy": [
+      {
+        "role": "DevOps",
+        "confidence": 0.79,
+        "matched_signals": [
+          "devops",
+          "kubernetes"
+        ]
+      },
+      {
+        "role": "Product Management",
+        "confidence": 0.79,
+        "matched_signals": [
+          "roadmap",
+          "poc"
+        ]
+      },
+      {
+        "role": "Data Science",
+        "confidence": 0.67,
+        "matched_signals": [
+          "modeling"
+        ]
+      },
+      {
+        "role": "Quality Assurance",
+        "confidence": 0.67,
+        "matched_signals": [
+          "quality"
+        ]
+      },
+      {
+        "role": "Cybersecurity",
+        "confidence": 0.67,
+        "matched_signals": [
+          "security"
+        ]
+      },
+      {
+        "role": "Production / Manufacturing",
+        "confidence": 0.67,
+        "matched_signals": [
+          "production"
+        ]
+      }
+    ],
+    "domain_taxonomy": [
+      {
+        "domain": "Cloud Infrastructure",
+        "confidence": 0.64,
+        "matched_signals": [
+          "kubernetes"
+        ]
+      },
+      {
+        "domain": "Observability",
+        "confidence": 0.64,
+        "matched_signals": [
+          "observability"
+        ]
+      },
+      {
+        "domain": "Manufacturing",
+        "confidence": 0.64,
+        "matched_signals": [
+          "production"
+        ]
+      }
+    ],
+    "embedding_keywords": [
+      "POC",
+      "Cloud Security",
+      "Observability Tooling",
+      "Cloud Platform",
+      "Platform Scalability",
+      "Kubernetes",
+      "GraphQL",
+      "Docker",
+      "DevOps",
+      "Microsoft Azure",
+      "CI/CD",
+      ".NET",
+      "REST API",
+      "Cloud Infrastructure"
+    ],
+    "embedding_vector": [],
+    "confidence_scores": {
+      "skills": 0.88,
+      "role": 0.79,
+      "domain": 0.64,
+      "experience": 0.85
+    }
+  },
+  "cv_json": {
+    "id": "bb9142776a75",
+    "candidate_name": "Mr. Dnyaneshwar Pawar",
+    "total_experience_years": 19.1,
+    "current_role": "Results-Driven Senior Solution Architect & Technical Project Manager",
+    "current_company": "",
+    "current_employment_status": "Currently Employed",
+    "last_employed_date": "May 2026",
+    "career_gap_periods": [],
+    "role_history": [
+      {
+        "title": "Results-Driven Senior Solution Architect & Technical Project Manager",
+        "company": "",
+        "duration_years": 0.4,
+        "responsibilities": [
+          "WCF, Entity Framework, SOLID Principles, Design Patterns, NUnit, CQRS",
+          "Led LoanOps intermediary middleware integration frameworks coordinating high-volume messaging pipelines",
+          "Designed high-accuracy Oracle FDR server data streams translating backend configurations to automated XML",
+          "BMW COFIS: Managed functional blueprints, customer clarity matrices, and multi-national release code testing"
+        ],
+        "skills_used": [
+          "Microservices",
+          "Google Cloud Platform",
+          "Cloud Platform",
+          "Platform Scalability",
+          "JavaScript",
+          "Automation",
+          "Kubernetes",
+          "Logistics",
+          "React",
+          "Angular",
+          "ASP.NET",
+          "MongoDB"
+        ]
+      }
+    ],
+    "primary_skills": [
+      "Microservices",
+      "SQL"
+    ],
+    "secondary_skills": [
+      "Google Cloud Platform",
+      "Cloud Platform",
+      "Platform Scalability",
+      "JavaScript",
+      "Automation",
+      "Kubernetes",
+      "Logistics",
+      "React",
+      "Angular",
+      "ASP.NET",
+      "MongoDB",
+      "Jenkins"
+    ],
+    "tools_technologies": [
+      "Microservices",
+      "Google Cloud Platform",
+      "Cloud Platform",
+      "Platform Scalability",
+      "JavaScript",
+      "Automation",
+      "Kubernetes",
+      "Logistics",
+      "React",
+      "Angular",
+      "ASP.NET",
+      "MongoDB",
+      "Jenkins",
+      "Payroll",
+      "DevOps",
+      "Microsoft Azure",
+      "CI/CD",
+      ".NET",
+      "SQL",
+      "AWS"
+    ],
+    "domain_experience": [
+      "Web Application Development",
+      "SaaS",
+      "Human Resources / Staffing",
+      "Finance / Accounting",
+      "Banking / Financial Services",
+      "Healthcare"
+    ],
+    "certifications": [
+      "Azure PaaS",
+      "Azure DevOps",
+      "Azure cloud native architectures to",
+      "Azure DevOps and optimize backend SQL Server",
+      "Azure Solutions Architect",
+      "Azure DevOps Engineer",
+      "Azure Developer",
+      "Azure Fundamentals"
+    ],
+    "education": [
+      "B.E"
+    ],
+    "location": "Pune",
+    "career_stability_score": 70,
+    "red_flags": [],
+    "project_complexity_indicators": [
+      "Microservices",
+      "Architecture",
+      "Pipeline",
+      "Automation",
+      "Performance",
+      "Cloud"
+    ],
+    "ownership_signals": [
+      "Led",
+      "Managed",
+      "Designed",
+      "Architected",
+      "Optimized"
+    ],
+    "contact": {
+      "email": "pawar.dnyaneshwar@gmail.com",
+      "phone": "+918010351566",
+      "linkedin": "",
+      "github": ""
+    },
+    "experience_metrics": {
+      "total_years_experience": 19.1,
+      "total_months_experience": 229,
+      "explicit_years_experience": 0,
+      "chronology_years_experience": 19.1,
+      "chronology_capped_by_explicit_summary": false,
+      "experience_confidence": "high"
+    },
+    "normalized_roles": [
+      "Web / Full Stack Engineering",
+      "DevOps",
+      "Platform Product Management",
+      "Supply Chain / Procurement"
+    ],
+    "normalized_skills": [
+      "Microservices",
+      "Google Cloud Platform",
+      "Cloud Platform",
+      "Platform Scalability",
+      "JavaScript",
+      "Automation",
+      "Kubernetes",
+      "Logistics",
+      "React",
+      "Angular",
+      "ASP.NET",
+      "MongoDB",
+      "Jenkins",
+      "Payroll",
+      "DevOps",
+      "Microsoft Azure",
+      "CI/CD",
+      ".NET",
+      "SQL",
+      "AWS",
+      "REST API",
+      "EDM",
+      "C#"
+    ],
+    "production_skills": [
+      "Microservices",
+      "SQL"
+    ],
+    "beginner_or_exposure_skills": [
+      "Google Cloud Platform",
+      "Cloud Platform",
+      "Platform Scalability",
+      "JavaScript",
+      "Automation",
+      "Kubernetes",
+      "Logistics",
+      "React",
+      "Angular",
+      "ASP.NET",
+      "MongoDB",
+      "Jenkins",
+      "Payroll",
+      "DevOps",
+      "Microsoft Azure",
+      "CI/CD",
+      ".NET",
+      "AWS",
+      "REST API",
+      "EDM",
+      "C#"
+    ],
+    "skill_confidence_scores": [
+      {
+        "skill": "Microservices",
+        "confidence": 0.75
+      },
+      {
+        "skill": "Google Cloud Platform",
+        "confidence": 0.7
+      },
+      {
+        "skill": "Cloud Platform",
+        "confidence": 0.85
+      },
+      {
+        "skill": "Platform Scalability",
+        "confidence": 0.8
+      },
+      {
+        "skill": "JavaScript",
+        "confidence": 0.7
+      },
+      {
+        "skill": "Automation",
+        "confidence": 0.7
+      },
+      {
+        "skill": "Kubernetes",
+        "confidence": 0.7
+      },
+      {
+        "skill": "Logistics",
+        "confidence": 0.7
+      },
+      {
+        "skill": "React",
+        "confidence": 0.7
+      },
+      {
+        "skill": "Angular",
+        "confidence": 0.7
+      },
+      {
+        "skill": "ASP.NET",
+        "confidence": 0.7
+      },
+      {
+        "skill": "MongoDB",
+        "confidence": 0.7
+      },
+      {
+        "skill": "Jenkins",
+        "confidence": 0.7
+      },
+      {
+        "skill": "Payroll",
+        "confidence": 0.7
+      },
+      {
+        "skill": "DevOps",
+        "confidence": 0.85
+      },
+      {
+        "skill": "Microsoft Azure",
+        "confidence": 0.7
+      },
+      {
+        "skill": "CI/CD",
+        "confidence": 0.75
+      },
+      {
+        "skill": ".NET",
+        "confidence": 0.9
+      },
+      {
+        "skill": "SQL",
+        "confidence": 0.8
+      },
+      {
+        "skill": "AWS",
+        "confidence": 0.7
+      },
+      {
+        "skill": "REST API",
+        "confidence": 0.65
+      },
+      {
+        "skill": "EDM",
+        "confidence": 0.75
+      },
+      {
+        "skill": "C#",
+        "confidence": 0.7
+      },
+      {
+        "skill": "REST API",
+        "confidence": 0.65
+      },
+      {
+        "skill": "Artificial Intelligence",
+        "confidence": 0.65
+      }
+    ],
+    "skill_recency_scores": [
+      {
+        "skill": "Microservices",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Google Cloud Platform",
+        "recency_score": 0.55
+      },
+      {
+        "skill": "Cloud Platform",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Platform Scalability",
+        "recency_score": 0.55
+      },
+      {
+        "skill": "JavaScript",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Automation",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Kubernetes",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Logistics",
+        "recency_score": 0.55
+      },
+      {
+        "skill": "React",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Angular",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "ASP.NET",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "MongoDB",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Jenkins",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Payroll",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "DevOps",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "Microsoft Azure",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "CI/CD",
+        "recency_score": 0.8
+      },
+      {
+        "skill": ".NET",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "SQL",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "AWS",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "REST API",
+        "recency_score": 0.25
+      },
+      {
+        "skill": "EDM",
+        "recency_score": 0.8
+      },
+      {
+        "skill": "C#",
+        "recency_score": 0.25
+      }
+    ],
+    "project_evidence_scores": [
+      {
+        "skill": "Microservices",
+        "evidence_score": 0.47
+      },
+      {
+        "skill": "Google Cloud Platform",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "Cloud Platform",
+        "evidence_score": 0.59
+      },
+      {
+        "skill": "Platform Scalability",
+        "evidence_score": 0.47
+      },
+      {
+        "skill": "JavaScript",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "Automation",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "Kubernetes",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "Logistics",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "React",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "Angular",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "ASP.NET",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "MongoDB",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "Jenkins",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "Payroll",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "DevOps",
+        "evidence_score": 0.59
+      },
+      {
+        "skill": "Microsoft Azure",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "CI/CD",
+        "evidence_score": 0.47
+      },
+      {
+        "skill": ".NET",
+        "evidence_score": 0.53
+      },
+      {
+        "skill": "SQL",
+        "evidence_score": 0.83
+      },
+      {
+        "skill": "AWS",
+        "evidence_score": 0.41
+      },
+      {
+        "skill": "REST API",
+        "evidence_score": 0.35
+      },
+      {
+        "skill": "EDM",
+        "evidence_score": 0.47
+      },
+      {
+        "skill": "C#",
+        "evidence_score": 0.35
+      }
+    ],
+    "ai_optimization_risk": {
+      "score": 26,
+      "label": "Low",
+      "signals": [
+        "results-driven",
+        "proven track record"
+      ]
+    },
+    "domain_confidence_scores": [
+      {
+        "domain": "Web Application Development",
+        "confidence": 0.95,
+        "matched_signals": [
+          "frontend",
+          "backend",
+          "angular",
+          "javascript",
+          "html5"
+        ]
+      },
+      {
+        "domain": "SaaS",
+        "confidence": 0.78,
+        "matched_signals": [
+          "multi-tenant",
+          "tenant"
+        ]
+      },
+      {
+        "domain": "Human Resources / Staffing",
+        "confidence": 0.78,
+        "matched_signals": [
+          "hr",
+          "payroll"
+        ]
+      },
+      {
+        "domain": "Finance / Accounting",
+        "confidence": 0.78,
+        "matched_signals": [
+          "accounts",
+          "tax"
+        ]
+      },
+      {
+        "domain": "Banking / Financial Services",
+        "confidence": 0.64,
+        "matched_signals": [
+          "bank"
+        ]
+      },
+      {
+        "domain": "Healthcare",
+        "confidence": 0.64,
+        "matched_signals": [
+          "patient"
+        ]
+      },
+      {
+        "domain": "Cloud Infrastructure",
+        "confidence": 0.64,
+        "matched_signals": [
+          "kubernetes"
+        ]
+      },
+      {
+        "domain": "Tool Room / Die Manufacturing",
+        "confidence": 0.64,
+        "matched_signals": [
+          "edm"
+        ]
+      },
+      {
+        "domain": "Supply Chain / Logistics",
+        "confidence": 0.64,
+        "matched_signals": [
+          "logistics"
+        ]
+      },
+      {
+        "domain": "Logistics / Transportation",
+        "confidence": 0.64,
+        "matched_signals": [
+          "logistics"
+        ]
+      },
+      {
+        "domain": "Education",
+        "confidence": 0.64,
+        "matched_signals": [
+          "education"
+        ]
+      }
+    ],
+    "seniority_level": "Principal/Architect",
+    "role_normalized": "Results-Driven Senior Solution Architect & Technical Project Manager",
+    "chronology_ranges": [
+      {
+        "start_month": 24089,
+        "end_month": 24181
+      },
+      {
+        "start_month": 24182,
+        "end_month": 24252
+      },
+      {
+        "start_month": 24253,
+        "end_month": 24317
+      }
+    ],
+    "embedding_vector": []
+  },
+  "score_json": {
+    "final_score": 65,
+    "verdict": "Moderate Match",
+    "structured_score": 45,
+    "semantic_score": 74,
+    "hard_filter_score": 100,
+    "score_breakdown": {
+      "must_have_skills": 0,
+      "role_alignment": 60,
+      "experience_fit": 95,
+      "domain_fit": 90,
+      "seniority_fit": 95,
+      "nice_to_have": 67
+    },
+    "matched_must_have_skills": [],
+    "missing_must_have_skills": [
+      "POC"
+    ],
+    "strengths": [
+      "Strong domain fit: the resume shows experience in the same work area as the job.",
+      "Experience fits the JD range",
+      "Shows ownership signals: Led, Managed, Designed, Architected, Optimized"
+    ],
+    "concerns": [
+      "Missing required skills: POC",
+      "Weighted must-have skill coverage with related-skill credit"
+    ],
+    "red_flags": [],
+    "penalties_applied": [
+      {
+        "reason": "Missing must-have skills",
+        "impact": 8
+      }
+    ],
+    "explanation_summary": "Missing required skills: POC; Weighted must-have skill coverage with related-skill credit"
+  },
+  "mode": "hybrid_deterministic",
+  "role_played_for_jd": "Results-Driven Senior Solution Architect & Technical Project Manager",
+  "dashboard": {
+    "overview": {
+      "final_score": 65,
+      "structured_score": 45,
+      "semantic_score": 74,
+      "hard_filter_score": 100,
+      "verdict": "Moderate Match",
+      "recommendation": "Hold for calibration or backup pipeline",
+      "confidence": {
+        "score": 98,
+        "label": "High"
+      }
+    },
+    "score_breakdown": [
+      {
+        "key": "hard_filters",
+        "label": "Hard Filters",
+        "score": 100,
+        "weight": 0.2,
+        "weighted_points": 20.0,
+        "reason": "Mandatory screening gates for experience, certifications, location, and career gaps.",
+        "matched_items": [
+          "Minimum experience"
+        ],
+        "missing_items": []
+      },
+      {
+        "key": "must-have_skills",
+        "label": "Must-Have Skills",
+        "score": 0,
+        "weight": 0.45,
+        "weighted_points": 0.0,
+        "reason": "Weighted must-have skill coverage with related-skill credit",
+        "matched_items": [],
+        "missing_items": [
+          "POC"
+        ]
+      },
+      {
+        "key": "role_alignment",
+        "label": "Role Alignment",
+        "score": 60,
+        "weight": 0.14,
+        "weighted_points": 8.4,
+        "reason": "The resume has some similar job experience, but the current role is not clearly the same as this opening.",
+        "matched_items": [
+          "DevOps"
+        ],
+        "missing_items": [
+          "DevOps",
+          "Product Management",
+          "Data Science",
+          "Quality Assurance",
+          "Cybersecurity",
+          "Production / Manufacturing"
+        ]
+      },
+      {
+        "key": "experience_fit",
+        "label": "Experience Fit",
+        "score": 95,
+        "weight": 0.15,
+        "weighted_points": 14.2,
+        "reason": "Experience fits the JD range",
+        "matched_items": [
+          "19.1 years"
+        ],
+        "missing_items": []
+      },
+      {
+        "key": "domain_fit",
+        "label": "Domain Fit",
+        "score": 90,
+        "weight": 0.06,
+        "weighted_points": 5.4,
+        "reason": "Strong domain fit: the resume shows experience in the same work area as the job.",
+        "matched_items": [
+          "Cloud Infrastructure"
+        ],
+        "missing_items": [
+          "Manufacturing",
+          "Observability"
+        ]
+      },
+      {
+        "key": "seniority_fit",
+        "label": "Seniority Fit",
+        "score": 95,
+        "weight": 0.04,
+        "weighted_points": 3.8,
+        "reason": "Seniority aligns",
+        "matched_items": [
+          "Principal/Architect"
+        ],
+        "missing_items": []
+      },
+      {
+        "key": "nice-to-have",
+        "label": "Nice-to-Have",
+        "score": 67,
+        "weight": 0.0,
+        "weighted_points": 0.0,
+        "reason": "Nice-to-have skill coverage",
+        "matched_items": [
+          "Cloud Platform",
+          "Platform Scalability",
+          "Kubernetes",
+          "DevOps",
+          "Microsoft Azure",
+          "CI/CD",
+          ".NET",
+          "REST API"
+        ],
+        "missing_items": [
+          "Cloud Security",
+          "Observability Tooling",
+          "GraphQL",
+          "Docker"
+        ]
+      }
+    ],
+    "strengths": [
+      "Strong domain fit: the resume shows experience in the same work area as the job.",
+      "Experience fits the JD range",
+      "Shows ownership signals: Led, Managed, Designed, Architected, Optimized"
+    ],
+    "concerns": [
+      "Missing required skills: POC",
+      "Weighted must-have skill coverage with related-skill credit"
+    ],
+    "skill_matrix": {
+      "matched_must_have": [],
+      "missing_must_have": [
+        "POC"
+      ],
+      "jd_must_have": [
+        "POC"
+      ],
+      "candidate_skills": [
+        "Microservices",
+        "Google Cloud Platform",
+        "Cloud Platform",
+        "Platform Scalability",
+        "JavaScript",
+        "Automation",
+        "Kubernetes",
+        "Logistics",
+        "React",
+        "Angular",
+        "ASP.NET",
+        "MongoDB",
+        "Jenkins",
+        "Payroll",
+        "DevOps",
+        "Microsoft Azure",
+        "CI/CD",
+        ".NET",
+        "SQL",
+        "AWS",
+        "REST API",
+        "EDM",
+        "C#"
+      ]
+    },
+    "candidate_snapshot": {
+      "candidate_name": "Mr. Dnyaneshwar Pawar",
+      "current_role": "Results-Driven Senior Solution Architect & Technical Project Manager",
+      "experience_years": 19.1,
+      "education": [
+        "B.E"
+      ],
+      "domains": [
+        "Web Application Development",
+        "SaaS",
+        "Human Resources / Staffing",
+        "Finance / Accounting",
+        "Banking / Financial Services",
+        "Healthcare"
+      ],
+      "top_skills": [
+        "Microservices",
+        "Google Cloud Platform",
+        "Cloud Platform",
+        "Platform Scalability",
+        "JavaScript",
+        "Automation",
+        "Kubernetes",
+        "Logistics",
+        "React",
+        "Angular",
+        "ASP.NET",
+        "MongoDB"
+      ],
+      "location": "Pune",
+      "employment_status": "Currently Employed",
+      "last_employed_date": "May 2026",
+      "career_gap_periods": [],
+      "career_stability_detail": {},
+      "cv_structure_quality": {},
+      "ai_optimization_risk": {
+        "score": 26,
+        "label": "Low",
+        "signals": [
+          "results-driven",
+          "proven track record"
+        ]
+      }
+    },
+    "role_history": [
+      {
+        "title": "Results-Driven Senior Solution Architect & Technical Project Manager",
+        "company": "",
+        "duration_years": 0.4,
+        "duration_months": 0,
+        "start": "",
+        "end": "",
+        "responsibilities": [
+          "WCF, Entity Framework, SOLID Principles, Design Patterns, NUnit, CQRS",
+          "Led LoanOps intermediary middleware integration frameworks coordinating high-volume messaging pipelines",
+          "Designed high-accuracy Oracle FDR server data streams translating backend configurations to automated XML",
+          "BMW COFIS: Managed functional blueprints, customer clarity matrices, and multi-national release code testing"
+        ],
+        "skills_used": [
+          "Microservices",
+          "Google Cloud Platform",
+          "Cloud Platform",
+          "Platform Scalability",
+          "JavaScript",
+          "Automation",
+          "Kubernetes",
+          "Logistics",
+          "React",
+          "Angular"
+        ]
+      }
+    ],
+    "penalties": [
+      {
+        "reason": "Missing must-have skills",
+        "impact": 8
+      }
+    ],
+    "semantic_insights": [
+      "Some parts of the resume are related to this job, but the match is not consistent across the whole profile.",
+      "Domain fit is partial because the resume shows Cloud Infrastructure experience, but the job also needs Manufacturing, Observability."
+    ],
+    "role_alignment_reasoning": [
+      "The resume has some similar job experience, but the current role is not clearly the same as this opening."
+    ],
+    "hard_filters": {
+      "hard_filter_score": 100,
+      "passed": true,
+      "filters": [
+        {
+          "name": "Minimum experience",
+          "passed": true,
+          "severity": "pass",
+          "reason": "Candidate has 19.1 years; requirement is 15+ years. Shortfall up to 6 months is acceptable."
+        }
+      ]
+    },
+    "recruiter_summary": "Mr. Dnyaneshwar Pawar, currently Results-Driven Senior Solution Architect & Technical Project Manager, is assessed as Moderate Match with a final score of 65. Positive signals include strong domain fit: the resume shows experience in the same work area as the job.; experience fits the job description range. The main gaps to validate are POC; Weighted must-have skill coverage with related-skill credit. The recommended next step is to hold for calibration or backup pipeline."
+  },
+  "case": {
+    "case_dir": "D:\\hrguru-ats\\tools\\case_001",
+    "resume_file": "resume.pdf",
+    "jd_file": "JD.docx",
+    "metadata": {},
+    "processed_at": "2026-05-26T18:53:32",
+    "resume_text_chars": 4627,
+    "jd_text_chars": 4713
+  }
+}

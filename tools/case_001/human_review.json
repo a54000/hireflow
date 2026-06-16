@@ -1,0 +1,14 @@
+{
+  "review_status": "pending",
+  "reviewed_at": "",
+  "reviewer": "",
+  "codex_score": 65,
+  "reviewer_score": null,
+  "reviewer_decision": "",
+  "agree_with_recommendation": null,
+  "matcher_missed": [],
+  "matcher_got_wrong": [],
+  "cv_parser_gaps": [],
+  "jd_parser_gaps": [],
+  "notes": ""
+}

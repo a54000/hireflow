@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add Candidate - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7;padding:18px 22px 92px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 auto 14px;max-width:1040px}
+.brand{font-size:20px;font-weight:900;color:#fff}.brand span{color:#e8643a}
+.top-actions{display:flex;gap:8px;align-items:center}.link-btn,.btn{border:1px solid #e8643a;background:#e8643a;color:#fff;border-radius:8px;padding:10px 14px;font:inherit;font-size:13px;font-weight:800;text-decoration:none;cursor:pointer}.link-btn.secondary,.btn.secondary{background:#252a3a;border-color:#343b52;color:#d9dee8}.btn:disabled{opacity:.65;cursor:not-allowed}
+.profile{position:relative}.profile-btn{width:38px;height:38px;border-radius:50%;border:1px solid #343b52;background:#252a3a;color:#fff;font-weight:900;cursor:pointer}.profile-menu{display:none;position:absolute;right:0;top:46px;z-index:40;min-width:170px;background:#1c2030;border:1px solid #343b52;border-radius:8px;box-shadow:0 16px 34px rgba(0,0,0,.35);overflow:hidden}.profile-menu.active{display:block}.profile-menu a,.profile-menu button{display:block;width:100%;border:0;background:transparent;color:#d9dee8;text-align:left;text-decoration:none;padding:12px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.profile-menu a:hover,.profile-menu button:hover{background:#252a3a;color:#fff}
+.wrap{max-width:1040px;margin:0 auto;background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;overflow:visible}
+.head{padding:18px 22px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.head h1{font-size:23px;color:#fff;margin-bottom:5px}.head p{color:#9aa5c4;font-size:13px}.head-note{color:#8b95b5;font-size:12px;text-align:right;max-width:300px;line-height:1.35}
+.content{padding:20px 22px;display:grid;gap:16px}.panel{border:1px solid #2a2f3a;background:#202636;border-radius:8px;padding:16px;display:grid;gap:14px}.section-title{font-size:13px;font-weight:900;color:#e8643a;text-transform:uppercase;letter-spacing:.04em}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field.full{grid-column:1/-1}
+label{display:block;color:#cfd7ee;font-size:12px;font-weight:850;margin-bottom:6px}.req label:after{content:" *";color:#e8643a}
+input,textarea{width:100%;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:14px;padding:11px 12px;min-height:42px}
+textarea{min-height:84px;resize:vertical}input:focus,textarea:focus{outline:none;border-color:#e8643a}.invalid input,.invalid textarea{border-color:#e86a6a}.help{display:block;color:#8b95b5;font-size:12px;margin-top:6px}.error-text{display:none;color:#ff9ca8;font-size:12px;margin-top:6px}.invalid .error-text{display:block}
+.file-row{display:flex;gap:10px;align-items:center}.file-row input{flex:1}.autocomplete{position:relative}.menu{display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:20;background:#111722;border:1px solid #343b52;border-radius:8px;box-shadow:0 14px 30px rgba(0,0,0,.35);overflow:hidden;max-height:280px;overflow-y:auto}.menu.active{display:block}.menu button{width:100%;border:0;border-bottom:1px solid #263047;background:#111722;color:#fff;text-align:left;padding:11px 12px;cursor:pointer}.menu button:hover{background:#252a3a}.menu span{display:block;color:#8b95b5;font-size:11px;margin-top:3px}
+.alert{display:none;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.4}.alert.error{display:block;background:#3a1d22;color:#ffb4bd;border:1px solid #6b2c36}.alert.success{display:block;background:#173421;color:#9af0b4;border:1px solid #2c6b3b}.alert.warning{display:block;background:#3b2b14;color:#ffd98a;border:1px solid #6c501f}
+.footer{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:12px 22px;border-top:1px solid #2a2f3a;display:flex;justify-content:center;background:rgba(13,16,23,.96);box-shadow:0 -12px 28px rgba(0,0,0,.28)}.footer-inner{width:min(1040px,100%);display:flex;justify-content:flex-end;gap:10px}
+.success-actions{display:none;gap:10px;justify-content:flex-end;flex-wrap:wrap}.success-actions.active{display:flex}
+@media(max-width:760px){body{padding:14px 14px 96px}.grid{grid-template-columns:1fr}.top,.head{align-items:flex-start}.head{display:block}.head-note{text-align:left;margin-top:8px}.file-row{display:grid}.footer-inner{display:grid;grid-template-columns:1fr 1fr}.success-actions.active{display:grid;grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand">HR <span>Guru</span></div>
+  <div class="top-actions">
+    <a class="link-btn secondary" href="/">Dashboard</a>
+    <div class="profile">
+      <button class="profile-btn" type="button" onclick="toggleProfileMenu()" aria-label="Open profile menu">U</button>
+      <div class="profile-menu" id="profileMenu">
+        <a href="/profile">Profile</a>
+        {% if session.get("impersonation_active") %}<a href="/admin/restore-profile">Return to Admin</a>{% endif %}
+        <button type="button" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+<main class="wrap">
+  <div class="head">
+    <div>
+      <h1>Add Candidate</h1>
+      <p>Attach the CV, select the requirement, and complete the mandatory candidate details.</p>
+    </div>
+    <div class="head-note">Save uploads the CV automatically if it has not been parsed yet.</div>
+  </div>
+  <div class="content">
+    <div id="alert" class="alert"></div>
+    <section class="panel">
+      <div class="section-title">CV & Requirement</div>
+      <div class="grid">
+      <div class="field full req" id="fieldCv">
+        <label>Resume</label>
+        <div class="file-row">
+          <input type="file" id="cvFile" accept=".pdf,.doc,.docx" onchange="cvParsedData=null;setParseStatus('Ready to parse')">
+          <button class="btn secondary" type="button" id="parseBtn" onclick="parseCV()">Parse</button>
+        </div>
+        <span class="help" id="parseStatus">Parse fills candidate details automatically. Save will upload the CV if not parsed.</span>
+        <span class="error-text">CV/Resume is required.</span>
+      </div>
+      <div class="field full req" id="fieldRequirement">
+        <label>Requirement</label>
+        <div class="autocomplete">
+          <input id="requirementSearch" placeholder="Type requirement or client name..." autocomplete="off" oninput="queueRequirementSearch(this.value)" onfocus="showRequirementHelp()">
+          <input type="hidden" id="requirementId">
+          <div class="menu" id="requirementResults"></div>
+        </div>
+        <span class="help" id="requirementHint">Type at least 2 letters to search active mapped requirements.</span>
+        <span class="error-text">Requirement is required.</span>
+      </div>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="section-title">Candidate Details</div>
+      <div class="grid">
+      <div class="field req" id="fieldName"><label>Candidate Name</label><input id="candidateName"><span class="error-text">Candidate name is required.</span></div>
+      <div class="field req" id="fieldEmail"><label>Email</label><input id="email" type="email"><span class="error-text">Email is required.</span></div>
+      <div class="field req" id="fieldPhone"><label>Mobile Number</label><input id="phone"><span class="error-text">Phone is required.</span></div>
+      <div class="field req" id="fieldCurrentLocation"><label>Current Location</label><input id="currentLocation"><span class="error-text">Current location is required.</span></div>
+      <div class="field req" id="fieldPreferredLocation"><label>Preferred Location</label><input id="preferredLocation"><span class="error-text">Preferred location is required.</span></div>
+      <div class="field req" id="fieldNotice"><label>Notice Period</label><input id="noticePeriod"><span class="error-text">Notice period is required.</span></div>
+      <div class="field"><label>Current Company</label><input id="currentCompany"></div>
+      <div class="field"><label>Current Designation</label><input id="currentRole"></div>
+      <div class="field req" id="fieldExperience"><label>Experience</label><input id="experience"><span class="error-text">Experience is required.</span></div>
+      <div class="field req" id="fieldSkills"><label>Skills</label><input id="skills" placeholder="Java, Spring, SQL"><span class="error-text">Skills are required.</span></div>
+      <div class="field req" id="fieldCurrentSalary"><label>Current Salary</label><input id="currentSalary"><span class="error-text">Current salary is required.</span></div>
+      <div class="field req" id="fieldExpectedSalary"><label>Expected Salary</label><input id="expectedSalary"><span class="error-text">Expected salary is required.</span></div>
+      <div class="field full"><label>Remarks</label><textarea id="remarks"></textarea></div>
+      </div>
+    </section>
+  </div>
+  <div class="footer">
+    <div class="footer-inner">
+      <div class="success-actions" id="successActions">
+        <a class="btn secondary" href="/add-candidate">Add Another</a>
+        <a class="btn" href="/">Dashboard</a>
+      </div>
+      <a class="btn secondary" id="cancelBtn" href="/">Cancel</a>
+      <button class="btn" id="saveBtn" type="button" onclick="saveCandidate()">Save Candidate</button>
+    </div>
+  </div>
+</main>
+<script>
+let currentUser = {};
+let cvParsedData = null;
+let requirementTimer = null;
+let requirementSeq = 0;
+let selectedRequirement = null;
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function val(id) { return (document.getElementById(id)?.value || '').trim(); }
+function setVal(id, value) { const el = document.getElementById(id); if (el && value) el.value = String(value).replace(/^\+91/, ''); }
+function showAlert(message, type='error') {
+  const el = document.getElementById('alert');
+  el.textContent = message;
+  el.className = 'alert ' + type;
+}
+function clearAlert() {
+  const el = document.getElementById('alert');
+  el.textContent = '';
+  el.className = 'alert';
+}
+function setParseStatus(text) { document.getElementById('parseStatus').textContent = text; }
+function markInvalid(id, invalid=true) { document.getElementById(id)?.classList.toggle('invalid', invalid); }
+function clearValidation() { document.querySelectorAll('.field.invalid').forEach(el => el.classList.remove('invalid')); clearAlert(); }
+
+function requirementLabel(row) {
+  const title = [row.title || '', row.client_name || ''].filter(Boolean).join(' - ') || 'Requirement #' + row.id;
+  return row.requisition_id ? `${row.requisition_id} | ${title}` : title;
+}
+function setRequirementMessage(message) {
+  const menu = document.getElementById('requirementResults');
+  menu.innerHTML = `<button type="button" disabled>${escapeHtml(message)}</button>`;
+  menu.classList.add('active');
+}
+function showRequirementHelp() {
+  if (!val('requirementId') && val('requirementSearch').length < 2) setRequirementMessage('Type at least 2 letters to search active mapped requirements.');
+}
+function selectRequirement(row) {
+  selectedRequirement = row || null;
+  document.getElementById('requirementId').value = row.id;
+  document.getElementById('requirementSearch').value = requirementLabel(row);
+  const taggdName = String(row.taggd_recruiter_name || '').trim();
+  document.getElementById('requirementHint').textContent = taggdName
+    ? `${row.status || 'Active'} requirement selected. Taggd Recruiter: ${taggdName}.`
+    : `${row.status || 'Active'} requirement selected.`;
+  document.getElementById('requirementResults').classList.remove('active');
+  markInvalid('fieldRequirement', false);
+  if (!taggdName) {
+    showAlert('Warning: this Requirement does not have a Taggd Recruiter Name assigned yet. You can still add the candidate, but reports may show Taggd Recruiter as Not assigned until the Requirement is updated.', 'warning');
+  } else {
+    clearAlert();
+  }
+}
+function queueRequirementSearch(query) {
+  document.getElementById('requirementId').value = '';
+  selectedRequirement = null;
+  clearTimeout(requirementTimer);
+  const q = String(query || '').trim();
+  if (q.length < 2) {
+    showRequirementHelp();
+    return;
+  }
+  requirementTimer = setTimeout(() => searchRequirements(q), 250);
+}
+async function searchRequirements(query) {
+  const seq = ++requirementSeq;
+  setRequirementMessage('Searching requirements...');
+  try {
+    const params = new URLSearchParams({q: query, limit: '20'});
+    const res = await fetch('/api/requirements/search?' + params.toString());
+    const rows = await res.json();
+    if (seq !== requirementSeq) return;
+    const menu = document.getElementById('requirementResults');
+    if (!Array.isArray(rows) || !rows.length) {
+      setRequirementMessage(`No active mapped requirements found for "${query}". Try requirement title or client name.`);
+      return;
+    }
+    menu.innerHTML = rows.map((row, index) => `
+      <button type="button" data-idx="${index}">
+        <strong>${escapeHtml(row.requisition_id ? row.requisition_id + ' | ' + (row.title || 'Untitled requirement') : (row.title || 'Untitled requirement'))}</strong>
+        <span>${escapeHtml(row.client_name || '-')} | ${escapeHtml(row.taggd_recruiter_name || 'No Taggd recruiter')} | ${escapeHtml(row.status || 'Active')}</span>
+      </button>
+    `).join('');
+    menu.querySelectorAll('button[data-idx]').forEach(btn => btn.onclick = () => selectRequirement(rows[Number(btn.dataset.idx)]));
+    menu.classList.add('active');
+  } catch(e) {
+    setRequirementMessage('Unable to search requirements right now.');
+  }
+}
+
+function applyParsed(parsed) {
+  if (!parsed) return;
+  setVal('candidateName', parsed.candidate_name);
+  setVal('email', parsed.email_addr);
+  setVal('phone', parsed.phone);
+  setVal('currentCompany', parsed.current_company);
+  setVal('currentRole', parsed.current_role);
+  setVal('experience', parsed.experience_years);
+  setVal('skills', parsed.key_skills);
+  setVal('noticePeriod', parsed.notice_period);
+  setVal('currentSalary', parsed.current_salary);
+  setVal('expectedSalary', parsed.expected_salary);
+  setVal('currentLocation', parsed.current_location);
+}
+function toggleProfileMenu() {
+  document.getElementById('profileMenu')?.classList.toggle('active');
+}
+async function parseCV() {
+  const file = document.getElementById('cvFile').files[0];
+  if (!file) {
+    markInvalid('fieldCv');
+    showAlert('Choose a CV before parsing.');
+    return null;
+  }
+  const btn = document.getElementById('parseBtn');
+  btn.disabled = true;
+  btn.textContent = 'Parsing...';
+  setParseStatus('Uploading and parsing CV...');
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await fetch('/api/upload_cv', {method: 'POST', body: fd});
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Parsing failed.');
+    cvParsedData = {filename: data.filename, url: data.url, public_id: data.public_id, parsed: data.parsed || {}};
+    applyParsed(cvParsedData.parsed);
+    setParseStatus(`Parsed: ${data.filename}`);
+    markInvalid('fieldCv', false);
+    clearAlert();
+    return cvParsedData;
+  } catch(e) {
+    showAlert(e.message || 'Unable to parse CV.');
+    setParseStatus('Parsing failed.');
+    return null;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Parse';
+  }
+}
+function validateForm() {
+  clearValidation();
+  const checks = [
+    ['fieldCv', () => document.getElementById('cvFile').files[0]],
+    ['fieldRequirement', () => val('requirementId')],
+    ['fieldName', () => val('candidateName')],
+    ['fieldEmail', () => val('email')],
+    ['fieldPhone', () => val('phone')],
+    ['fieldCurrentLocation', () => val('currentLocation')],
+    ['fieldPreferredLocation', () => val('preferredLocation')],
+    ['fieldNotice', () => val('noticePeriod')],
+    ['fieldExperience', () => val('experience')],
+    ['fieldSkills', () => val('skills')],
+    ['fieldCurrentSalary', () => val('currentSalary')],
+    ['fieldExpectedSalary', () => val('expectedSalary')]
+  ];
+  const missing = checks.filter(([, fn]) => !fn()).map(([id]) => id);
+  missing.forEach(id => markInvalid(id));
+  if (missing.length) showAlert('Please complete all mandatory fields.');
+  return missing.length === 0;
+}
+async function saveCandidate() {
+  if (!validateForm()) return;
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  try {
+    const file = document.getElementById('cvFile').files[0];
+    if (file && !cvParsedData) await parseCV();
+    if (!cvParsedData) throw new Error('CV upload failed. Please parse the CV again.');
+    const reqId = Number(val('requirementId'));
+    const body = {
+      requirement_id: reqId,
+      candidate_name: val('candidateName'),
+      email_addr: val('email'),
+      phone: val('phone'),
+      current_company: val('currentCompany'),
+      current_role: val('currentRole'),
+      experience_years: val('experience'),
+      key_skills: val('skills'),
+      notice_period: val('noticePeriod'),
+      current_salary: val('currentSalary'),
+      expected_salary: val('expectedSalary'),
+      current_location: val('currentLocation'),
+      preferred_location: val('preferredLocation'),
+      remarks: val('remarks'),
+      source: '',
+      sourcer_id: currentUser.team_member_id,
+      cv_filename: cvParsedData.filename || file.name,
+      cv_url: cvParsedData.url || '',
+      cv_public_id: cvParsedData.public_id || '',
+      cv_summary: cvParsedData.parsed?.cv_summary || ''
+    };
+    const res = await fetch('/api/candidate', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Unable to save candidate.');
+    if (data.id && reqId) {
+      await fetch('/api/submissions', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({candidate_id:data.id, requirement_id:reqId, sourcer_id:currentUser.team_member_id, notes: val('remarks'), checks: []})});
+    }
+    showAlert('Candidate added successfully.', 'success');
+    btn.style.display = 'none';
+    document.getElementById('cancelBtn').style.display = 'none';
+    document.getElementById('successActions').classList.add('active');
+  } catch(e) {
+    showAlert(e.message || 'Unable to save candidate.');
+    btn.disabled = false;
+    btn.textContent = 'Save Candidate';
+  }
+}
+async function signOut() {
+  await fetch('/api/logout', {method:'POST'});
+  localStorage.removeItem('hrguru_user');
+  window.location.href = '/login';
+}
+document.addEventListener('click', event => {
+  if (!event.target.closest('.autocomplete')) document.getElementById('requirementResults').classList.remove('active');
+  if (!event.target.closest('.profile')) document.getElementById('profileMenu')?.classList.remove('active');
+});
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const res = await fetch('/api/me');
+    currentUser = await res.json();
+    if (currentUser.is_client_viewer) window.location.href = '/candidate-search';
+  } catch(e) {
+    showAlert('Unable to load your login profile. Please sign in again.');
+  }
+});
+</script>
+</body>
+</html>

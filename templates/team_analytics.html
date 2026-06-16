@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Analytics - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7;padding:12px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 auto 12px;max-width:1180px}.brand{font-size:20px;font-weight:900;color:#fff}.brand span{color:#e8643a}.top-title{color:#9aa5c4;font-size:12px;font-weight:850}
+.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.link-btn,.btn{height:40px;border:1px solid #e8643a;background:#e8643a;color:#fff;border-radius:8px;padding:0 14px;font:inherit;font-size:13px;font-weight:850;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}.link-btn.secondary,.btn.secondary{background:#252a3a;border-color:#343b52;color:#d9dee8}.link-btn:hover,.btn:hover{filter:brightness(1.08)}
+.profile{position:relative}.profile-btn{width:38px;height:38px;border-radius:50%;border:1px solid #343b52;background:#252a3a;color:#fff;font-weight:900;cursor:pointer}.profile-menu{display:none;position:absolute;right:0;top:46px;z-index:40;min-width:170px;background:#1c2030;border:1px solid #343b52;border-radius:8px;box-shadow:0 16px 34px rgba(0,0,0,.35);overflow:hidden}.profile-menu.active{display:block}.profile-menu a,.profile-menu button{display:block;width:100%;border:0;background:transparent;color:#d9dee8;text-align:left;text-decoration:none;padding:12px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.profile-menu a:hover,.profile-menu button:hover{background:#252a3a;color:#fff}
+.wrap{max-width:1180px;margin:0 auto;background:#171c28;border:1px solid #2a2f3a;border-radius:10px;overflow:hidden}.head{padding:18px 20px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.head h1{font-size:22px;color:#fff;margin-bottom:4px}.head p{color:#9aa5c4;font-size:13px;line-height:1.4}.badge{height:30px;border:1px solid #344055;background:#22293a;color:#bac4df;border-radius:999px;padding:0 12px;display:inline-flex;align-items:center;font-size:12px;font-weight:850;white-space:nowrap}
+.status{padding:10px 20px;color:#9aa5c4;font-size:13px;border-bottom:1px solid #2a2f3a;min-height:38px}.status.error{color:#ffb4bd}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:16px 20px;border-bottom:1px solid #2a2f3a}.kpi{--accent:#5eead4;background:#111620;border:1px solid #30394f;border-radius:8px;padding:14px;position:relative;overflow:hidden;min-height:92px}.kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}.kpi strong{display:block;font-size:28px;color:#fff;line-height:1;margin-bottom:7px}.kpi span{display:block;font-size:12px;color:#bac4df;font-weight:850}.kpi em{display:block;margin-top:5px;font-size:11px;color:#7f8bad;font-style:normal}
+.content{padding:16px 20px;display:grid;gap:14px}.grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr);gap:14px}.panel{background:#111620;border:1px solid #30394f;border-radius:8px;padding:14px}.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}.panel h2{font-size:16px;color:#fff}.panel p{font-size:12px;color:#8b95b5;margin-top:3px}.legend{font-size:12px;color:#9aa5c4;font-weight:850;white-space:nowrap}
+.full-row{display:grid;grid-template-columns:1fr}
+.chart{height:320px;position:relative;padding:18px 10px 30px 42px;background:linear-gradient(#1d2433 1px,transparent 1px) 0 18px/100% 64px;border:1px solid #252d40;border-radius:8px;display:grid;grid-template-columns:repeat(var(--bars),minmax(18px,1fr));gap:8px;align-items:end;overflow:auto}.axis{position:absolute;left:10px;color:#7f8bad;font-size:11px}.axis.a1{top:16px}.axis.a2{top:80px}.axis.a3{top:144px}.axis.a4{top:208px}.axis.a5{bottom:28px}
+.bar{height:100%;min-width:22px;display:grid;grid-template-rows:1fr auto;align-items:end;text-align:center;gap:7px}.fill{height:var(--h);min-height:4px;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,#5eead4,#2563eb);box-shadow:0 10px 24px rgba(37,99,235,.22);position:relative}.fill.today{background:linear-gradient(180deg,#f2b84b,#e8643a)}.fill:after{content:attr(data-count);position:absolute;left:50%;top:-24px;transform:translateX(-50%);font-size:11px;color:#fff;font-weight:900;background:#202636;border:1px solid #343b52;border-radius:999px;padding:3px 7px;opacity:0;transition:opacity .15s}.bar:hover .fill:after{opacity:1}.bar span{font-size:10px;color:#8b95b5;font-weight:850;white-space:nowrap}
+.heat{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}.day-label{font-size:10px;color:#7f8bad;text-align:center;font-weight:900}.cell{aspect-ratio:1;border-radius:7px;border:1px solid #2b3448;background:#1b2231;display:flex;align-items:flex-start;justify-content:flex-start;padding:6px;font-size:11px;color:#cfd7ee;font-weight:850;position:relative}.cell[data-v="0"]{color:#63708e;background:#151923}.cell[data-v="1"]{background:#18332e;border-color:#245449}.cell[data-v="2"]{background:#155e51;border-color:#268374}.cell[data-v="3"]{background:#1d6d8f;border-color:#2b93bd}.cell[data-v="4"]{background:#5d3fd3;border-color:#8065f4}.cell strong{position:absolute;right:5px;bottom:5px;min-width:18px;height:18px;border-radius:999px;background:rgba(13,16,23,.5);display:grid;place-items:center;padding:0 5px;font-size:9px;color:#fff;line-height:1}.cell.blank{visibility:hidden}
+.empty{padding:42px;text-align:center;color:#8b95b5}
+.leaderboards{display:grid;grid-template-columns:1fr 1fr;gap:12px}.leaderboard{--tone:#5eead4;border:1px solid #2d3449;background:#1b2231;border-radius:8px;padding:12px;min-width:0}.leaderboard h3{font-size:14px;color:#fff;margin-bottom:2px}.leaderboard small{display:block;color:#8b95b5;font-size:11px;font-weight:800;margin-bottom:10px}.leader-list{display:grid;grid-template-columns:1fr;gap:0}.leader-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;min-height:54px;border-top:1px solid #2a2f3a;padding:9px 0}.leader-row:first-child{border-top:0}.rank{width:28px;height:28px;border-radius:999px;display:grid;place-items:center;background:rgba(94,234,212,.13);border:1px solid rgba(94,234,212,.42);color:#8ff5d6;font-size:12px;font-weight:950}.leader-name{min-width:0}.leader-name strong{display:block;color:#fff;font-size:14px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.leader-name span{display:block;color:#8b95b5;font-size:11px;line-height:1.25;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.leader-count{border:1px solid rgba(94,234,212,.35);background:rgba(94,234,212,.1);color:#dffcf6;border-radius:999px;min-width:74px;text-align:center;padding:7px 9px;font-size:16px;font-weight:950}.leader-count span{display:block;font-size:9px;color:#8b95b5;line-height:1;margin-top:2px}.leaderboard.bottom{--tone:#ef4444}.leaderboard.bottom .rank{background:rgba(239,68,68,.13);border-color:rgba(239,68,68,.45);color:#ffb4bd}.leaderboard.bottom .leader-count{border-color:rgba(239,68,68,.36);background:rgba(239,68,68,.1);color:#ffd4d8}
+@media(max-width:900px){.grid,.kpis{grid-template-columns:1fr 1fr}.leaderboards{grid-template-columns:1fr}.chart{grid-template-columns:repeat(7,minmax(24px,1fr));height:360px;overflow:auto}}@media(max-width:620px){body{padding:8px}.top,.head,.grid,.kpis{grid-template-columns:1fr;display:grid}.badge{width:max-content}.wrap,.top{max-width:calc(100vw - 16px)}.content,.kpis,.head{padding:12px}.chart{padding-left:34px;gap:6px}.panel-head{display:grid}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><div class="brand">HR <span>Guru</span></div><div class="top-title">Team Analytics</div></div>
+  <div class="top-actions">
+    <a class="link-btn secondary" href="/">Dashboard</a>
+    <a class="link-btn secondary" href="/team-reports">Team Reports</a>
+    <button class="btn" type="button" onclick="loadAnalytics()">Load Analytics</button>
+    <div class="profile">
+      <button class="profile-btn" type="button" onclick="toggleProfileMenu()" aria-label="Open profile menu">U</button>
+      <div class="profile-menu" id="profileMenu">
+        <a href="/profile">Profile</a>
+        {% if session.get("impersonation_active") %}<a href="/admin/restore-profile">Return to Admin</a>{% endif %}
+        <button type="button" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+<main class="wrap">
+  <div class="head">
+    <div>
+      <h1>Team Analytics</h1>
+      <p>Submission trends for your accessible team. Graph data loads only on this page.</p>
+    </div>
+    <span class="badge" id="generatedBadge">On demand</span>
+  </div>
+  <div class="status" id="statusText">Analytics will load when requested.</div>
+  <section class="kpis" id="summaryCards"></section>
+  <section class="content" id="content"><div class="empty">Click Load Analytics to view team performance.</div></section>
+</main>
+<script>
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function toggleProfileMenu(){document.getElementById('profileMenu')?.classList.toggle('active');}
+document.addEventListener('click',event=>{if(!event.target.closest('.profile'))document.getElementById('profileMenu')?.classList.remove('active');});
+function numberFmt(value){return Number(value||0).toLocaleString('en-IN');}
+function bestDay(rows){return (rows||[]).reduce((best,row)=>Number(row.count||0)>Number(best.count||0)?row:best,{count:0,label:'-'});}
+function zeroDays(rows){return (rows||[]).filter(row=>Number(row.count||0)===0).length;}
+function avg(total,rows){const n=(rows||[]).length||1;return (Number(total||0)/n).toFixed(1);}
+function renderCards(data){
+  const best=bestDay(data.last14||[]);
+  const quiet=zeroDays(data.last14||[]);
+  document.getElementById('summaryCards').innerHTML=[
+    ['Last 14 Days',data.last14_total||0,`${avg(data.last14_total,data.last14)} average/day`,'#5eead4'],
+    [data.month_label||'This Month',data.month_total||0,'Month submissions','#f2b84b'],
+    ['Best Day',best.count||0,best.label||'-','#60a5fa'],
+    ['Quiet Days',quiet,quiet===1?'Zero-submission day':'Zero-submission days','#f472b6']
+  ].map(([label,value,note,accent])=>`<div class="kpi" style="--accent:${accent}"><strong>${escapeHtml(numberFmt(value))}</strong><span>${escapeHtml(label)}</span><em>${escapeHtml(note)}</em></div>`).join('');
+}
+function renderTrend(rows){
+  const list=Array.isArray(rows)?rows:[];
+  if(!list.length)return '<div class="empty">No trend data found.</div>';
+  const max=Math.max(1,...list.map(row=>Number(row.count||0)));
+  const todayIso=new Date().toISOString().slice(0,10);
+  const bars=list.map(row=>{
+    const count=Number(row.count||0);
+    const height=Math.max(count?8:4,Math.round((count/max)*100));
+    const isToday=row.date===todayIso || row===list[list.length-1];
+    const label=isToday?'Today':(row.short_label||row.label||'');
+    return `<div class="bar" title="${escapeHtml(row.label)}: ${count}">
+      <div class="fill ${isToday?'today':''}" data-count="${count}" style="--h:${height}%"></div>
+      <span>${escapeHtml(label)}</span>
+    </div>`;
+  }).join('');
+  return `<div class="chart" style="--bars:${list.length}">
+    <span class="axis a1">${Math.ceil(max)}</span><span class="axis a2">${Math.ceil(max*.75)}</span><span class="axis a3">${Math.ceil(max*.5)}</span><span class="axis a4">${Math.ceil(max*.25)}</span><span class="axis a5">0</span>
+    ${bars}
+  </div>`;
+}
+function heatLevel(count,max){
+  const n=Number(count||0);
+  if(!n)return 0;
+  if(max<=1)return 1;
+  return Math.max(1,Math.min(4,Math.ceil((n/max)*4)));
+}
+function renderHeatmap(rows){
+  const list=Array.isArray(rows)?rows:[];
+  if(!list.length)return '<div class="empty">No month data found.</div>';
+  const max=Math.max(1,...list.map(row=>Number(row.count||0)));
+  const first=new Date(list[0].date+'T00:00:00');
+  const blanks=(first.getDay()+6)%7;
+  const labels=['M','T','W','T','F','S','S'].map(day=>`<div class="day-label">${day}</div>`).join('');
+  const blankCells=Array.from({length:blanks},()=>'<div class="cell blank"></div>').join('');
+  const cells=list.map(row=>{
+    const d=new Date(row.date+'T00:00:00');
+    const day=d.getDate();
+    const count=Number(row.count||0);
+    return `<div class="cell" data-v="${heatLevel(count,max)}" title="${escapeHtml(row.label)}: ${count}">${day}<strong>${count}</strong></div>`;
+  }).join('');
+  return `<div class="heat">${labels}${blankCells}${cells}</div>`;
+}
+function leaderRow(row,index){
+  const submissions=Number(row.submissions||0);
+  return `<div class="leader-row">
+    <div class="rank">${index+1}</div>
+    <div class="leader-name"><strong title="${escapeHtml(row.recruiter||'Unassigned')}">${escapeHtml(row.recruiter||'Unassigned')}</strong><span>${escapeHtml(numberFmt(submissions))} submission${submissions===1?'':'s'} this week</span></div>
+    <div class="leader-count">${escapeHtml(numberFmt(submissions))}<span>subs</span></div>
+  </div>`;
+}
+function renderWeeklyLeaderboard(rows){
+  const list=(Array.isArray(rows)?rows:[]).map(row=>({recruiter:row.recruiter||'Unassigned',email:row.email||'',submissions:Number(row.submissions||0)}));
+  if(!list.length)return '<div class="empty">No weekly recruiter submissions found.</div>';
+  const top=list.slice().sort((a,b)=>b.submissions-a.submissions || a.recruiter.localeCompare(b.recruiter)).slice(0,3);
+  const bottom=list.slice().sort((a,b)=>a.submissions-b.submissions || a.recruiter.localeCompare(b.recruiter)).slice(0,3);
+  return `<div class="leaderboards">
+    <div class="leaderboard best"><h3>Top 3 This Week</h3><small>Highest submissions in the last 7 days</small><div class="leader-list">${top.map(leaderRow).join('')}</div></div>
+    <div class="leaderboard bottom"><h3>Bottom 3 This Week</h3><small>Lowest submissions in the last 7 days</small><div class="leader-list">${bottom.map(leaderRow).join('')}</div></div>
+  </div>`;
+}
+function renderContent(data){
+  document.getElementById('content').innerHTML=`<div class="grid">
+    <section class="panel"><div class="panel-head"><div><h2>Last 14 Days Submissions</h2><p>Daily trend with today highlighted.</p></div><span class="legend">Daily count</span></div>${renderTrend(data.last14||[])}</section>
+    <section class="panel"><div class="panel-head"><div><h2>${escapeHtml(data.month_label||'Month')} Activity Heatmap</h2><p>Compact month view to spot quiet days quickly.</p></div></div>${renderHeatmap(data.month||[])}</section>
+  </div>
+  <div class="grid full-row">
+    <section class="panel"><div class="panel-head"><div><h2>Weekly Recruiter Contribution</h2><p>Top and bottom performers by submissions in the last 7 days.</p></div></div>${renderWeeklyLeaderboard(data.weekly_recruiters||[])}</section>
+  </div>`;
+}
+async function loadAnalytics(){
+  const status=document.getElementById('statusText');
+  status.textContent='Loading team analytics...';
+  status.className='status';
+  generatedBadge.textContent='Loading...';
+  try{
+    const res=await fetch('/api/team-analytics/submissions');
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'Unable to load team analytics.');
+    renderCards(data);
+    renderContent(data);
+    generatedBadge.textContent='Generated '+(data.generated_at||'now');
+    status.textContent='Team analytics loaded.';
+  }catch(e){
+    status.textContent=e.message||'Unable to load team analytics.';
+    status.className='status error';
+    generatedBadge.textContent='Unavailable';
+    document.getElementById('summaryCards').innerHTML='';
+    document.getElementById('content').innerHTML='<div class="empty">Unable to load team analytics.</div>';
+  }
+}
+async function signOut(){
+  await fetch('/api/logout',{method:'POST'});
+  localStorage.removeItem('hrguru_user');
+  window.location.href='/login';
+}
+</script>
+</body>
+</html>

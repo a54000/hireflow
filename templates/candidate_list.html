@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Candidates - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d1017;color:#e8ecf7;padding:10px 12px 16px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 auto 10px;max-width:calc(100vw - 24px)}
+.brand{font-size:20px;font-weight:900;color:#fff}.brand span{color:#e8643a}.top-title{color:#9aa5c4;font-size:12px;font-weight:850}
+.top-actions{display:flex;gap:8px;align-items:center}.link-btn,.btn{height:40px;border:1px solid #e8643a;background:#e8643a;color:#fff;border-radius:8px;padding:0 14px;font:inherit;font-size:13px;font-weight:850;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.link-btn.secondary,.btn.secondary{background:#252a3a;border-color:#343b52;color:#d9dee8}.btn.ghost{background:transparent;border-color:#343b52;color:#c9d2e8}.link-btn:hover,.btn:hover{filter:brightness(1.08)}.btn:disabled{opacity:.6;cursor:not-allowed}
+.profile{position:relative}.profile-btn{width:38px;height:38px;border-radius:50%;border:1px solid #343b52;background:#252a3a;color:#fff;font-weight:900;cursor:pointer}.profile-menu{display:none;position:absolute;right:0;top:46px;z-index:40;min-width:170px;background:#1c2030;border:1px solid #343b52;border-radius:8px;box-shadow:0 16px 34px rgba(0,0,0,.35);overflow:hidden}.profile-menu.active{display:block}.profile-menu a,.profile-menu button{display:block;width:100%;border:0;background:transparent;color:#d9dee8;text-align:left;text-decoration:none;padding:12px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.profile-menu a:hover,.profile-menu button:hover{background:#252a3a;color:#fff}
+.wrap{width:100%;max-width:calc(100vw - 24px);margin:0 auto;background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;overflow:hidden}
+.head{padding:14px 18px;border-bottom:1px solid #2a2f3a;display:grid;gap:10px}.head-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.head h1{font-size:22px;color:#fff;margin-bottom:4px}.head p{color:#9aa5c4;font-size:13px}
+.tools{display:grid;grid-template-columns:minmax(260px,1fr) minmax(180px,240px) auto auto;gap:10px;align-items:end}.field{display:grid;gap:6px}.field input,.field select{width:100%;height:40px;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:13px;padding:0 12px}.field input:focus,.field select:focus{outline:none;border-color:#e8643a}
+.status{padding:8px 18px;color:#9aa5c4;font-size:13px;border-bottom:1px solid #2a2f3a;min-height:36px}
+.table-wrap{overflow:auto;height:calc(100vh - 252px);min-height:430px}.candidate-table{width:100%;min-width:1130px;border-collapse:collapse;table-layout:fixed}.candidate-table th,.candidate-table td{height:42px;padding:8px 10px;border-bottom:1px solid #2a2f3a;border-right:1px solid #2a2f3a;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.candidate-table th{position:sticky;top:0;z-index:2;background:#0d1017;color:#aab3c8;font-size:12px;font-weight:900}.candidate-table tr:hover td{background:#222838}.candidate-table input[type=checkbox]{width:auto}
+.col-check{width:46px;text-align:center}.col-date{width:112px}.col-name{width:240px}.col-req{width:240px}.col-client{width:150px}.col-status{width:174px}.col-rec{width:150px}.col-cv{width:92px;text-align:center}.col-actions{width:220px}
+.name{font-weight:850;color:#fff}.muted{color:#8b95b5}.pill{display:inline-block;max-width:100%;padding:4px 12px;border-radius:999px;background:#252a3a;border:1px solid #343b52;color:#e0e0e0;overflow:hidden;text-overflow:ellipsis}
+select{height:32px;max-width:154px;background:#252a3a;border:1px solid #343b52;border-radius:999px;color:#fff;font:inherit;font-size:12px;font-weight:800;padding:0 9px}.cv-link,.mini-btn{height:30px;border-radius:7px;border:1px solid #3a4050;background:#252a3a;color:#e8643a;display:inline-flex;align-items:center;justify-content:center;padding:0 9px;text-decoration:none;font-size:12px;font-weight:850;cursor:pointer}.cv-link:hover,.mini-btn:hover{border-color:#e8643a;color:#fff}.actions{display:flex;gap:6px;align-items:center}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 18px;border-top:1px solid #2a2f3a;background:#1c2030;color:#9aa5c4;font-size:13px}.pager-actions{display:flex;gap:8px}.btn.danger{background:#7c2935;border-color:#9a3543;color:#fff}.btn.danger:hover{filter:brightness(1.12)}
+.empty{padding:42px;text-align:center;color:#8b95b5}.alert{display:none;margin:12px 22px 0;border-radius:8px;padding:11px 13px;font-size:13px}.alert.active{display:block}.alert.error{background:#3a1d22;color:#ffb4bd;border:1px solid #6b2c36}.alert.success{background:#173421;color:#9af0b4;border:1px solid #2c6b3b}
+.modal{display:none;position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);padding:22px;align-items:center;justify-content:center}.modal.active{display:flex}.modal-card{width:min(760px,100%);max-height:88vh;overflow:auto;background:#1c2030;border:1px solid #343b52;border-radius:10px;box-shadow:0 20px 48px rgba(0,0,0,.48)}.modal-head,.modal-foot{padding:16px 18px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:12px;align-items:center}.modal-foot{border-top:1px solid #2a2f3a;border-bottom:0;justify-content:flex-end}.modal-body{padding:18px;display:grid;gap:14px}.modal h2{font-size:19px;color:#fff}.modal p{color:#9aa5c4;font-size:13px;line-height:1.4}.close{width:32px;height:32px;border-radius:8px;border:1px solid #343b52;background:#252a3a;color:#fff;cursor:pointer;font-size:18px;line-height:1}.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.modal-grid .full{grid-column:1/-1}.modal .field select,.modal .field textarea{width:100%;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:13px;padding:9px 12px}.modal .field textarea{min-height:150px;resize:vertical}.modal-status{min-height:18px;color:#9aa5c4;font-size:13px}.toast{position:fixed;right:18px;bottom:18px;z-index:90;display:none;max-width:420px;border-radius:8px;padding:12px 14px;font-size:13px;box-shadow:0 14px 32px rgba(0,0,0,.35)}.toast.active{display:block}.toast.error{background:#3a1d22;color:#ffb4bd;border:1px solid #6b2c36}.toast.success{background:#173421;color:#9af0b4;border:1px solid #2c6b3b}
+@media(max-width:760px){body{padding:8px}.top,.head-row{align-items:flex-start}.top{max-width:calc(100vw - 16px)}.wrap{max-width:calc(100vw - 16px)}.top-title{display:none}.top-actions{flex-wrap:wrap}.head{padding:12px}.head-row,.pager{display:grid}.tools{grid-template-columns:1fr}.status{padding:8px 12px}.table-wrap{height:calc(100vh - 286px);min-height:360px}.pager{align-items:flex-start;padding:10px 12px}.pager-actions{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><div class="brand">HR <span>Guru</span></div><div class="top-title">Candidate List</div></div>
+  <div class="top-actions">
+    <a class="link-btn secondary" href="/">Dashboard</a>
+    <a class="link-btn" href="/add-candidate">Add Candidate</a>
+    <div class="profile">
+      <button class="profile-btn" type="button" onclick="toggleProfileMenu()" aria-label="Open profile menu">U</button>
+      <div class="profile-menu" id="profileMenu">
+        <a href="/profile">Profile</a>
+        {% if session.get("impersonation_active") %}<a href="/admin/restore-profile">Return to Admin</a>{% endif %}
+        <button type="button" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+<main class="wrap">
+  <div class="head">
+    <div class="head-row">
+    <div>
+      <h1>Candidates</h1>
+      <p>Review recent candidates, update status, and open CV files.</p>
+    </div>
+    </div>
+    <div class="tools">
+      <div class="field">
+        <label>Search</label>
+        <input id="searchInput" placeholder="Name, email, phone, role, skills" oninput="scheduleLoad()">
+      </div>
+      <div class="field">
+        <label>Client</label>
+        <select id="clientFilter" onchange="reloadFirstPage()"><option value="">All clients</option></select>
+      </div>
+      <button class="btn danger" id="deleteSelectedBtn" type="button" onclick="deleteSelectedCandidates()" disabled>Delete Selected</button>
+      <button class="btn ghost" type="button" onclick="reloadFirstPage()">Refresh</button>
+    </div>
+  </div>
+  <div id="alert" class="alert"></div>
+  <div class="status" id="statusText">Loading candidates...</div>
+  <div class="table-wrap" id="tableWrap"></div>
+  <div class="pager">
+    <span id="pageInfo">0-0 of 0</span>
+    <div class="pager-actions">
+      <button class="btn secondary" id="prevBtn" type="button" onclick="goPage(page - 1)">Previous</button>
+      <button class="btn secondary" id="nextBtn" type="button" onclick="goPage(page + 1)">Next</button>
+    </div>
+  </div>
+</main>
+<div class="modal" id="emailModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h2>Email Candidate</h2>
+        <p id="emailCandidateMeta">Select a template and review before sending.</p>
+      </div>
+      <button class="close" type="button" onclick="closeEmailModal()" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-grid">
+        <div class="field"><label>To</label><input id="emailTo" disabled></div>
+        <div class="field"><label>CC Optional</label><input id="emailCc" placeholder="one or more email ids"></div>
+        <div class="field full"><label>Template</label><select id="emailTemplate" onchange="applyEmailTemplate()"><option value="">Loading templates...</option></select></div>
+        <div class="field full"><label>Subject</label><input id="emailSubject"></div>
+        <div class="field full"><label>Body</label><textarea id="emailBody"></textarea></div>
+      </div>
+      <div class="modal-status" id="emailStatus"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" type="button" onclick="closeEmailModal()">Cancel</button>
+      <button class="btn" type="button" id="sendEmailBtn" onclick="sendCandidateEmail()">Send Email</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="editModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h2>Edit Candidate</h2>
+        <p id="editCandidateMeta">Update candidate details.</p>
+      </div>
+      <button class="close" type="button" onclick="closeEditModal()" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-grid">
+        <div class="field"><label>Candidate Name</label><input id="edit_candidate_name"></div>
+        <div class="field"><label>Email</label><input id="edit_email_addr"></div>
+        <div class="field"><label>Phone</label><input id="edit_phone"></div>
+        <div class="field"><label>Status</label><select id="edit_status"></select></div>
+        <div class="field"><label>Current Company</label><input id="edit_current_company"></div>
+        <div class="field"><label>Current Designation</label><input id="edit_current_role"></div>
+        <div class="field"><label>Experience</label><input id="edit_experience_years"></div>
+        <div class="field"><label>Notice Period</label><input id="edit_notice_period"></div>
+        <div class="field"><label>Current Salary</label><input id="edit_current_salary"></div>
+        <div class="field"><label>Expected Salary</label><input id="edit_expected_salary"></div>
+        <div class="field"><label>Current Location</label><input id="edit_current_location"></div>
+        <div class="field"><label>Preferred Location</label><input id="edit_preferred_location"></div>
+        <div class="field full"><label>Key Skills</label><textarea id="edit_key_skills"></textarea></div>
+        <div class="field full"><label>Remarks</label><textarea id="edit_remarks"></textarea></div>
+      </div>
+      <div class="modal-status" id="editStatus"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" type="button" onclick="closeEditModal()">Cancel</button>
+      <button class="btn" type="button" id="saveEditBtn" onclick="saveCandidateEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+let currentUser = {};
+let page = 1;
+const pageSize = 15;
+let totalPages = 1;
+let loadTimer = null;
+let currentRows = [];
+let emailTemplates = [];
+let emailTemplatesLoaded = false;
+let emailTemplatesLoadFailed = false;
+let currentEmailCandidate = null;
+let currentEditCandidateId = null;
+let statuses = ['New','Shortlisted','Screening Pending','Screen Rejected','Interviewed','HM Rejected','Offered','Joined','Dropped','Duplicate','OnHold'];
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function toggleProfileMenu() {
+  document.getElementById('profileMenu')?.classList.toggle('active');
+}
+document.addEventListener('click', event => {
+  if (!event.target.closest('.profile')) document.getElementById('profileMenu')?.classList.remove('active');
+});
+function showAlert(message, type='error') {
+  const el = document.getElementById('alert');
+  el.textContent = message;
+  el.className = 'alert active ' + type;
+  setTimeout(() => { el.className = 'alert'; }, 2600);
+}
+function showToast(message, type='error') {
+  const el = document.getElementById('toast');
+  el.textContent = message || '';
+  el.className = 'toast active ' + type;
+  setTimeout(() => { el.className = 'toast'; }, 3200);
+}
+function cvUrl(row) {
+  return row.cv_url || '';
+}
+function statusOptions(value) {
+  const clean = String(value || 'New');
+  const all = statuses.includes(clean) ? statuses : [clean, ...statuses];
+  return all.map(status => `<option value="${escapeHtml(status)}" ${status === clean ? 'selected' : ''}>${escapeHtml(status)}</option>`).join('');
+}
+function rowHtml(row) {
+  const reportDate = row.created_at ? String(row.created_at).split(' ')[0] : '-';
+  const phone = String(row.phone || '').replace(/\D/g, '');
+  const email = row.email_addr || '';
+  const cv = cvUrl(row);
+  return `<tr>
+    <td class="col-check" onclick="event.stopPropagation()"><input type="checkbox" class="row-check" data-id="${Number(row.id)}" onchange="updateSelectionState()"></td>
+    <td class="col-date muted">${escapeHtml(reportDate)}</td>
+    <td class="col-name"><span class="name">${escapeHtml(row.candidate_name || '-')}</span><div class="muted">${escapeHtml(row.email_addr || '')}</div></td>
+    <td class="col-req">${escapeHtml(row.requirement_title || row.role_name || '-')}</td>
+    <td class="col-client"><span class="pill">${escapeHtml(row.client_name || '-')}</span></td>
+    <td class="col-status"><select onchange="updateStatus(${Number(row.id)}, this)">${statusOptions(row.status)}</select></td>
+    <td class="col-rec">${escapeHtml(row.recruiter_name || '-')}</td>
+    <td class="col-cv">${cv ? `<a class="cv-link" href="${escapeHtml(cv)}" download>CV</a>` : '-'}</td>
+    <td class="col-actions"><div class="actions">
+      <button class="mini-btn" type="button" onclick="openCandidateEdit(${Number(row.id)})">Edit</button>
+      ${email ? `<button class="mini-btn" type="button" onclick="openCandidateEmail(${Number(row.id)})">Email</button>` : ''}
+      ${phone ? `<a class="mini-btn" href="https://wa.me/${escapeHtml(phone)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
+    </div></td>
+  </tr>`;
+}
+function renderRows(rows) {
+  if (!rows.length) {
+    document.getElementById('tableWrap').innerHTML = '<div class="empty">No candidates found.</div>';
+    return;
+  }
+  document.getElementById('tableWrap').innerHTML = `<table class="candidate-table">
+    <thead><tr>
+      <th class="col-check"><input type="checkbox" id="selectAllRows" onchange="toggleSelectAll(this.checked)"></th>
+      <th class="col-date">Date</th><th class="col-name">Name</th><th class="col-req">Requirement</th>
+      <th class="col-client">Client</th><th class="col-status">Status</th><th class="col-rec">Recruiter</th>
+      <th class="col-cv">CV</th><th class="col-actions">Communication</th>
+    </tr></thead><tbody>${rows.map(rowHtml).join('')}</tbody></table>`;
+}
+async function loadCandidates() {
+  const status = document.getElementById('statusText');
+  status.textContent = 'Loading candidates...';
+  try {
+    const params = new URLSearchParams({page: String(page), page_size: String(pageSize), sort: 'date_desc', view: 'list'});
+    const q = document.getElementById('searchInput').value.trim();
+    const client = document.getElementById('clientFilter')?.value.trim();
+    if (q) params.set('q', q);
+    if (client) params.set('client', client);
+    const res = await fetch('/api/candidates?' + params.toString());
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(payload.error || 'Unable to load candidates.');
+    const rows = payload.rows || payload.candidates || (Array.isArray(payload) ? payload : []);
+    currentRows = rows;
+    page = Number(payload.page || page || 1);
+    totalPages = Math.max(1, Number(payload.total_pages || 1));
+    const total = Number(payload.total || rows.length || 0);
+    const start = total ? ((page - 1) * pageSize) + 1 : 0;
+    const end = Math.min(total, page * pageSize);
+    status.textContent = rows.length ? `${rows.length} candidates shown` : 'No candidates found';
+    document.getElementById('pageInfo').textContent = `${start}-${end} of ${total}`;
+    document.getElementById('prevBtn').disabled = page <= 1;
+    document.getElementById('nextBtn').disabled = page >= totalPages;
+    renderRows(rows);
+    updateSelectionState();
+  } catch(e) {
+    status.textContent = 'Unable to load candidates.';
+    document.getElementById('tableWrap').innerHTML = '<div class="empty">Unable to load candidates.</div>';
+    showAlert(e.message || 'Unable to load candidates.');
+  }
+}
+function scheduleLoad() {
+  clearTimeout(loadTimer);
+  loadTimer = setTimeout(() => {
+    page = 1;
+    loadCandidates();
+  }, 250);
+}
+function reloadFirstPage() {
+  page = 1;
+  loadCandidates();
+}
+function goPage(nextPage) {
+  page = Math.max(1, Math.min(totalPages, nextPage));
+  loadCandidates();
+}
+function selectedCandidateIds() {
+  return [...document.querySelectorAll('.row-check:checked')].map(cb => cb.dataset.id).filter(Boolean);
+}
+function updateSelectionState() {
+  const selected = selectedCandidateIds();
+  const btn = document.getElementById('deleteSelectedBtn');
+  if (btn) {
+    btn.disabled = selected.length === 0;
+    btn.textContent = selected.length ? `Delete Selected (${selected.length})` : 'Delete Selected';
+  }
+  const all = [...document.querySelectorAll('.row-check')];
+  const header = document.getElementById('selectAllRows');
+  if (header) {
+    header.checked = all.length > 0 && all.every(cb => cb.checked);
+    header.indeterminate = all.some(cb => cb.checked) && !header.checked;
+  }
+}
+function toggleSelectAll(checked) {
+  document.querySelectorAll('.row-check').forEach(cb => { cb.checked = checked; });
+  updateSelectionState();
+}
+async function deleteSelectedCandidates() {
+  const ids = selectedCandidateIds();
+  if (!ids.length) return;
+  const ok = window.confirm(`Delete ${ids.length} selected candidate${ids.length === 1 ? '' : 's'}? This cannot be undone.`);
+  if (!ok) return;
+  const btn = document.getElementById('deleteSelectedBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Deleting...';
+  }
+  try {
+    const res = await fetch('/api/candidates/bulk_delete', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ids})
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || 'Unable to delete selected candidates.');
+    showAlert(`Deleted ${data.deleted || ids.length} candidate${(data.deleted || ids.length) === 1 ? '' : 's'}.`, 'success');
+    reloadFirstPage();
+  } catch(e) {
+    showAlert(e.message || 'Unable to delete selected candidates.');
+    updateSelectionState();
+  }
+}
+function candidateById(id) {
+  return currentRows.find(row => String(row.id) === String(id));
+}
+function setEditValue(field, value) {
+  const el = document.getElementById('edit_' + field);
+  if (el) el.value = value ?? '';
+}
+function getEditValue(field) {
+  return document.getElementById('edit_' + field)?.value.trim() || '';
+}
+function fillEditStatus(value) {
+  const select = document.getElementById('edit_status');
+  const clean = String(value || 'New');
+  const all = statuses.includes(clean) ? statuses : [clean, ...statuses];
+  select.innerHTML = all.map(status => `<option value="${escapeHtml(status)}" ${status === clean ? 'selected' : ''}>${escapeHtml(status)}</option>`).join('');
+}
+function fillEditForm(candidate) {
+  currentEditCandidateId = candidate.id;
+  document.getElementById('editCandidateMeta').textContent = `${candidate.requirement_title || candidate.role_name || 'Requirement not set'}${candidate.client_name ? ' - ' + candidate.client_name : ''}`;
+  ['candidate_name','email_addr','phone','current_company','current_role','experience_years','notice_period','current_salary','expected_salary','current_location','preferred_location','key_skills','remarks'].forEach(field => setEditValue(field, candidate[field]));
+  fillEditStatus(candidate.status);
+}
+async function openCandidateEdit(id) {
+  currentEditCandidateId = id;
+  document.getElementById('editModal').classList.add('active');
+  document.getElementById('editStatus').textContent = 'Loading candidate details...';
+  document.getElementById('saveEditBtn').disabled = true;
+  const fallback = candidateById(id);
+  if (fallback) fillEditForm(fallback);
+  try {
+    const res = await fetch(`/api/candidate/${id}?view=edit`);
+    const candidate = await res.json().catch(() => ({}));
+    if (!res.ok || candidate.error) throw new Error(candidate.error || 'Unable to load candidate details.');
+    fillEditForm(candidate);
+    document.getElementById('editStatus').textContent = '';
+  } catch(e) {
+    if (!fallback) {
+      closeEditModal();
+      showToast(e.message || 'Unable to load candidate details.');
+      return;
+    }
+    document.getElementById('editStatus').textContent = 'Using current row details. Some fields may need refresh.';
+  } finally {
+    document.getElementById('saveEditBtn').disabled = false;
+  }
+}
+function closeEditModal() {
+  document.getElementById('editModal')?.classList.remove('active');
+  currentEditCandidateId = null;
+}
+async function saveCandidateEdit() {
+  if (!currentEditCandidateId) return;
+  const payload = {
+    candidate_name: getEditValue('candidate_name'),
+    email_addr: getEditValue('email_addr'),
+    phone: getEditValue('phone'),
+    status: document.getElementById('edit_status').value,
+    current_company: getEditValue('current_company'),
+    current_role: getEditValue('current_role'),
+    experience_years: getEditValue('experience_years'),
+    notice_period: getEditValue('notice_period'),
+    current_salary: getEditValue('current_salary'),
+    expected_salary: getEditValue('expected_salary'),
+    current_location: getEditValue('current_location'),
+    preferred_location: getEditValue('preferred_location'),
+    key_skills: getEditValue('key_skills'),
+    remarks: getEditValue('remarks')
+  };
+  if (!payload.candidate_name) {
+    document.getElementById('editStatus').textContent = 'Candidate name is required.';
+    document.getElementById('editStatus').style.color = '#ffb3b3';
+    return;
+  }
+  const btn = document.getElementById('saveEditBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  document.getElementById('editStatus').textContent = 'Saving changes...';
+  document.getElementById('editStatus').style.color = '#9aa5c4';
+  try {
+    const res = await fetch(`/api/candidate/${currentEditCandidateId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || 'Unable to save candidate.');
+    showToast('Candidate updated.', 'success');
+    closeEditModal();
+    loadCandidates();
+  } catch(e) {
+    document.getElementById('editStatus').textContent = e.message || 'Unable to save candidate.';
+    document.getElementById('editStatus').style.color = '#ffb3b3';
+    showToast(e.message || 'Unable to save candidate.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Changes';
+  }
+}
+function templateVariables(candidate) {
+  const fullName = candidate.candidate_name || '';
+  return {
+    candidate_name: fullName,
+    first_name: fullName.split(/\s+/).filter(Boolean)[0] || fullName,
+    email: candidate.email_addr || '',
+    phone: candidate.phone || '',
+    role: candidate.current_role || candidate.role_name || '',
+    current_role: candidate.current_role || '',
+    requirement: candidate.requirement_title || candidate.role_name || '',
+    requirement_title: candidate.requirement_title || '',
+    client: candidate.client_name || '',
+    client_name: candidate.client_name || '',
+    recruiter_name: currentUser.recruiter_name || currentUser.username || '',
+    recruiter_email: currentUser.recruiter_email || currentUser.email || '',
+    current_company: candidate.current_company || '',
+    current_location: candidate.current_location || '',
+    preferred_location: candidate.preferred_location || '',
+    notice_period: candidate.notice_period || '',
+    experience: candidate.experience_years || '',
+    experience_years: candidate.experience_years || ''
+  };
+}
+function fillTemplate(text, candidate) {
+  const vars = templateVariables(candidate || {});
+  let out = String(text || '');
+  Object.entries(vars).forEach(([key, value]) => {
+    out = out.replaceAll('{{' + key + '}}', value).replaceAll('{' + key + '}', value);
+  });
+  return out;
+}
+async function loadEmailTemplates() {
+  if (emailTemplatesLoaded) return;
+  const select = document.getElementById('emailTemplate');
+  select.innerHTML = '<option value="">Loading templates...</option>';
+  const res = await fetch('/api/email_templates');
+  const data = await res.json().catch(() => []);
+  if (!res.ok) throw new Error((data && data.error) || 'Unable to load templates.');
+  emailTemplates = Array.isArray(data) ? data : [];
+  emailTemplatesLoaded = true;
+  emailTemplatesLoadFailed = false;
+  select.innerHTML = '<option value="">Custom email</option>' + emailTemplates.map(t => `<option value="${Number(t.id)}">${escapeHtml(t.name || 'Template')}</option>`).join('');
+}
+function defaultEmailDraft(candidate) {
+  const vars = templateVariables(candidate || {});
+  return {
+    subject: vars.requirement ? `Regarding ${vars.requirement}` : 'Regarding your profile',
+    body: `Hi ${vars.first_name || 'Candidate'},\n\n\n\nRegards,\n${vars.recruiter_name || 'HR Guru Placement Services'}`
+  };
+}
+function setEmailStatus(message, type='info') {
+  const status = document.getElementById('emailStatus');
+  status.textContent = message || '';
+  status.style.color = type === 'error' ? '#ffb3b3' : (type === 'success' ? '#9af0b4' : '#9aa5c4');
+}
+async function openCandidateEmail(id) {
+  const fallback = candidateById(id);
+  if (!fallback || !fallback.email_addr) {
+    showToast('Candidate email is not available.');
+    return;
+  }
+  currentEmailCandidate = fallback;
+  document.getElementById('emailModal').classList.add('active');
+  document.getElementById('emailCandidateMeta').textContent = `${fallback.candidate_name || 'Candidate'} - ${fallback.requirement_title || fallback.role_name || 'Requirement not set'}`;
+  document.getElementById('emailTo').value = fallback.email_addr || '';
+  document.getElementById('emailCc').value = '';
+  const draft = defaultEmailDraft(fallback);
+  document.getElementById('emailSubject').value = draft.subject;
+  document.getElementById('emailBody').value = draft.body;
+  document.getElementById('sendEmailBtn').disabled = true;
+  setEmailStatus('Loading candidate details...');
+  try {
+    const detailRes = await fetch(`/api/candidate/${id}?view=edit`);
+    const detail = await detailRes.json().catch(() => ({}));
+    if (detailRes.ok && !detail.error) {
+      currentEmailCandidate = detail;
+      document.getElementById('emailCandidateMeta').textContent = `${detail.candidate_name || 'Candidate'} - ${detail.requirement_title || detail.role_name || 'Requirement not set'}`;
+      document.getElementById('emailTo').value = detail.email_addr || fallback.email_addr || '';
+      const freshDraft = defaultEmailDraft(detail);
+      document.getElementById('emailSubject').value = freshDraft.subject;
+      document.getElementById('emailBody').value = freshDraft.body;
+    }
+    await loadEmailTemplates();
+    setEmailStatus(emailTemplates.length ? 'Choose a template or write a custom email.' : 'No templates found. You can write a custom email.');
+  } catch(e) {
+    emailTemplatesLoadFailed = true;
+    document.getElementById('emailTemplate').innerHTML = '<option value="">Custom email</option>';
+    setEmailStatus('Templates could not be loaded. You can still send a custom email.', 'error');
+  } finally {
+    document.getElementById('sendEmailBtn').disabled = false;
+  }
+}
+function closeEmailModal() {
+  document.getElementById('emailModal')?.classList.remove('active');
+  currentEmailCandidate = null;
+}
+function applyEmailTemplate() {
+  const selected = document.getElementById('emailTemplate').value;
+  const template = emailTemplates.find(t => String(t.id) === String(selected));
+  if (!template || !currentEmailCandidate) return;
+  document.getElementById('emailSubject').value = fillTemplate(template.subject || '', currentEmailCandidate);
+  document.getElementById('emailBody').value = fillTemplate(template.body || '', currentEmailCandidate);
+}
+async function sendCandidateEmail() {
+  if (!currentEmailCandidate) return;
+  const to = document.getElementById('emailTo').value.trim();
+  const cc = document.getElementById('emailCc').value.trim();
+  const subject = document.getElementById('emailSubject').value.trim();
+  const body = document.getElementById('emailBody').value.trim();
+  const selected = document.getElementById('emailTemplate').value;
+  const template = emailTemplates.find(t => String(t.id) === String(selected));
+  if (!to || !subject || !body) {
+    setEmailStatus('To, subject, and body are required.', 'error');
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    setEmailStatus('Candidate email is not valid.', 'error');
+    return;
+  }
+  const btn = document.getElementById('sendEmailBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  setEmailStatus('Sending email...');
+  try {
+    const res = await fetch('/api/send_email', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        to,
+        cc,
+        subject,
+        body,
+        candidate_id: currentEmailCandidate.id,
+        template_name: template ? template.name : 'custom'
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || 'Unable to send email.');
+    setEmailStatus(`Email sent successfully${data.sender ? ' from ' + data.sender : ''}.`, 'success');
+    showToast('Email sent successfully.', 'success');
+    setTimeout(closeEmailModal, 900);
+  } catch(e) {
+    setEmailStatus(e.message || 'Unable to send email.', 'error');
+    showToast(e.message || 'Unable to send email.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send Email';
+  }
+}
+async function updateStatus(id, select) {
+  const next = select.value;
+  select.disabled = true;
+  try {
+    const res = await fetch(`/api/candidate/${id}/status`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({status: next})
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || 'Unable to update status.');
+    showAlert('Status updated.', 'success');
+  } catch(e) {
+    showAlert(e.message || 'Unable to update status.');
+    loadCandidates();
+  } finally {
+    select.disabled = false;
+  }
+}
+async function signOut() {
+  await fetch('/api/logout', {method:'POST'});
+  localStorage.removeItem('hrguru_user');
+  window.location.href = '/login';
+}
+async function loadClientFilterOptions() {
+  const select = document.getElementById('clientFilter');
+  if (!select) return;
+  try {
+    const res = await fetch('/api/candidate_search_filters');
+    const data = await res.json().catch(() => ({}));
+    const clients = Array.isArray(data.clients) ? data.clients.filter(Boolean) : [];
+    select.innerHTML = '<option value="">All clients</option>' + clients.map(client => `<option value="${escapeHtml(client)}">${escapeHtml(client)}</option>`).join('');
+  } catch(e) {
+    select.innerHTML = '<option value="">All clients</option>';
+  }
+}
+async function loadCandidateStatuses() {
+  try {
+    const res = await fetch('/api/statuses');
+    const data = await res.json().catch(() => []);
+    const list = (Array.isArray(data) ? data : []).map(row => row.status || row.name || row).filter(Boolean);
+    if (list.length) statuses = [...new Set(list.map(String))];
+  } catch(e) {}
+}
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const res = await fetch('/api/me');
+    currentUser = await res.json();
+  } catch(e) {}
+  await loadCandidateStatuses();
+  await loadClientFilterOptions();
+  loadCandidates();
+});
+</script>
+</body>
+</html>
