@@ -538,12 +538,7 @@ async function signOut() {
   localStorage.removeItem('hrguru_user');
   window.location.href = '/login';
 }
-document.addEventListener('DOMContentLoaded', () => {
-  checkDailyFollowups();
-  {% if open_weekly_performance %}
-  openWeeklyPerformanceModal();
-  {% endif %}
-});
+document.addEventListener('DOMContentLoaded', checkDailyFollowups);
 </script>
 </body>
 </html>

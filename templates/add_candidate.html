@@ -110,6 +110,7 @@ let cvParsedData = null;
 let requirementTimer = null;
 let requirementSeq = 0;
 let selectedRequirement = null;
+let requirementSearchAbort = null;
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -140,7 +141,7 @@ function setRequirementMessage(message) {
   menu.classList.add('active');
 }
 function showRequirementHelp() {
-  if (!val('requirementId') && val('requirementSearch').length < 2) setRequirementMessage('Type at least 2 letters to search active mapped requirements.');
+  if (!val('requirementId') && val('requirementSearch').length < 3) setRequirementMessage('Type at least 3 letters to search active mapped requirements.');
 }
 function selectRequirement(row) {
   selectedRequirement = row || null;
@@ -163,20 +164,26 @@ function queueRequirementSearch(query) {
   selectedRequirement = null;
   clearTimeout(requirementTimer);
   const q = String(query || '').trim();
-  if (q.length < 2) {
+  if (q.length < 3) {
     showRequirementHelp();
     return;
   }
-  requirementTimer = setTimeout(() => searchRequirements(q), 250);
+  requirementTimer = setTimeout(() => searchRequirements(q), 650);
 }
 async function searchRequirements(query) {
   const seq = ++requirementSeq;
+  if (requirementSearchAbort) requirementSearchAbort.abort();
+  requirementSearchAbort = new AbortController();
   setRequirementMessage('Searching requirements...');
   try {
     const params = new URLSearchParams({q: query, limit: '20'});
-    const res = await fetch('/api/requirements/search?' + params.toString());
+    const res = await fetch('/api/requirements/search?' + params.toString(), {signal: requirementSearchAbort.signal});
     const rows = await res.json();
     if (seq !== requirementSeq) return;
+    if (!res.ok) {
+      setRequirementMessage(rows && rows.error ? rows.error : 'Requirement search is busy. Type a more specific requirement.');
+      return;
+    }
     const menu = document.getElementById('requirementResults');
     if (!Array.isArray(rows) || !rows.length) {
       setRequirementMessage(`No active mapped requirements found for "${query}". Try requirement title or client name.`);
@@ -191,6 +198,7 @@ async function searchRequirements(query) {
     menu.querySelectorAll('button[data-idx]').forEach(btn => btn.onclick = () => selectRequirement(rows[Number(btn.dataset.idx)]));
     menu.classList.add('active');
   } catch(e) {
+    if (e && e.name === 'AbortError') return;
     setRequirementMessage('Unable to search requirements right now.');
   }
 }

@@ -29,6 +29,11 @@ from googleapiclient.http import MediaIoBaseUpload
 import base64
 from urllib.parse import urlparse
 load_dotenv()
+try:
+    import psycopg2
+    import psycopg2.extras
+except ImportError:
+    psycopg2 = None
 from ats_schema import ensure_ats_pipeline_schema
 from ats_pipeline import MATCH_PIPELINE_VERSION, parse_jd as parse_jd_structured, parse_resume as parse_resume_structured, run_hybrid_match, versioned_text_hash
 from embedding_engine import deserialize_embedding, serialize_embedding
@@ -65,7 +70,8 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 oauth = OAuth(app)
 SLOW_REQUEST_LOG_SECONDS = float(os.getenv("ATS_SLOW_REQUEST_LOG_SECONDS", "0.75"))
-PERF_RECORD_MIN_SECONDS = float(os.getenv("ATS_PERF_RECORD_MIN_SECONDS", "0"))
+PERF_RECORD_MIN_SECONDS = float(os.getenv("ATS_PERF_RECORD_MIN_SECONDS", "0.75"))
+PERF_LOG_ALL_SLOW_REQUESTS = os.getenv("ATS_PERF_LOG_ALL_SLOW_REQUESTS", "1").strip().lower() in {"1", "true", "yes", "on"}
 PERF_LOG_PATH_PREFIXES = (
     "/api/dashboard_summary",
     "/api/candidates",
@@ -74,6 +80,43 @@ PERF_LOG_PATH_PREFIXES = (
     "/api/me",
 )
 WRITE_PERF_DEBUG = os.getenv("ATS_WRITE_PERF_DEBUG", "0").strip().lower() in {"1", "true", "yes", "on"}
+ACTIVE_REQUEST_COUNT = 0
+ACTIVE_REQUEST_LOCK = threading.Lock()
+INFLIGHT_REQUESTS = {}
+INFLIGHT_REQUEST_LOCK = threading.Lock()
+INFLIGHT_WARN_SECONDS = float(os.getenv("ATS_INFLIGHT_WARN_SECONDS", "10"))
+INFLIGHT_WATCHDOG_ENABLED = os.getenv("ATS_INFLIGHT_WATCHDOG_ENABLED", "1").strip().lower() in {"1", "true", "yes", "on"}
+INFLIGHT_WATCHDOG_STARTED = False
+MAX_CONCURRENT_JD_PARSE = max(1, int(os.getenv("ATS_MAX_CONCURRENT_JD_PARSE", "2")))
+JD_PARSE_SEMAPHORE = threading.BoundedSemaphore(MAX_CONCURRENT_JD_PARSE)
+
+
+def _start_inflight_watchdog():
+    global INFLIGHT_WATCHDOG_STARTED
+    if INFLIGHT_WATCHDOG_STARTED or not INFLIGHT_WATCHDOG_ENABLED:
+        return
+    INFLIGHT_WATCHDOG_STARTED = True
+
+    def _watch():
+        while True:
+            time.sleep(15)
+            now = time.perf_counter()
+            stale = []
+            with INFLIGHT_REQUEST_LOCK:
+                for item in INFLIGHT_REQUESTS.values():
+                    age = now - item["started"]
+                    if age >= INFLIGHT_WARN_SECONDS:
+                        stale.append((age, dict(item)))
+            stale.sort(reverse=True, key=lambda pair: pair[0])
+            for age, item in stale[:12]:
+                print(
+                    f"PERF inflight_stuck age_s={age:.1f} method={item.get('method')} "
+                    f"path={item.get('path')} endpoint={item.get('endpoint') or '-'} "
+                    f"user={item.get('user') or '-'} active={len(INFLIGHT_REQUESTS)}",
+                    flush=True,
+                )
+
+    threading.Thread(target=_watch, name="ats-inflight-watchdog", daemon=True).start()
 
 def perf_log(label, started_at, **fields):
     if not WRITE_PERF_DEBUG:
@@ -85,14 +128,31 @@ def perf_log(label, started_at, **fields):
 
 @app.before_request
 def start_request_timer():
+    global ACTIVE_REQUEST_COUNT
+    _start_inflight_watchdog()
     g.request_started_at = time.perf_counter()
+    with ACTIVE_REQUEST_LOCK:
+        ACTIVE_REQUEST_COUNT += 1
+        g.active_request_count = ACTIVE_REQUEST_COUNT
+    query = request.query_string.decode("utf-8", errors="replace")
+    path_for_log = f"{request.path}?{query[:180]}" if query else request.path
+    g.inflight_request_id = id(g)
+    with INFLIGHT_REQUEST_LOCK:
+        INFLIGHT_REQUESTS[g.inflight_request_id] = {
+            "started": g.request_started_at,
+            "method": request.method,
+            "path": path_for_log,
+            "endpoint": request.endpoint or "",
+            "user": session.get("username") or "",
+        }
 
 
 def record_performance_log(path, elapsed_ms, status_code, method=None):
     try:
         conn = get_db(timeout=2)
-        conn.execute(
-            """CREATE TABLE IF NOT EXISTS performance_logs (
+        if not USE_POSTGRES:
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS performance_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT,
                 team_member_id INTEGER,
@@ -108,8 +168,9 @@ def record_performance_log(path, elapsed_ms, status_code, method=None):
                 user_agent TEXT,
                 created_at TEXT DEFAULT (datetime('now','localtime'))
             )"""
-        )
+            )
         conn.execute(
+
             """INSERT INTO performance_logs
                (username, team_member_id, recruiter_name, recruiter_email, method, path, endpoint,
                 status_code, elapsed_ms, is_admin, ip_address, user_agent)
@@ -137,21 +198,50 @@ def record_performance_log(path, elapsed_ms, status_code, method=None):
 
 @app.after_request
 def log_slow_request(response):
+    global ACTIVE_REQUEST_COUNT
     started = getattr(g, "request_started_at", None)
     if started is None:
         return response
     elapsed = time.perf_counter() - started
     path = request.path or ""
+    active_count = getattr(g, "active_request_count", None)
     if path.startswith(PERF_LOG_PATH_PREFIXES) and elapsed >= PERF_RECORD_MIN_SECONDS:
         record_performance_log(path, elapsed * 1000, response.status_code, request.method)
-    if elapsed >= SLOW_REQUEST_LOG_SECONDS and path.startswith(PERF_LOG_PATH_PREFIXES):
+    should_log_slow = path.startswith(PERF_LOG_PATH_PREFIXES) or (
+        PERF_LOG_ALL_SLOW_REQUESTS and not path.startswith("/static/")
+    )
+    if elapsed >= SLOW_REQUEST_LOG_SECONDS and should_log_slow:
+        query = request.query_string.decode("utf-8", errors="replace")
+        path_for_log = f"{path}?{query[:180]}" if query else path
         print(
-            f"PERF {request.method} {path} status={response.status_code} "
-            f"elapsed_ms={elapsed * 1000:.1f} user={session.get('username') or '-'}",
+            f"PERF slow_request method={request.method} path={path_for_log} "
+            f"endpoint={request.endpoint or '-'} status={response.status_code} "
+            f"elapsed_ms={elapsed * 1000:.1f} active_at_start={active_count} "
+            f"user={session.get('username') or '-'}",
             flush=True,
         )
+    if not getattr(g, "_request_counter_released", False):
+        g._request_counter_released = True
+        with ACTIVE_REQUEST_LOCK:
+            ACTIVE_REQUEST_COUNT = max(0, ACTIVE_REQUEST_COUNT - 1)
+        with INFLIGHT_REQUEST_LOCK:
+            INFLIGHT_REQUESTS.pop(getattr(g, "inflight_request_id", None), None)
     return response
-GOOGLE_OAUTH_SCOPE = "openid email profile https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets.readonly"
+
+
+@app.teardown_request
+def cleanup_request_counter(exc):
+    global ACTIVE_REQUEST_COUNT
+    if getattr(g, "request_started_at", None) is None:
+        return
+    if getattr(g, "_request_counter_released", False):
+        return
+    g._request_counter_released = True
+    with ACTIVE_REQUEST_LOCK:
+        ACTIVE_REQUEST_COUNT = max(0, ACTIVE_REQUEST_COUNT - 1)
+    with INFLIGHT_REQUEST_LOCK:
+        INFLIGHT_REQUESTS.pop(getattr(g, "inflight_request_id", None), None)
+GOOGLE_OAUTH_SCOPE = os.getenv("GOOGLE_OAUTH_SCOPE", "openid email profile")
 
 google = oauth.register(
     name='google',
@@ -354,23 +444,16 @@ def schedule_candidate_ai_screening_retry(candidate_id, trigger, run_id, gemini_
 
 def acquire_single_instance_lock():
     global APP_INSTANCE_LOCK_HANDLE
-    lock_path = os.path.join(BASE_DIR, "ats.lock")
+    lock_path = os.path.join(BASE_DIR, "ats_pg.lock" if USE_POSTGRES else "ats.lock")
     handle = open(lock_path, "a+b")
     try:
-        if os.name == "nt":
-            import msvcrt
-        else:
-            import fcntl
+        import msvcrt
         handle.seek(0)
         handle.write(str(os.getpid()).encode("ascii", errors="ignore"))
-        handle.truncate()
         handle.flush()
         handle.seek(0)
-        if os.name == "nt":
-            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
-        else:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except (OSError, ModuleNotFoundError) as e:
+        msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+    except OSError as e:
         try:
             handle.close()
         except Exception:
@@ -386,14 +469,10 @@ def release_single_instance_lock():
     if not handle:
         return
     try:
+        import msvcrt
         try:
             handle.seek(0)
-            if os.name == "nt":
-                import msvcrt
-                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
-            else:
-                import fcntl
-                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
         except Exception:
             pass
         handle.close()
@@ -413,6 +492,127 @@ CV_PARSE_MODE = os.getenv("CV_PARSE_MODE", "free")  # "free" or "ai"
 CV_AI_PROVIDER = os.getenv("CV_AI_PROVIDER", "")   # openai, gemini, claude
 CV_AI_API_KEY = os.getenv("CV_AI_API_KEY", "")
 
+DATABASE_URL = (os.getenv("DATABASE_URL") or "").strip()
+USE_POSTGRES = DATABASE_URL.startswith(("postgres://", "postgresql://"))
+
+
+def translate_sql_for_postgres(query):
+    text = str(query or "")
+    insert_ignore = bool(re.match(r"\s*INSERT\s+OR\s+IGNORE\b", text, re.I))
+
+    # SQLite schema helpers can still run from request-time safety checks. PostgreSQL parses
+    # CREATE TABLE even when IF NOT EXISTS skips creation, so translate AUTOINCREMENT DDL.
+    text = re.sub(
+        r"\b([A-Za-z_][A-Za-z0-9_]*)\s+INTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT\b",
+        r"\1 SERIAL PRIMARY KEY",
+        text,
+        flags=re.I,
+    )
+    text = re.sub(r"\bAUTOINCREMENT\b", "", text, flags=re.I)
+
+    # SQLite date helpers are permissive and tolerate dirty text values. PostgreSQL is strict,
+    # so candidate/report date filters compare ISO date prefixes as text.
+    text = re.sub(r"\bdate\(\s*c\.created_at\s*\)", "substr(COALESCE(c.created_at, ''),1,10)", text, flags=re.I)
+    text = re.sub(r"\bdate\(\s*created_at\s*\)", "substr(COALESCE(created_at, ''),1,10)", text, flags=re.I)
+    text = text.replace("date('now','localtime','start of month')", "to_char(date_trunc('month', CURRENT_DATE), 'YYYY-MM-DD')")
+    text = text.replace('date("now","localtime","start of month")', "to_char(date_trunc('month', CURRENT_DATE), 'YYYY-MM-DD')")
+    text = re.sub(r"date\('now','localtime','([+-]\d+) days?'\)", r"to_char((CURRENT_DATE + INTERVAL '\1 days')::date, 'YYYY-MM-DD')", text)
+    text = re.sub(r'date\("now","localtime","([+-]\d+) days?"\)', r"to_char((CURRENT_DATE + INTERVAL '\1 days')::date, 'YYYY-MM-DD')", text)
+    text = text.replace("date('now','localtime')", "CURRENT_DATE::text")
+    text = text.replace('date("now","localtime")', "CURRENT_DATE::text")
+    text = text.replace("datetime('now','localtime')", "CURRENT_TIMESTAMP")
+    text = text.replace('datetime("now","localtime")', "CURRENT_TIMESTAMP")
+    text = text.replace("datetime('now')", "CURRENT_TIMESTAMP")
+    text = text.replace('datetime("now")', "CURRENT_TIMESTAMP")
+    text = re.sub(r"datetime\('now','localtime','([+-]\d+) minutes'\)", r"(CURRENT_TIMESTAMP + INTERVAL '\1 minutes')", text)
+    text = re.sub(r"datetime\('now','localtime','([+-]\d+) hours'\)", r"(CURRENT_TIMESTAMP + INTERVAL '\1 hours')", text)
+    text = re.sub(r"datetime\('now','localtime','([+-]\d+) days?'\)", r"(CURRENT_TIMESTAMP + INTERVAL '\1 days')", text)
+    text = re.sub(r"\bdatetime\(\s*([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)?)\s*\)", r"NULLIF(\1, '')::timestamp", text)
+    text = re.sub(r"\bINSERT\s+OR\s+IGNORE\b", "INSERT", text, flags=re.I)
+    if insert_ignore and " ON CONFLICT " not in text.upper():
+        text = text.rstrip().rstrip(";") + " ON CONFLICT DO NOTHING"
+    text = re.sub(r'(?<![".])\bcurrent_role\b(?!")', '"current_role"', text)
+    text = re.sub(r'\.current_role\b', '."current_role"', text)
+    return text.replace("?", "%s")
+
+class PgCursorAdapter:
+    def __init__(self, cursor):
+        self.cursor = cursor
+        self.lastrowid = None
+
+    def fetchone(self):
+        return self.cursor.fetchone()
+
+    def fetchall(self):
+        return self.cursor.fetchall()
+
+    def __iter__(self):
+        return iter(self.cursor)
+
+
+class PgConnectionAdapter:
+    _id_column_cache = {}
+
+    def __init__(self, conn):
+        self.conn = conn
+
+    def table_has_id_column(self, table_name):
+        table_name = str(table_name or "").strip().strip('"')
+        if not table_name:
+            return False
+        if table_name in self._id_column_cache:
+            return self._id_column_cache[table_name]
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema='public' AND table_name=%s AND column_name='id'
+            LIMIT 1
+            """,
+            (table_name,),
+        )
+        has_id = cur.fetchone() is not None
+        self._id_column_cache[table_name] = has_id
+        return has_id
+
+    def execute(self, query, params=()):
+        cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        translated = translate_sql_for_postgres(query)
+        insert_match = re.match(r"\s*INSERT\s+INTO\s+([A-Za-z_][A-Za-z0-9_]*)\b", translated, re.I)
+        wants_id = insert_match and " RETURNING " not in translated.upper() and self.table_has_id_column(insert_match.group(1))
+        if wants_id:
+            translated = translated.rstrip().rstrip(";") + " RETURNING id"
+        cur.execute(translated, tuple(params or ()))
+        wrapped = PgCursorAdapter(cur)
+        if wants_id:
+            row = cur.fetchone()
+            if row:
+                wrapped.lastrowid = row[0]
+        return wrapped
+
+    def executemany(self, query, seq_of_params):
+        cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cur.executemany(translate_sql_for_postgres(query), seq_of_params)
+        return PgCursorAdapter(cur)
+
+    def executescript(self, script):
+        cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        for statement in [part.strip() for part in str(script or "").split(";") if part.strip()]:
+            cur.execute(translate_sql_for_postgres(statement))
+        return PgCursorAdapter(cur)
+
+    def commit(self):
+        return self.conn.commit()
+
+    def rollback(self):
+        return self.conn.rollback()
+
+    def close(self):
+        return self.conn.close()
+
+    def cursor(self):
+        return self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 # Candidate statuses
 STATUSES = ["New", "Shortlisted", "Screening Pending", "Screen Rejected", 
             "Interviewed", "HM Rejected", "Offered", "Joined", "Dropped", "Duplicate", "OnHold"]
@@ -422,6 +622,10 @@ SUBMISSION_STATUSES = ["Pending", "Reviewing", "Interview Scheduled", "Selected"
 
 # â”€â”€ DB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def get_db(timeout=60):
+    if USE_POSTGRES:
+        if psycopg2 is None:
+            raise RuntimeError('psycopg2 is required when DATABASE_URL uses PostgreSQL')
+        return PgConnectionAdapter(psycopg2.connect(DATABASE_URL, connect_timeout=max(1, int(float(timeout)))))
     conn = sqlite3.connect(DB_PATH, timeout=timeout)
     conn.row_factory = sqlite3.Row
     conn.execute(f"PRAGMA busy_timeout={int(max(1, float(timeout)) * 1000)}")
@@ -433,6 +637,103 @@ def get_db(timeout=60):
         pass
     return conn
 
+
+def normalize_status_key(value):
+    return re.sub(r"\s+", " ", str(value or "").strip()).lower()
+
+
+FOLLOWUP_TERMINAL_STATUSES = {"joined", "dropped", "duplicate", "hm rejected", "screen rejected", "rejected", "l1 reject"}
+FOLLOWUP_STALE_RULES = {
+    "new": 3,
+    "shortlisted": 2,
+    "screen shortlisted": 2,
+    "screening pending": 2,
+    "cv shared": 2,
+    "interviewed": 2,
+    "feedback pending": 2,
+    "interview feedback pending": 2,
+    "l1 scheduled": 1,
+    "offered": 3,
+    "onhold": 7,
+    "on hold": 7,
+}
+CLIENT_SLA_THRESHOLDS = {
+    "feedback_pending_days": 2,
+    "no_recent_submission_days": 3,
+    "requirement_aging_days": 7,
+    "critical_aging_days": 14,
+}
+
+def normalize_status_key(value):
+    return re.sub(r"\s+", " ", str(value or "").strip()).lower()
+
+def parse_local_datetime(value):
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(raw[:len(fmt)], fmt)
+        except ValueError:
+            pass
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00").replace("T", " "))
+        if parsed.tzinfo is not None:
+            return parsed.astimezone().replace(tzinfo=None)
+        return parsed
+    except ValueError:
+        return None
+
+def get_candidate_status_master(conn=None):
+    statuses = list(STATUSES)
+    own_conn = None
+    try:
+        if conn is None:
+            own_conn = get_db(timeout=5)
+            conn = own_conn
+        rows = conn.execute("""
+            SELECT DISTINCT trim(status) AS status
+            FROM candidates
+            WHERE trim(COALESCE(status,'')) <> ''
+            ORDER BY status
+        """).fetchall()
+        seen = {normalize_status_key(s) for s in statuses}
+        for row in rows:
+            status = row["status"] if isinstance(row, sqlite3.Row) else row[0]
+            key = normalize_status_key(status)
+            if key and key not in seen:
+                statuses.append(status)
+                seen.add(key)
+    except sqlite3.Error:
+        pass
+    finally:
+        if own_conn:
+            own_conn.close()
+    return statuses
+
+def get_candidate_statuses_for_role(conn, role_name=""):
+    statuses = []
+    seen = set()
+    def add_many(values):
+        for value in values or []:
+            status = str(value or "").strip()
+            key = normalize_status_key(status)
+            if status and key not in seen:
+                statuses.append(status)
+                seen.add(key)
+    try:
+        pipe = conn.execute("SELECT status_list FROM pipelines WHERE role_name=? LIMIT 1", (role_name or "",)).fetchone()
+        if not pipe:
+            pipe = conn.execute("SELECT status_list FROM pipelines WHERE is_default=1 LIMIT 1").fetchone()
+        if pipe:
+            add_many(json.loads(pipe[0]))
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+    add_many(get_candidate_status_master(conn))
+    return statuses
 PASSWORD_HASH_METHOD = os.getenv("PASSWORD_HASH_METHOD", "pbkdf2:sha256:260000")
 
 def hash_password(password):
@@ -584,7 +885,7 @@ def post_login_redirect_endpoint():
     if is_client_viewer_session():
         return "client_candidates_page"
     if session.get("is_admin"):
-        return "admin_landing_page"
+        return "app_page"
     return "index"
 
 def client_viewer_write_forbidden():
@@ -619,36 +920,23 @@ def team_leader_candidate_clause(conn, current_session, candidate_alias="c"):
     leader_id = current_session.get("team_member_id")
     if not leader_id:
         return " AND 1=0", []
-    leader = conn.execute(
-        "SELECT id, lower(trim(COALESCE(email,''))) AS email FROM team_members WHERE id=?",
-        (leader_id,),
-    ).fetchone()
     rows = conn.execute("""
         SELECT tm.id, lower(trim(COALESCE(tm.email,''))) AS email
         FROM team_leader_mappings m
         JOIN team_members tm ON tm.id = m.member_team_member_id
         WHERE m.leader_team_member_id=?
     """, (leader_id,)).fetchall()
-    member_ids = {int(r["id"]) for r in rows if r["id"]}
-    member_emails = {r["email"] for r in rows if r["email"]}
-    if leader and leader["id"]:
-        member_ids.add(int(leader["id"]))
-    leader_email = (current_session.get("recruiter_email") or current_session.get("email") or "").strip().lower()
-    if leader and leader["email"]:
-        leader_email = leader["email"]
-    if leader_email:
-        member_emails.add(leader_email)
+    member_ids = [int(r["id"]) for r in rows if r["id"]]
+    member_emails = [r["email"] for r in rows if r["email"]]
     clauses = []
     params = []
     prefix = f"{candidate_alias}." if candidate_alias else ""
     if member_ids:
-        ids = sorted(member_ids)
-        clauses.append(f"{prefix}sourcer_id IN ({','.join('?' * len(ids))})")
-        params.extend(ids)
+        clauses.append(f"{prefix}sourcer_id IN ({','.join('?' * len(member_ids))})")
+        params.extend(member_ids)
     if member_emails:
-        emails = sorted(member_emails)
-        clauses.append(f"lower({prefix}recruiter_email) IN ({','.join('?' * len(emails))})")
-        params.extend(emails)
+        clauses.append(f"lower({prefix}recruiter_email) IN ({','.join('?' * len(member_emails))})")
+        params.extend(member_emails)
     if not clauses:
         return " AND 1=0", []
     return " AND (" + " OR ".join(clauses) + ")", params
@@ -679,93 +967,6 @@ def non_admin_candidate_owner_clause(current_session, alias="c"):
         return f" AND lower({prefix}recruiter_email)=?", [recruiter_email]
     return " AND 1=0", []
 
-FOLLOWUP_TERMINAL_STATUSES = {"joined", "dropped", "duplicate", "hm rejected", "screen rejected", "rejected", "l1 reject"}
-FOLLOWUP_STALE_RULES = {
-    "new": 3,
-    "shortlisted": 2,
-    "screen shortlisted": 2,
-    "screening pending": 2,
-    "cv shared": 2,
-    "interviewed": 2,
-    "feedback pending": 2,
-    "interview feedback pending": 2,
-    "l1 scheduled": 1,
-    "offered": 3,
-    "onhold": 7,
-    "on hold": 7,
-}
-CLIENT_SLA_THRESHOLDS = {
-    "feedback_pending_days": 2,
-    "no_recent_submission_days": 3,
-    "requirement_aging_days": 7,
-    "critical_aging_days": 14,
-}
-
-def normalize_status_key(value):
-    return re.sub(r"\s+", " ", str(value or "").strip()).lower()
-
-def parse_local_datetime(value):
-    raw = str(value or "").strip()
-    if not raw:
-        return None
-    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
-        try:
-            return datetime.strptime(raw[:len(fmt)], fmt)
-        except ValueError:
-            pass
-    try:
-        return datetime.fromisoformat(raw.replace("Z", "").replace("T", " "))
-    except ValueError:
-        return None
-
-def get_candidate_status_master(conn=None):
-    statuses = list(STATUSES)
-    own_conn = None
-    try:
-        if conn is None:
-            own_conn = get_db(timeout=5)
-            conn = own_conn
-        rows = conn.execute("""
-            SELECT DISTINCT trim(status) AS status
-            FROM candidates
-            WHERE trim(COALESCE(status,'')) <> ''
-            ORDER BY lower(trim(status))
-        """).fetchall()
-        seen = {normalize_status_key(s) for s in statuses}
-        for row in rows:
-            status = row["status"] if isinstance(row, sqlite3.Row) else row[0]
-            key = normalize_status_key(status)
-            if key and key not in seen:
-                statuses.append(status)
-                seen.add(key)
-    except sqlite3.Error:
-        pass
-    finally:
-        if own_conn:
-            own_conn.close()
-    return statuses
-
-def get_candidate_statuses_for_role(conn, role_name=""):
-    statuses = []
-    seen = set()
-    def add_many(values):
-        for value in values or []:
-            status = str(value or "").strip()
-            key = normalize_status_key(status)
-            if status and key not in seen:
-                statuses.append(status)
-                seen.add(key)
-    try:
-        pipe = conn.execute("SELECT status_list FROM pipelines WHERE role_name=? LIMIT 1", (role_name or "",)).fetchone()
-        if not pipe:
-            pipe = conn.execute("SELECT status_list FROM pipelines WHERE is_default=1 LIMIT 1").fetchone()
-        if pipe:
-            add_many(json.loads(pipe[0]))
-    except (sqlite3.Error, TypeError, json.JSONDecodeError):
-        pass
-    add_many(get_candidate_status_master(conn))
-    return statuses
-
 def candidate_age_days(row):
     dt = parse_local_datetime(row.get("updated_at") or row.get("created_at"))
     if not dt:
@@ -781,21 +982,33 @@ def has_candidate_cv_reference(row):
 def candidate_followup_items(current_session=None, admin=False, limit=150):
     current_session = current_session or session
     conn = get_db(timeout=10)
-    valid_statuses = {normalize_status_key(s) for s in get_candidate_status_master(conn)}
-    owner_sql, owner_params = ("", [])
-    if not admin:
-        owner_sql, owner_params = non_admin_candidate_owner_clause(current_session, "c")
-    rows = conn.execute(f"""
-        SELECT c.id, c.candidate_name, c.email_addr, c.phone, c.status, c.created_at, c.updated_at,
-               c.cv_url, c.cv_filename, c.cv_public_id, c.requirement_id, c.recruiter_name, c.recruiter_email, c.sourcer_id,
-               r.title AS requirement_title, r.client_name AS client_name
-        FROM candidates c
-        LEFT JOIN requirements r ON r.id = c.requirement_id
-        WHERE COALESCE(c.is_duplicate, 0)=0 {owner_sql}
-        ORDER BY datetime(COALESCE(NULLIF(c.updated_at,''), c.created_at)) ASC, c.id DESC
-        LIMIT 600
-    """, owner_params).fetchall()
-    conn.close()
+    try:
+        if USE_POSTGRES:
+            conn.execute("SET statement_timeout = '2500ms'")
+        valid_statuses = {normalize_status_key(s) for s in get_candidate_status_master(conn)}
+        owner_sql, owner_params = ("", [])
+        if not admin:
+            owner_sql, owner_params = non_admin_candidate_owner_clause(current_session, "c")
+        scan_limit = min(250, max(limit * 3, 75))
+        rows = conn.execute(f"""
+            SELECT c.id, c.candidate_name, c.email_addr, c.phone, c.status, c.created_at, c.updated_at,
+                   c.requirement_id, c.recruiter_name, c.recruiter_email, c.sourcer_id,
+                   r.title AS requirement_title, r.client_name AS client_name
+            FROM candidates c
+            LEFT JOIN requirements r ON r.id = c.requirement_id
+            WHERE COALESCE(c.is_duplicate, 0)=0 {owner_sql}
+            ORDER BY c.id DESC
+            LIMIT ?
+        """, owner_params + [scan_limit]).fetchall()
+    except Exception as exc:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        print(f"Candidate followup items failed: {type(exc).__name__}: {exc}", flush=True)
+        return []
+    finally:
+        conn.close()
 
     items = []
     for row in rows:
@@ -999,7 +1212,7 @@ def data_quality_console_items():
               AND trim(COALESCE(cv_url,''))=''
               AND trim(COALESCE(cv_filename,''))=''
               AND trim(COALESCE(cv_public_id,''))=''
-            ORDER BY datetime(created_at) DESC LIMIT 8
+            ORDER BY created_at DESC LIMIT 8
         """).fetchall()]
         add_issue("Candidates", "Watch", "Candidates missing CV", missing_cv, "Daily reports, follow-ups, and recruiter handoffs depend on CV availability.", sample)
 
@@ -1017,7 +1230,7 @@ def data_quality_console_items():
             LEFT JOIN requirements r ON r.id=c.requirement_id
             WHERE COALESCE(c.is_duplicate,0)=0
               AND (c.requirement_id IS NULL OR r.id IS NULL)
-            ORDER BY datetime(c.created_at) DESC LIMIT 8
+            ORDER BY c.created_at DESC LIMIT 8
         """).fetchall()]
         add_issue("Candidates", "Critical", "Candidates missing valid requirement mapping", missing_req, "Client SLA, reports, and follow-up ownership can be wrong without requirement mapping.", sample)
 
@@ -1033,7 +1246,7 @@ def data_quality_console_items():
             WHERE COALESCE(is_duplicate,0)=0
               AND trim(COALESCE(email_addr,''))=''
               AND trim(COALESCE(phone,''))=''
-            ORDER BY datetime(created_at) DESC LIMIT 8
+            ORDER BY created_at DESC LIMIT 8
         """).fetchall()]
         add_issue("Candidates", "Watch", "Candidates missing email and phone", missing_contact, "Duplicate detection and recruiter follow-up are weaker without contact details.", sample)
 
@@ -1070,15 +1283,16 @@ def data_quality_console_items():
             FROM requirements
             WHERE {active_requirement_where}
               AND (taggd_recruiter_id IS NULL OR taggd_recruiter_id=0 OR trim(COALESCE(taggd_recruiter_name,''))='')
-            ORDER BY datetime(created_at) DESC LIMIT 8
+            ORDER BY created_at DESC LIMIT 8
         """).fetchall()]
         add_issue("Requirements", "Watch", "Active requirements missing Taggd recruiter", missing_taggd, "Requirement reports and client ownership views need Taggd recruiter mapping.", sample)
 
+    stale_cutoff = (datetime.now() - timedelta(days=14)).strftime("%Y-%m-%d %H:%M:%S")
     stale_active_req = conn.execute(f"""
         SELECT COUNT(*) FROM requirements
         WHERE {active_requirement_where}
-          AND julianday('now','localtime') - julianday(COALESCE(NULLIF(updated_at,''), created_at)) >= 14
-    """).fetchone()[0]
+          AND COALESCE(NULLIF(updated_at,''), created_at) <= ?
+    """, (stale_cutoff,)).fetchone()[0]
     if stale_active_req:
         add_issue("Requirements", "Watch", "Active requirements not updated for 14+ days", stale_active_req, "Review whether old requirements should be closed or refreshed.")
 
@@ -1108,7 +1322,6 @@ def current_user_can_use_client(conn, client_name):
     return str(client_name or "").strip().lower() in allowed
 
 def resolve_taggd_recruiter_for_client(conn, taggd_recruiter_id, client_name):
-    ensure_taggd_recruiter_schema(conn)
     try:
         taggd_recruiter_id = int(taggd_recruiter_id or 0)
     except (TypeError, ValueError):
@@ -1124,28 +1337,6 @@ def resolve_taggd_recruiter_for_client(conn, taggd_recruiter_id, client_name):
           AND lower(trim(c.client_name))=lower(trim(?))
         LIMIT 1
     """, (taggd_recruiter_id, client_name or "")).fetchone()
-
-def ensure_taggd_recruiter_schema(conn):
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS taggd_recruiters (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT,
-            client_id INTEGER NOT NULL,
-            is_active INTEGER DEFAULT 1,
-            created_by TEXT,
-            created_at TEXT DEFAULT (datetime('now','localtime')),
-            UNIQUE(client_id, name),
-            FOREIGN KEY(client_id) REFERENCES clients(id)
-        )
-    """)
-    requirement_columns = {
-        row["name"] for row in conn.execute("PRAGMA table_info(requirements)").fetchall()
-    }
-    if "taggd_recruiter_id" not in requirement_columns:
-        conn.execute("ALTER TABLE requirements ADD COLUMN taggd_recruiter_id INTEGER")
-    if "taggd_recruiter_name" not in requirement_columns:
-        conn.execute("ALTER TABLE requirements ADD COLUMN taggd_recruiter_name TEXT")
 
 def resolve_team_member_gemini_key(team_member_id=None, conn=None):
     team_member_id = team_member_id or session.get("team_member_id")
@@ -1316,24 +1507,43 @@ def should_update_login_timestamp(conn, table, row_id, threshold_minutes=10):
     if not row_id:
         return False
     try:
-        row = conn.execute(
-            f"""
-            SELECT 1 AS due
-            FROM {table}
-            WHERE id=?
-              AND (
-                last_login_at IS NULL
-                OR last_login_at=''
-                OR datetime(last_login_at) <= datetime('now','localtime',?)
-              )
-            LIMIT 1
-            """,
-            (row_id, f"-{int(threshold_minutes)} minutes"),
-        ).fetchone()
+        if USE_POSTGRES:
+            row = conn.execute(
+                f"""
+                SELECT 1 AS due
+                FROM {table}
+                WHERE id=?
+                  AND (
+                    last_login_at IS NULL
+                    OR last_login_at=''
+                    OR last_login_at <= to_char((CURRENT_TIMESTAMP - INTERVAL '{int(threshold_minutes)} minutes'), 'YYYY-MM-DD HH24:MI:SS')
+                  )
+                LIMIT 1
+                """,
+                (row_id,),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                f"""
+                SELECT 1 AS due
+                FROM {table}
+                WHERE id=?
+                  AND (
+                    last_login_at IS NULL
+                    OR last_login_at=''
+                    OR datetime(last_login_at) <= datetime('now','localtime',?)
+                  )
+                LIMIT 1
+                """,
+                (row_id, f"-{int(threshold_minutes)} minutes"),
+            ).fetchone()
         return bool(row)
     except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         return True
-
 def persist_password_login_artifacts(app_user_id, team_member_id, username="", email="", display_name="", role="", status="success", message="", ip_address="", user_agent="", password_hash_upgrade=None):
     conn = None
     try:
@@ -1419,7 +1629,8 @@ def persist_google_login_artifacts(app_user_id, team_member_id, username="", ema
     conn = None
     try:
         conn = get_db(timeout=1)
-        ensure_ats_pipeline_schema(conn)
+        if not USE_POSTGRES:
+            ensure_ats_pipeline_schema(conn)
         if status == "success":
             if team_member_id and should_update_login_timestamp(conn, "team_members", team_member_id):
                 _best_effort_write(
@@ -1963,7 +2174,18 @@ def _with_db_write_retry(fn, attempts=4, base_delay=0.2):
     if last_exc:
         raise last_exc
 
-def system_email(to_addr, subject, body):
+def current_reply_to_email():
+    email = (
+        session.get("recruiter_email")
+        or session.get("email")
+        or session.get("username")
+        or ""
+    ).strip().lower()
+    if re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        return email
+    return ""
+
+def system_email(to_addr, subject, body, reply_to=None):
     if not to_addr:
         return {"error": "No recipient configured"}
     if not GMAIL_USER or not GMAIL_APP_PASS:
@@ -1972,6 +2194,9 @@ def system_email(to_addr, subject, body):
     msg["Subject"] = subject
     msg["From"] = GMAIL_USER
     msg["To"] = to_addr
+    reply_to = (reply_to or "").strip().lower()
+    if reply_to and re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", reply_to):
+        msg["Reply-To"] = reply_to
     msg.attach(MIMEText(body, "plain"))
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as s:
         s.login(GMAIL_USER, GMAIL_APP_PASS)
@@ -2135,6 +2360,7 @@ def init_db():
         );
         CREATE TABLE IF NOT EXISTS requirements (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            requisition_id TEXT,
             title TEXT NOT NULL,
             description TEXT,
             client_name TEXT,
@@ -2613,6 +2839,8 @@ def init_db():
         requirement_columns = {
             row["name"] for row in conn.execute("PRAGMA table_info(requirements)").fetchall()
         }
+        if "requisition_id" not in requirement_columns:
+            conn.execute("ALTER TABLE requirements ADD COLUMN requisition_id TEXT")
         for col in ["jd_filename", "jd_url", "jd_public_id"]:
             if col not in requirement_columns:
                 conn.execute(f"ALTER TABLE requirements ADD COLUMN {col} TEXT")
@@ -2655,11 +2883,6 @@ def init_db():
             conn.execute("ALTER TABLE app_users ADD COLUMN email TEXT")
         if "last_login_at" not in user_columns:
             conn.execute("ALTER TABLE app_users ADD COLUMN last_login_at TEXT")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_app_users_username_lower ON app_users(lower(trim(username)))")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_app_users_email_lower ON app_users(lower(trim(COALESCE(email,''))))")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_app_users_team_member ON app_users(team_member_id)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_app_users_active ON app_users(is_active)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_team_members_email_lower ON team_members(lower(trim(COALESCE(email,''))))")
         conn.execute("""
             CREATE TABLE IF NOT EXISTS user_login_audit (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2685,23 +2908,27 @@ def init_db():
         )""")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_user_login_audit_created ON user_login_audit(created_at)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_user_login_audit_email ON user_login_audit(lower(email))")
-        conn.execute("""CREATE TABLE IF NOT EXISTS performance_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT,
-            team_member_id INTEGER,
-            recruiter_name TEXT,
-            recruiter_email TEXT,
-            method TEXT,
-            path TEXT,
-            endpoint TEXT,
-            status_code INTEGER,
-            elapsed_ms REAL,
-            is_admin INTEGER DEFAULT 0,
-            ip_address TEXT,
-            user_agent TEXT,
-            created_at TEXT DEFAULT (datetime('now','localtime'))
-        )""")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_performance_logs_created ON performance_logs(created_at)")
+        if not USE_POSTGRES:
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS performance_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT,
+                team_member_id INTEGER,
+                recruiter_name TEXT,
+                recruiter_email TEXT,
+                method TEXT,
+                path TEXT,
+                endpoint TEXT,
+                status_code INTEGER,
+                elapsed_ms REAL,
+                is_admin INTEGER DEFAULT 0,
+                ip_address TEXT,
+                user_agent TEXT,
+                created_at TEXT DEFAULT (datetime('now','localtime'))
+            )"""
+            )
+        conn.execute(
+"CREATE INDEX IF NOT EXISTS idx_performance_logs_created ON performance_logs(created_at)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_performance_logs_user ON performance_logs(username, team_member_id)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_performance_logs_path ON performance_logs(path, created_at)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_match_audit_log_object ON match_audit_log(object_type, object_hash)")
@@ -2840,6 +3067,12 @@ def init_db():
         conn.close()
 
 def initialize_app_database():
+    if USE_POSTGRES:
+        conn = get_db(timeout=5)
+        conn.execute("SELECT 1")
+        conn.close()
+        print("PostgreSQL mode: skipped SQLite schema initialization", flush=True)
+        return
     attempts = 5
     delay_seconds = 2
     for attempt in range(1, attempts + 1):
@@ -3431,7 +3664,9 @@ COL_MAP = {
     "position applied":"role_name","job title":"role_name","position name":"role_name",
     "position title":"requirement_title",
     "requirement":"requirement_title","requirement title":"requirement_title",
-    "requirement id":"requirement_id","req id":"requirement_id",
+    "requisition":"requisition_id","requisition id":"requisition_id","requisition no":"requisition_id",
+    "requisition number":"requisition_id","req id":"requisition_id","req no":"requisition_id","req number":"requisition_id",
+    "requirement id":"requirement_id","ats requirement id":"requirement_id","ats id":"requirement_id",
     "education":"education",
     "status":"status","candidate status":"status","cv status":"status","ats status":"status","stage":"status",
     "date":"created_at","added date":"created_at","added on":"created_at","created date":"created_at","created at":"created_at",
@@ -3444,7 +3679,7 @@ COL_MAP = {
 ALL_FIELDS = ["candidate_name","email_addr","phone","current_company","current_role",
               "experience_years","key_skills","notice_period","current_salary",
               "expected_salary","current_location","preferred_location","remarks",
-              "role_name","requirement_title","requirement_id","client_name","education",
+              "role_name","requirement_title","requirement_id","requisition_id","client_name","education",
               "status","created_at","industry_domain","recruiter_name"]
 ATS_FIELD_LABELS = {
     "": "Do not import",
@@ -3464,6 +3699,7 @@ ATS_FIELD_LABELS = {
     "role_name": "Role Name",
     "requirement_title": "Requirement / Position Title",
     "requirement_id": "Requirement ID",
+    "requisition_id": "Requisition ID",
     "client_name": "Client Name",
     "education": "Education",
     "status": "Candidate Status",
@@ -6060,17 +6296,41 @@ def normalize_requirement_file_key(value):
     value = re.sub(r"[^a-zA-Z0-9+# ]+", " ", value)
     return normalize_requirement_key(value)
 
+def requirement_requisition_column_exists(conn):
+    if USE_POSTGRES:
+        return conn.execute(
+            """
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema='public'
+              AND table_name='requirements'
+              AND column_name='requisition_id'
+            LIMIT 1
+            """
+        ).fetchone() is not None
+    return any(
+        row["name"] == "requisition_id"
+        for row in conn.execute("PRAGMA table_info(requirements)").fetchall()
+    )
+
 def load_requirement_lookup(conn):
-    rows = conn.execute("SELECT id,title,client_name,status FROM requirements ORDER BY title").fetchall()
+    requisition_select = "requisition_id" if requirement_requisition_column_exists(conn) else "'' AS requisition_id"
+    rows = conn.execute(f"SELECT id,{requisition_select},title,client_name,status FROM requirements ORDER BY title").fetchall()
     lookup = {}
     for r in rows:
         rid = str(r["id"])
+        requisition_id = normalize_requirement_key(r["requisition_id"])
         title = normalize_requirement_key(r["title"])
         client = normalize_requirement_key(r["client_name"])
         keys = {rid, title}
+        if requisition_id:
+            keys.add(requisition_id)
         if client:
             keys.add(f"{title} - {client}")
             keys.add(f"{title} / {client}")
+            if requisition_id:
+                keys.add(f"{requisition_id} - {client}")
+                keys.add(f"{requisition_id} / {client}")
         for key in keys:
             if key:
                 lookup[key] = r
@@ -6078,13 +6338,20 @@ def load_requirement_lookup(conn):
 
 def resolve_requirement_id(row, requirement_lookup):
     raw_id = str(row.get("requirement_id") or "").strip()
+    raw_requisition_id = str(row.get("requisition_id") or row.get("requisition id") or row.get("req id") or "").strip()
     raw_title = str(row.get("requirement_title") or row.get("role_name") or "").strip()
     raw_client = str(row.get("client_name") or "").strip()
     match = None
     if raw_id:
         match = requirement_lookup.get(normalize_requirement_key(raw_id))
+    if not match and raw_requisition_id:
+        match = requirement_lookup.get(normalize_requirement_key(raw_requisition_id))
     if not match and raw_title:
         match = requirement_lookup.get(normalize_requirement_key(raw_title))
+    if not match and raw_requisition_id and raw_client:
+        combined_req = normalize_requirement_key(f"{raw_requisition_id} - {raw_client}")
+        alt_req = normalize_requirement_key(f"{raw_requisition_id} / {raw_client}")
+        match = requirement_lookup.get(combined_req) or requirement_lookup.get(alt_req)
     if not match and raw_title and raw_client:
         combined = normalize_requirement_key(f"{raw_title} - {raw_client}")
         alt_combined = normalize_requirement_key(f"{raw_title} / {raw_client}")
@@ -6119,10 +6386,13 @@ def suggest_requirement_matches(raw_title, raw_client, requirement_lookup, limit
     out = []
     for score, req in suggestions[:limit]:
         label = str(row_value(req, "title") or "").strip()
+        requisition_id = normalize_requisition_id(row_value(req, "requisition_id"))
         client = str(row_value(req, "client_name") or "").strip()
+        if requisition_id:
+            label = f"{requisition_id} | {label}"
         if client:
             label = f"{label} - {client}"
-        out.append({"id": row_value(req, "id"), "title": row_value(req, "title"), "client_name": row_value(req, "client_name"), "match_score": round(score, 3), "label": label})
+        out.append({"id": row_value(req, "id"), "requisition_id": requisition_id, "title": row_value(req, "title"), "client_name": row_value(req, "client_name"), "match_score": round(score, 3), "label": label})
     return out
 
 def save_bulk_jd_files(conn, jd_file_list, requirement_lookup, batch_id):
@@ -6385,11 +6655,11 @@ def process_upload(recruiter_name, recruiter_email, role_override, sourcer_id, e
 
             today = date.today().isoformat()
             submitted = {r[0] for r in conn.execute(
-                "SELECT DISTINCT recruiter_email FROM candidates WHERE date(created_at)=?",(today,)).fetchall()}
+                "SELECT DISTINCT recruiter_email FROM candidates WHERE substr(COALESCE(created_at, ''),1,10)=?",(today,)).fetchall()}
             for member in conn.execute("SELECT name,email FROM team_members").fetchall():
                 if member["email"] not in submitted:
                     if not conn.execute(
-                        "SELECT 1 FROM alerts WHERE alert_type='no_submission' AND recruiter_email=? AND date(created_at)=?",
+                        "SELECT 1 FROM alerts WHERE alert_type='no_submission' AND recruiter_email=? AND substr(COALESCE(created_at, ''),1,10)=?",
                         (member["email"],today)).fetchone():
                         conn.execute("INSERT INTO alerts (alert_type,message,recruiter_email) VALUES (?,?,?)",
                             ("no_submission",f"{member['name']} has not submitted any profiles today",member["email"]))
@@ -6518,9 +6788,9 @@ def prepare_google_sheet_candidates(conn, rows, default_client_name="", create_r
                 else:
                     row["_will_create_requirement"] = f"{title} - {client_name}"
                     planned_requirements.add((normalize_requirement_key(title), normalize_requirement_client_key(client_name)))
-                    row["_skip_reason"] = f"Requirement not found: {title} - {client_name}. Create the Requirement first, then upload again."
+                    req_id = None
         if not req_id:
-            row["_skip_reason"] = row.get("_skip_reason") or "Missing Requirement. Create/map an existing Requirement before upload."
+            row["_skip_reason"] = "Missing Requirement"
             summary["missing_requirement"] += 1
             prepared.append(row)
             continue
@@ -6595,7 +6865,7 @@ def api_google_sheet_import():
         conn,
         rows or [],
         data.get("default_client_name") or data.get("client_name") or "",
-        create_requirements=False,
+        create_requirements=True,
         created_by=session.get("username") or session.get("email") or "Google Sheet Import"
     )
     if summary.get("error"):
@@ -6709,7 +6979,7 @@ def api_local_candidate_sheet_import():
         conn,
         rows or [],
         request.form.get("default_client_name") or request.form.get("client_name") or "",
-        create_requirements=False,
+        create_requirements=True,
         created_by=session.get("username") or session.get("email") or "Local Excel Import"
     )
     if summary.get("error"):
@@ -6897,8 +7167,18 @@ def send_weekly_email():
         return {"error": str(e)}
 
 # â”€â”€ Template â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+TEMPLATE_CACHE = {"created_at": 0.0, "bytes": None}
+TEMPLATE_CACHE_SECONDS = int(os.getenv("ATS_TEMPLATE_CACHE_SECONDS", "600"))
+TEMPLATE_CACHE_LOCK = threading.Lock()
+
+
 def make_template():
     if not XLSX_OK: return None
+    now = time.time()
+    with TEMPLATE_CACHE_LOCK:
+        cached = TEMPLATE_CACHE.get("bytes")
+        if cached and (now - float(TEMPLATE_CACHE.get("created_at") or 0)) < TEMPLATE_CACHE_SECONDS:
+            return io.BytesIO(cached)
     wb = openpyxl.Workbook(); ws = wb.active; ws.title = "Candidates"
     headers = ["Requirement","Candidate Name","Email","Phone","Current Company","Current Role","Education",
                "Experience (Years)","Key Skills","Notice Period","Current Salary",
@@ -6917,23 +7197,38 @@ def make_template():
              "e.g. 12 LPA","e.g. 18 LPA","Current city","Preferred city","Role being screened","Any notes"]
     for i,h in enumerate(hints,1):
         c = ws.cell(row=2,column=i,value=h); c.font=ifont; c.fill=ifill
+    conn = None
     try:
-        conn = get_db()
-        reqs = conn.execute("SELECT id,title,client_name,status FROM requirements ORDER BY title").fetchall()
-        conn.close()
+        conn = get_db(timeout=3)
+        if USE_POSTGRES:
+            conn.execute("SET statement_timeout = '2500ms'")
+        requisition_select = "requisition_id" if requirement_requisition_column_exists(conn) else "'' AS requisition_id"
+        reqs = conn.execute(f"SELECT id,{requisition_select},title,client_name,status FROM requirements ORDER BY title LIMIT 1000").fetchall()
         req_ws = wb.create_sheet("Requirements")
-        req_headers = ["Requirement ID", "Requirement Title", "Client", "Status"]
+        req_headers = ["Requirement ID", "Requisition ID", "Requirement Title", "Client", "Status"]
         for i,h in enumerate(req_headers,1):
             c = req_ws.cell(row=1,column=i,value=h); c.font=hfont; c.fill=hfill
             req_ws.column_dimensions[c.column_letter].width=max(len(h)+6,18)
         for ri,r in enumerate(reqs,2):
             req_ws.cell(row=ri,column=1,value=r["id"])
-            req_ws.cell(row=ri,column=2,value=r["title"])
-            req_ws.cell(row=ri,column=3,value=r["client_name"])
-            req_ws.cell(row=ri,column=4,value=r["status"])
+            req_ws.cell(row=ri,column=2,value=r["requisition_id"])
+            req_ws.cell(row=ri,column=3,value=r["title"])
+            req_ws.cell(row=ri,column=4,value=r["client_name"])
+            req_ws.cell(row=ri,column=5,value=r["status"])
     except Exception as e:
         print("Template requirements sheet error:", e)
-    buf = io.BytesIO(); wb.save(buf); buf.seek(0); return buf
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+    buf = io.BytesIO(); wb.save(buf)
+    data = buf.getvalue()
+    with TEMPLATE_CACHE_LOCK:
+        TEMPLATE_CACHE["created_at"] = now
+        TEMPLATE_CACHE["bytes"] = data
+    return io.BytesIO(data)
 
 # â”€â”€ Export â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 EXPORT_COLS = ["candidate_name","email_addr","phone","current_company","current_role",
@@ -7069,10 +7364,10 @@ def build_query(args, current_session=None, select_clause=None):
         exp_max = parts[1].strip() if len(parts) > 1 and parts[1].strip() else None
         # Extract numeric from experience_years (handle "6 Years", "6 years", "6", etc)
         if exp_min:
-            sql+=" AND CAST(replace(replace(replace(replace(lower(experience_years),'years',''),'year',''),' ',''),'yrs','') AS REAL) >= ?"
+            sql+=" AND CAST(NULLIF(substring(COALESCE(experience_years,'') from '[0-9]+(\\.[0-9]+)*'), '') AS REAL) >= ?"
             p.append(float(exp_min))
         if exp_max:
-            sql+=" AND CAST(replace(replace(replace(replace(lower(experience_years),'years',''),'year',''),' ',''),'yrs','') AS REAL) <= ?"
+            sql+=" AND CAST(NULLIF(substring(COALESCE(experience_years,'') from '[0-9]+(\\.[0-9]+)*'), '') AS REAL) <= ?"
             p.append(float(exp_max))
     # Sorting
     sort_map = {
@@ -7100,8 +7395,8 @@ def build_query(args, current_session=None, select_clause=None):
         "status": "LOWER(c.status) ASC",
         "status_asc": "LOWER(c.status) ASC",
         "status_desc": "LOWER(c.status) DESC",
-        "experience_asc": "CAST(replace(replace(replace(replace(lower(c.experience_years),'years',''),'year',''),' ',''),'yrs','') AS REAL) ASC",
-        "experience_desc": "CAST(replace(replace(replace(replace(lower(c.experience_years),'years',''),'year',''),' ',''),'yrs','') AS REAL) DESC",
+        "experience_asc": "CAST(NULLIF(substring(COALESCE(c.experience_years,'') from '[0-9]+(\\.[0-9]+)*'), '') AS REAL) ASC",
+        "experience_desc": "CAST(NULLIF(substring(COALESCE(c.experience_years,'') from '[0-9]+(\\.[0-9]+)*'), '') AS REAL) DESC",
         "location_asc": "LOWER(c.current_location) ASC",
         "location_desc": "LOWER(c.current_location) DESC",
         "notice_asc": "LOWER(c.notice_period) ASC",
@@ -7128,13 +7423,26 @@ def parse_positive_int(value, default, max_value=None):
 
 GENERIC_REQUIREMENT_TITLE_WORDS = {"jd", "job", "requirement", "opening", "urgent", "hiring", "needed", "new"}
 
+def ensure_requirement_requisition_schema(conn):
+    if USE_POSTGRES:
+        conn.execute("ALTER TABLE requirements ADD COLUMN IF NOT EXISTS requisition_id TEXT")
+        conn.commit()
+        return
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(requirements)").fetchall()}
+    if "requisition_id" not in columns:
+        conn.execute("ALTER TABLE requirements ADD COLUMN requisition_id TEXT")
+        conn.commit()
+
+def normalize_requisition_id(value):
+    return re.sub(r"\s+", " ", str(value or "").strip())
+
 def normalize_requirement_title_text(value):
     text = re.sub(r"\s+", " ", str(value or "").strip())
     text = re.sub(r"\s*[-/|]\s*", " - ", text)
     return text
 
 def normalize_requirement_title_key(value):
-    return re.sub(r"[^a-z]+", " ", normalize_requirement_title_text(value).lower()).strip()
+    return re.sub(r"[^a-z0-9]+", " ", normalize_requirement_title_text(value).lower()).strip()
 
 def normalize_requirement_client_key(value):
     text = re.sub(r"\s+", " ", str(value or "").strip().lower())
@@ -7147,10 +7455,8 @@ def validate_requirement_title(title, client_name=""):
     errors = []
     if len(clean) < 5 or len(clean) > 90:
         errors.append("Requirement title should be 5-90 characters.")
-    if re.search(r"\d", clean):
-        errors.append("Do not include numbers in the requirement title.")
-    if not re.match(r"^[A-Za-z][A-Za-z .,&()+/#-]*$", clean):
-        errors.append("Use only letters, spaces, and common separators like -, /, &, +, #.")
+    if not re.match(r"^[A-Za-z0-9][A-Za-z0-9 .,&()+/#-]*$", clean):
+        errors.append("Use only letters, numbers, spaces, and common separators like -, /, &, +, #.")
     words = re.findall(r"[A-Za-z]+", clean.lower())
     if len([w for w in words if w not in GENERIC_REQUIREMENT_TITLE_WORDS]) < 2:
         errors.append("Use a clear role name, for example 'Java Developer' or 'Finance Analyst'.")
@@ -7603,8 +7909,9 @@ def api_performance_summary():
         slow_ms = max(0.0, float(request.args.get("slow_ms", slow_ms)))
     except (TypeError, ValueError):
         pass
-    where = ["datetime(created_at) >= datetime('now','localtime', ?)"]
-    params = [f"-{days} days"]
+    cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+    where = ["COALESCE(created_at,'') >= ?"]
+    params = [cutoff]
     if path:
         where.append("path=?")
         params.append(path)
@@ -7692,21 +7999,26 @@ def api_performance_summary():
 @app.route("/api/upload", methods=["POST"])
 @login_required
 def api_upload():
-    forbidden = client_viewer_write_forbidden()
-    if forbidden:
-        return forbidden
-    if not has_bulk_upload_access():
-        return jsonify({"error":"Bulk upload permission required"}),403
-    sourcer_id = session.get("team_member_id")
-    name  = request.form.get("recruiter_name","").strip() or session.get("recruiter_name","System")
-    email = request.form.get("recruiter_email","").strip() or session.get("recruiter_email","")
-    if not name or name == "System": name = session.get("recruiter_name","System")
-    if not email: email = session.get("recruiter_email","system@hrguru.com")
-    email = email.lower()
-    role  = request.form.get("role_override","").strip()
-    if "excel_file" not in request.files: return jsonify({"error":"No file attached"}),400
-    return jsonify(process_upload(name,email,role,sourcer_id,
-                   request.files["excel_file"],request.files.getlist("cv_files"),request.files.getlist("jd_files")))
+    try:
+        forbidden = client_viewer_write_forbidden()
+        if forbidden:
+            return forbidden
+        if not has_bulk_upload_access():
+            return jsonify({"error":"Bulk upload permission required"}),403
+        sourcer_id = session.get("team_member_id")
+        name  = request.form.get("recruiter_name","").strip() or session.get("recruiter_name","System")
+        email = request.form.get("recruiter_email","").strip() or session.get("recruiter_email","")
+        if not name or name == "System": name = session.get("recruiter_name","System")
+        if not email: email = session.get("recruiter_email","system@hrguru.com")
+        email = email.lower()
+        role  = request.form.get("role_override","").strip()
+        if "excel_file" not in request.files: return jsonify({"error":"No file attached"}),400
+        return jsonify(process_upload(name,email,role,sourcer_id,
+                       request.files["excel_file"],request.files.getlist("cv_files"),request.files.getlist("jd_files")))
+    except Exception as exc:
+        print("Bulk upload failed:", exc, flush=True)
+        traceback.print_exc()
+        return jsonify({"error": f"Bulk upload failed: {exc}"}), 500
 
 @app.route("/api/template")
 def api_template():
@@ -7720,19 +8032,10 @@ def api_template():
 def api_candidates():
     conn = get_db()
     select_clause = None
-    view = str(request.args.get("view", "")).strip().lower()
-    if view == "reporting":
+    if str(request.args.get("view", "")).strip().lower() == "reporting":
         select_clause = (
             "c.id, c.candidate_name, c.email_addr, c.current_role, c.role_name, "
             "c.status, c.recruiter_name, c.recruiter_email, c.created_at, "
-            "r.title as requirement_title, r.client_name as client_name"
-        )
-    elif view == "list":
-        select_clause = (
-            "c.id, c.candidate_name, c.email_addr, c.phone, c.current_company, c.current_role, "
-            "c.experience_years, c.key_skills, c.notice_period, c.current_salary, c.expected_salary, "
-            "c.current_location, c.preferred_location, c.remarks, c.role_name, c.status, "
-            "c.recruiter_name, c.recruiter_email, c.created_at, c.cv_url, c.cv_filename, "
             "r.title as requirement_title, r.client_name as client_name"
         )
     sql, p = build_query(request.args, session, select_clause=select_clause)
@@ -7787,7 +8090,7 @@ def api_client_candidates():
         FROM candidates c
         LEFT JOIN requirements r ON r.id = c.requirement_id
         WHERE {' AND '.join(where)}
-        ORDER BY datetime(c.created_at) DESC, c.id DESC
+        ORDER BY c.created_at DESC, c.id DESC
     """
     page = parse_positive_int(request.args.get("page"), 1)
     page_size = parse_positive_int(request.args.get("page_size"), 15, 100)
@@ -8308,8 +8611,8 @@ def api_reports():
         totals = conn.execute("""
             SELECT
                 COUNT(*) as submissions,
-                COUNT(DISTINCT COALESCE(NULLIF(recruiter_email,''), sourcer_id)) as recruiters,
-                COUNT(DISTINCT COALESCE(requirement_id, role_name)) as requirements
+                COUNT(DISTINCT COALESCE(NULLIF(recruiter_email,''), sourcer_id::text)) as recruiters,
+                COUNT(DISTINCT COALESCE(requirement_id::text, role_name)) as requirements
             FROM candidates
             WHERE date(created_at)=?
         """, (today,)).fetchone()
@@ -8436,7 +8739,7 @@ def api_team_report_today_by_recruiter():
     totals = conn.execute(f"""
         SELECT
             COUNT(c.id) AS submissions,
-            COUNT(DISTINCT COALESCE(c.sourcer_id, c.recruiter_email)) AS recruiters,
+            COUNT(DISTINCT COALESCE(c.sourcer_id::text, c.recruiter_email)) AS recruiters,
             COUNT(DISTINCT c.requirement_id) AS requirements_worked,
             SUM(CASE WHEN COALESCE(c.status,'') IN ('Selected','Offered','Joined','Hired') THEN 1 ELSE 0 END) AS selections
         FROM candidates c
@@ -8502,7 +8805,7 @@ def api_team_report_selection_summary():
         SELECT
             SUM(CASE WHEN date(c.created_at)>=date('now','localtime','start of month') THEN 1 ELSE 0 END) AS current_month,
             COUNT(c.id) AS overall,
-            COUNT(DISTINCT COALESCE(c.sourcer_id, c.recruiter_email)) AS recruiters
+            COUNT(DISTINCT COALESCE(c.sourcer_id::text, c.recruiter_email)) AS recruiters
         FROM candidates c
         WHERE COALESCE(c.is_duplicate,0)=0
           AND COALESCE(c.status,'') IN ({placeholders})
@@ -8661,24 +8964,52 @@ def api_filters():
 @login_required
 def api_candidate_search_filters():
     conn = get_db()
-    owner_sql, owner_params = non_admin_candidate_owner_clause(session, "c")
-    clients = [
-        r[0] for r in conn.execute(f"""
-            SELECT DISTINCT r.client_name
-            FROM candidates c
-            LEFT JOIN requirements r ON r.id=c.requirement_id
-            WHERE COALESCE(r.client_name,'')!=''{owner_sql}
-            ORDER BY r.client_name
-        """, owner_params).fetchall()
-    ]
-    sourcers = [dict(r) for r in conn.execute(f"""
-        SELECT DISTINCT c.recruiter_email AS email, c.recruiter_name AS name
-        FROM candidates c
-        WHERE COALESCE(c.recruiter_email,'')!=''{owner_sql}
-        ORDER BY c.recruiter_name
-    """, owner_params).fetchall()]
-    conn.close()
-    return jsonify({"clients": clients, "sourcers": sourcers})
+    try:
+        if USE_POSTGRES:
+            conn.execute("SET statement_timeout = '2500ms'")
+        allowed_clients = mapped_client_names_for_current_user(conn)
+        if allowed_clients is None:
+            clients = [
+                r[0] for r in conn.execute("""
+                    SELECT client_name
+                    FROM clients
+                    WHERE COALESCE(client_name,'')!=''
+                    ORDER BY client_name
+                    LIMIT 300
+                """).fetchall()
+            ]
+        else:
+            clients = sorted(allowed_clients)[:300]
+
+        if session.get("is_admin") or is_team_leader_session():
+            sourcers = [dict(r) for r in conn.execute("""
+                SELECT email, name
+                FROM team_members
+                WHERE COALESCE(email,'')!=''
+                  AND COALESCE(is_ex_employee,0)=0
+                ORDER BY name
+                LIMIT 300
+            """).fetchall()]
+        else:
+            sourcers = [{
+                "email": session.get("recruiter_email") or session.get("email") or "",
+                "name": session.get("recruiter_name") or session.get("username") or "",
+            }]
+        return jsonify({"clients": clients, "sourcers": sourcers})
+    except Exception as exc:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        print(f"Candidate search filters failed: {type(exc).__name__}: {exc}", flush=True)
+        return jsonify({"clients": [], "sourcers": [], "error": "Candidate filters timed out. Please refresh and try again."}), 503
+    finally:
+        if USE_POSTGRES:
+            try:
+                conn.execute("RESET statement_timeout")
+            except Exception:
+                pass
+        conn.close()
 
 @app.route("/api/stats")
 @login_required
@@ -8975,58 +9306,6 @@ def api_my_analytics():
             conn.close()
         ANALYTICS_SEMAPHORE.release()
 
-@app.route("/api/my/weekly_performance")
-@login_required
-def api_my_weekly_performance():
-    if is_client_viewer_session():
-        return jsonify({"error": "Weekly performance is not available for this user type."}), 403
-
-    if not ANALYTICS_SEMAPHORE.acquire(blocking=False):
-        return jsonify({
-            "error": "Performance snapshot is busy right now. Please try again in a minute."
-        }), 429
-
-    conn = None
-    try:
-        conn = get_db()
-        owner_sql, owner_params = non_admin_candidate_owner_clause(session, "c")
-        base_where = "WHERE COALESCE(c.is_duplicate,0)=0" + owner_sql
-        rows = conn.execute(
-            f"""
-            SELECT date(c.created_at) AS day, COUNT(*) AS count
-            FROM candidates c
-            {base_where}
-              AND date(c.created_at)>=date('now','localtime','-6 days')
-            GROUP BY date(c.created_at)
-            ORDER BY day
-            """,
-            owner_params,
-        ).fetchall()
-        counts = {row["day"]: row["count"] for row in rows}
-        today = date.today()
-        trend = []
-        total = 0
-        for offset in range(6, -1, -1):
-            day = today - timedelta(days=offset)
-            iso_day = day.isoformat()
-            count = int(counts.get(iso_day, 0) or 0)
-            total += count
-            trend.append({
-                "date": iso_day,
-                "label": day.strftime("%d %b"),
-                "short_label": day.strftime("%a"),
-                "count": count,
-            })
-        return jsonify({
-            "weekly_submissions": total,
-            "trend": trend,
-            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        })
-    finally:
-        if conn:
-            conn.close()
-        ANALYTICS_SEMAPHORE.release()
-
 @app.route("/api/roles")
 @login_required
 def get_roles():
@@ -9223,11 +9502,9 @@ def taggd_recruiters():
         if forbidden:
             return forbidden
     conn = get_db()
-    ensure_taggd_recruiter_schema(conn)
     if request.method == "GET":
         client_name = (request.args.get("client_name") or "").strip()
-        include_inactive = str(request.args.get("include_inactive") or "").strip().lower() in {"1", "true", "yes"}
-        where_parts = ["1=1"] if include_inactive else ["tr.is_active=1"]
+        where_parts = ["tr.is_active=1"]
         params = []
         if client_name:
             where_parts.append("lower(trim(c.client_name))=lower(trim(?))")
@@ -9241,7 +9518,7 @@ def taggd_recruiters():
             where_parts.append(f"lower(trim(c.client_name)) IN ({placeholders})")
             params.extend(sorted(allowed_clients))
         rows = conn.execute(f"""
-            SELECT tr.id, tr.name, tr.email, tr.is_active, c.client_name
+            SELECT tr.id, tr.name, tr.email, c.client_name
             FROM taggd_recruiters tr
             JOIN clients c ON c.id=tr.client_id
             WHERE {" AND ".join(where_parts)}
@@ -9266,7 +9543,11 @@ def taggd_recruiters():
             INSERT INTO taggd_recruiters (name, email, client_id, created_by)
             VALUES (?,?,?,?)
         """, (name, email, client["id"], session.get("username") or "")).lastrowid
-    except sqlite3.IntegrityError:
+    except Exception as exc:
+        if not isinstance(exc, sqlite3.IntegrityError) and exc.__class__.__name__ not in {"IntegrityError", "UniqueViolation"}:
+            conn.close()
+            raise
+        conn.rollback()
         row = conn.execute("""
             SELECT id FROM taggd_recruiters WHERE client_id=? AND lower(trim(name))=lower(trim(?)) LIMIT 1
         """, (client["id"], name)).fetchone()
@@ -9275,78 +9556,13 @@ def taggd_recruiters():
             conn.execute("UPDATE taggd_recruiters SET is_active=1, email=? WHERE id=?", (email, rid))
     conn.commit()
     row = conn.execute("""
-        SELECT tr.id, tr.name, tr.email, tr.is_active, c.client_name
+        SELECT tr.id, tr.name, tr.email, c.client_name
         FROM taggd_recruiters tr
         JOIN clients c ON c.id=tr.client_id
         WHERE tr.id=?
     """, (rid,)).fetchone()
     conn.close()
     return jsonify({"ok": True, "taggd_recruiter": dict(row) if row else {"id": rid, "name": name, "client_name": client_name}})
-
-@app.route("/api/taggd-recruiters/<int:rid>", methods=["PATCH"])
-@login_required
-def update_taggd_recruiter(rid):
-    forbidden = client_viewer_write_forbidden()
-    if forbidden:
-        return forbidden
-    data = request.get_json(silent=True) or {}
-    conn = get_db()
-    ensure_taggd_recruiter_schema(conn)
-    current = conn.execute("""
-        SELECT tr.*, c.client_name
-        FROM taggd_recruiters tr
-        JOIN clients c ON c.id=tr.client_id
-        WHERE tr.id=?
-    """, (rid,)).fetchone()
-    if not current:
-        conn.close()
-        return jsonify({"error": "Taggd recruiter not found."}), 404
-    if not current_user_can_use_client(conn, current["client_name"]):
-        conn.close()
-        return jsonify({"error": "You can update Taggd recruiters only for clients mapped to you."}), 403
-    updates = []
-    params = []
-    if "name" in data:
-        name = (data.get("name") or "").strip()
-        if not name:
-            conn.close()
-            return jsonify({"error": "Taggd recruiter name is required."}), 400
-        duplicate = conn.execute("""
-            SELECT id FROM taggd_recruiters
-            WHERE id<>? AND client_id=? AND lower(trim(name))=lower(trim(?))
-            LIMIT 1
-        """, (rid, current["client_id"], name)).fetchone()
-        if duplicate:
-            conn.close()
-            return jsonify({"error": "A Taggd recruiter with this name already exists for this client."}), 409
-        updates.append("name=?")
-        params.append(name)
-    if "email" in data:
-        updates.append("email=?")
-        params.append((data.get("email") or "").strip())
-    if "is_active" in data:
-        updates.append("is_active=?")
-        params.append(1 if data.get("is_active") else 0)
-    if not updates:
-        conn.close()
-        return jsonify({"ok": True})
-    params.append(rid)
-    conn.execute(f"UPDATE taggd_recruiters SET {', '.join(updates)} WHERE id=?", params)
-    if "name" in data:
-        conn.execute("""
-            UPDATE requirements
-            SET taggd_recruiter_name=?
-            WHERE taggd_recruiter_id=?
-        """, ((data.get("name") or "").strip(), rid))
-    conn.commit()
-    row = conn.execute("""
-        SELECT tr.id, tr.name, tr.email, tr.is_active, c.client_name
-        FROM taggd_recruiters tr
-        JOIN clients c ON c.id=tr.client_id
-        WHERE tr.id=?
-    """, (rid,)).fetchone()
-    conn.close()
-    return jsonify({"ok": True, "taggd_recruiter": dict(row) if row else None})
 
 @app.route("/api/clients/<int:client_id>", methods=["PATCH"])
 @login_required
@@ -9819,7 +10035,7 @@ def daily_trend():
 def no_submission_today():
     conn  = get_db(); today=date.today().isoformat()
     submitted={r[0] for r in conn.execute(
-        "SELECT DISTINCT recruiter_email FROM candidates WHERE date(created_at)=?",(today,)).fetchall()}
+        "SELECT DISTINCT recruiter_email FROM candidates WHERE substr(COALESCE(created_at, ''),1,10)=?",(today,)).fetchall()}
     excluded_names = {
         "surindersingh",
         "reetusaini",
@@ -10285,6 +10501,21 @@ def api_reset_jd_match_cache():
 @app.route("/api/parse_jd", methods=["POST"])
 @login_required
 def api_parse_jd_structured():
+    if not JD_PARSE_SEMAPHORE.acquire(blocking=False):
+        return jsonify({
+            "error": "JD parsing is busy right now. Please save the requirement manually or try Parse JD again in a minute."
+        }), 429
+    started = time.perf_counter()
+    jd_hash_for_log = ""
+    try:
+        return _api_parse_jd_structured_locked(started, jd_hash_for_log)
+    except ValueError as exc:
+        return jsonify({"error": str(exc) or "Upload PDF, DOC, DOCX, or TXT files only"}), 400
+    finally:
+        JD_PARSE_SEMAPHORE.release()
+
+
+def _api_parse_jd_structured_locked(started, jd_hash_for_log=""):
     data = request.get_json(silent=True) or {}
     jd_text = (data.get("jd_text") or request.form.get("jd_text") or "").strip()
     if not jd_text and "jd_file" in request.files and request.files["jd_file"].filename:
@@ -10292,12 +10523,13 @@ def api_parse_jd_structured():
         jd_text = extract_cv_text(jd_path)
     if not jd_text:
         return jsonify({"error": "Please upload a JD file or paste JD text."}), 400
+    jd_hash_for_log = versioned_text_hash(jd_text)
     parsed = parse_jd_structured(jd_text)
     queue_match_audit(
         "parse_jd",
         event_type="parse_jd",
         object_type="jd",
-        object_hash=versioned_text_hash(jd_text),
+        object_hash=jd_hash_for_log,
         pipeline_version=MATCH_PIPELINE_VERSION,
         status="parsed",
         source=parsed.get("parse_source", ""),
@@ -10310,6 +10542,13 @@ def api_parse_jd_structured():
             "role_family": parsed.get("role_family", ""),
             "domain_family": parsed.get("domain_family", ""),
         }
+    )
+    perf_log(
+        "parse_jd_complete",
+        started,
+        user=session.get("username") or "-",
+        source=parsed.get("parse_source", ""),
+        hash=jd_hash_for_log[:12],
     )
     return jsonify({"ok": True, "parsed_jd": parsed})
 
@@ -10912,7 +11151,7 @@ def get_users():
         return jsonify({"error":"Admin only"}),403
     conn=get_db()
     rows=conn.execute("""
-        SELECT u.id,u.username,u.email,u.team_member_id,u.is_admin,u.is_bulk_admin,u.is_active,u.created_at,u.last_login_at,
+        SELECT u.id,u.username,u.email,u.is_admin,u.is_bulk_admin,u.is_active,u.created_at,u.last_login_at,
                t.name AS team_name,t.email AS team_email,t.role AS team_role,t.last_login_at AS team_last_login_at
         FROM app_users u
         LEFT JOIN team_members t ON t.id=u.team_member_id
@@ -10943,7 +11182,7 @@ def user_login_report():
                method, status, ip_address, user_agent, message, created_at
         FROM user_login_audit
         {sql_where}
-        ORDER BY datetime(created_at) DESC, id DESC
+        ORDER BY created_at DESC, id DESC
         LIMIT ?
     """, params + [limit]).fetchall()
     conn.close()
@@ -11096,109 +11335,14 @@ def update_user(uid):
         return jsonify({"error":"Admin only"}),403
     d=request.json
     conn=get_db()
-    try:
-        user = conn.execute("SELECT * FROM app_users WHERE id=?", (uid,)).fetchone()
-        if not user:
-            conn.close()
-            return jsonify({"error":"User not found"}),404
-        if uid == session.get("user_id") and d.get("is_active") is not None and not d.get("is_active"):
-            conn.close()
-            return jsonify({"error":"Cannot deactivate yourself"}),400
-
-        updates = []
-        params = []
-        if "username" in d:
-            username = (d.get("username") or "").strip().lower()
-            if not username:
-                conn.close()
-                return jsonify({"error":"Username is required"}),400
-            exists = conn.execute(
-                "SELECT id FROM app_users WHERE lower(trim(username))=lower(trim(?)) AND id<>?",
-                (username, uid),
-            ).fetchone()
-            if exists:
-                conn.close()
-                return jsonify({"error":"Username already exists"}),400
-            updates.append("username=?")
-            params.append(username)
-
-        email = None
-        if "email" in d:
-            email = (d.get("email") or "").strip().lower()
-            if email:
-                exists = conn.execute(
-                    """SELECT u.id
-                       FROM app_users u
-                       LEFT JOIN team_members t ON t.id=u.team_member_id
-                       WHERE (lower(trim(COALESCE(u.email,'')))=lower(trim(?))
-                              OR lower(trim(COALESCE(t.email,'')))=lower(trim(?)))
-                         AND u.id<>?
-                       LIMIT 1""",
-                    (email, email, uid),
-                ).fetchone()
-                if exists:
-                    conn.close()
-                    return jsonify({"error":"Email already belongs to another login user"}),400
-            updates.append("email=?")
-            params.append(email or None)
-
-        role = None
-        if "role" in d or "is_admin" in d:
-            role = normalize_user_role_label(d.get("role"), bool(d.get("is_admin")))
-
-        if d.get("password"):
-            password = str(d["password"])
-            if len(password) < 8:
-                conn.close()
-                return jsonify({"error":"Password must be at least 8 characters"}),400
-            updates.append("password=?")
-            params.append(hash_password(password))
-        if d.get("is_active") is not None:
-            updates.append("is_active=?")
-            params.append(1 if d["is_active"] else 0)
-        if d.get("is_bulk_admin") is not None:
-            updates.append("is_bulk_admin=?")
-            params.append(1 if d["is_bulk_admin"] else 0)
-        if d.get("is_admin") is not None:
-            updates.append("is_admin=?")
-            params.append(1 if d["is_admin"] else 0)
-
-        if updates:
-            conn.execute(f"UPDATE app_users SET {', '.join(updates)} WHERE id=?", params + [uid])
-
-        target = conn.execute("SELECT * FROM app_users WHERE id=?", (uid,)).fetchone()
-        team_member_id = target["team_member_id"] if target else None
-        if team_member_id:
-            member_updates = []
-            member_params = []
-            if email is not None:
-                member_updates.append("email=?")
-                member_params.append(email or None)
-            if role is not None:
-                member_updates.append("role=?")
-                member_params.append(role)
-            if d.get("is_bulk_admin") is not None:
-                member_updates.append("can_bulk_upload=?")
-                member_params.append(1 if d["is_bulk_admin"] else 0)
-            if member_updates:
-                conn.execute(f"UPDATE team_members SET {', '.join(member_updates)} WHERE id=?", member_params + [team_member_id])
-        elif email:
-            name = (d.get("name") or target["username"] or email.split("@")[0]).strip()
-            team_member_id = conn.execute(
-                "INSERT INTO team_members (name,email,role,can_bulk_upload) VALUES (?,?,?,?)",
-                (name, email, role or "Recruiter", 1 if d.get("is_bulk_admin") else 0),
-            ).lastrowid
-            conn.execute("UPDATE app_users SET team_member_id=? WHERE id=?", (team_member_id, uid))
-
-        conn.commit()
-        conn.close()
-        return jsonify({"ok":True})
-    except Exception as e:
-        conn.close()
-        message = str(e)
-        if "UNIQUE" in message.upper():
-            return jsonify({"error":"Username or email already exists"}),400
-        return jsonify({"error":"Unable to update user"}),400
+    if d.get("password"):
+        password_hash = hash_password(d["password"])
+        conn.execute("UPDATE app_users SET password=? WHERE id=?",(password_hash,uid))
+    if d.get("is_active") is not None:
+        conn.execute("UPDATE app_users SET is_active=? WHERE id=?",(1 if d["is_active"] else 0,uid))
+    if d.get("is_bulk_admin") is not None:
+        conn.execute("UPDATE app_users SET is_bulk_admin=? WHERE id=?",(1 if d["is_bulk_admin"] else 0,uid))
+    conn.commit(); conn.close(); return jsonify({"ok":True})
 
 # â”€â”€ Candidate CRUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.route("/api/candidate/<int:cid>",methods=["PATCH"])
@@ -11442,20 +11586,11 @@ def update_client_candidate_status(cid):
 @login_required
 def get_candidate(cid):
     conn = get_db()
-    select_clause = "c.*, r.title as requirement_title, r.client_name as client_name"
-    if str(request.args.get("view", "")).strip().lower() == "edit":
-        select_clause = (
-            "c.id, c.candidate_name, c.email_addr, c.phone, c.current_company, c.current_role, "
-            "c.experience_years, c.key_skills, c.notice_period, c.current_salary, c.expected_salary, "
-            "c.current_location, c.preferred_location, c.remarks, c.role_name, c.status, "
-            "c.recruiter_name, c.recruiter_email, c.created_at, c.cv_url, c.cv_filename, "
-            "r.title as requirement_title, r.client_name as client_name"
-        )
 
     if not session.get("is_admin"):
         owner_sql, owner_params = non_admin_candidate_owner_clause(session, "c")
         row = conn.execute(
-            f"""SELECT {select_clause}
+            f"""SELECT c.*, r.title as requirement_title, r.client_name as client_name
                FROM candidates c
                LEFT JOIN requirements r ON c.requirement_id = r.id
                WHERE c.id=?{owner_sql}""",
@@ -11463,7 +11598,7 @@ def get_candidate(cid):
         ).fetchone()
     else:
         row = conn.execute(
-            f"""SELECT {select_clause}
+            """SELECT c.*, r.title as requirement_title, r.client_name as client_name
                FROM candidates c
                LEFT JOIN requirements r ON c.requirement_id = r.id
                WHERE c.id=?""",
@@ -11656,9 +11791,12 @@ def del_pipeline(pid):
 def get_pipeline_for_role():
     role=request.args.get("role","")
     conn=get_db()
-    statuses = get_candidate_statuses_for_role(conn, role)
+    row=conn.execute("SELECT status_list FROM pipelines WHERE role_name=? LIMIT 1",(role,)).fetchone()
+    if not row:
+        row=conn.execute("SELECT status_list FROM pipelines WHERE is_default=1 LIMIT 1").fetchone()
     conn.close()
-    return jsonify(statuses)
+    if row: return jsonify(json.loads(row[0]))
+    return jsonify(["New","Shortlisted","Feedback Pending","Offered","On Hold","Joined","Rejected","Duplicate"])
 
 # â”€â”€ Jobs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @app.route("/api/jobs",methods=["GET"])
@@ -11706,6 +11844,7 @@ def del_job(jid):
 @login_required
 def get_requirements():
     conn=get_db()
+    ensure_requirement_requisition_schema(conn)
     status = (request.args.get("status") or "").strip()
     q = (request.args.get("q") or "").strip().lower()
     include_stats = str(request.args.get("stats", "")).lower() in {"1", "true", "yes"}
@@ -11715,8 +11854,8 @@ def get_requirements():
         where_parts.append("r.status=?")
         params.append(status)
     if q:
-        where_parts.append("(lower(COALESCE(r.title,'')) LIKE ? OR lower(COALESCE(r.client_name,'')) LIKE ? OR CAST(r.id AS TEXT)=?)")
-        params.extend([f"%{q}%", f"%{q}%", q])
+        where_parts.append("(lower(COALESCE(r.title,'')) LIKE ? OR lower(COALESCE(r.client_name,'')) LIKE ? OR lower(COALESCE(r.requisition_id,'')) LIKE ? OR CAST(r.id AS TEXT)=?)")
+        params.extend([f"%{q}%", f"%{q}%", f"%{q}%", q])
     allowed_clients = mapped_client_names_for_current_user(conn)
     if allowed_clients is not None:
         if not allowed_clients:
@@ -11755,14 +11894,12 @@ def get_requirements():
     total = conn.execute(f"SELECT COUNT(*) FROM requirements r {where}", params).fetchone()[0]
     list_sql = f"""
         SELECT r.id,
+               r.requisition_id,
                r.title,
                r.client_name,
                r.description,
-               r.location,
-               r.daily_target,
                r.status,
                r.jd_url,
-               r.taggd_recruiter_id,
                COALESCE(tg.name, r.taggd_recruiter_name, '') AS taggd_recruiter_name,
                ts.name as sourcer_name,
                tr.name as recruiter_name
@@ -11814,51 +11951,70 @@ def search_requirements():
         return jsonify([])
 
     conn = get_db()
-    active_statuses = ["New", "Open", "In Progress"]
-    where_parts = ["COALESCE(NULLIF(TRIM(r.status),''),'New') IN (?,?,?)"]
-    params = active_statuses[:]
+    try:
+        if USE_POSTGRES:
+            conn.execute("SET statement_timeout = '3000ms'")
+        has_requisition = requirement_requisition_column_exists(conn)
+        req_select = "r.requisition_id" if has_requisition else "'' AS requisition_id"
+        req_filter = "OR lower(COALESCE(r.requisition_id,'')) LIKE ?" if has_requisition else ""
 
-    allowed_clients = mapped_client_names_for_current_user(conn)
-    if allowed_clients is not None:
-        if not allowed_clients:
-            conn.close()
-            return jsonify([])
-        placeholders = ",".join("?" * len(allowed_clients))
-        where_parts.append(f"lower(trim(COALESCE(r.client_name,''))) IN ({placeholders})")
-        params.extend(sorted(allowed_clients))
+        active_statuses = ["New", "Open", "In Progress"]
+        where_parts = ["COALESCE(NULLIF(TRIM(r.status),''),'New') IN (?,?,?)"]
+        params = active_statuses[:]
 
-    like = f"%{q}%"
-    where_parts.append("""
-        (
-          lower(COALESCE(r.title,'')) LIKE ?
-          OR lower(COALESCE(r.client_name,'')) LIKE ?
-          OR CAST(r.id AS TEXT)=?
-        )
-    """)
-    params.extend([like, like, q])
-    where = "WHERE " + " AND ".join(where_parts)
-    rows = conn.execute(f"""
-        SELECT r.id,
-               r.title,
-               r.client_name,
-               COALESCE(NULLIF(TRIM(r.status),''),'New') AS status,
-               r.taggd_recruiter_id,
-               COALESCE(tg.name, r.taggd_recruiter_name, '') AS taggd_recruiter_name
-        FROM requirements r
-        LEFT JOIN taggd_recruiters tg ON tg.id = r.taggd_recruiter_id
-        {where}
-        ORDER BY
-          CASE COALESCE(NULLIF(TRIM(r.status),''),'New')
-            WHEN 'Open' THEN 1
-            WHEN 'In Progress' THEN 2
-            WHEN 'New' THEN 3
-            ELSE 4
-          END,
-          r.created_at DESC
-        LIMIT ?
-    """, params + [limit]).fetchall()
-    conn.close()
-    return jsonify([dict(r) for r in rows])
+        allowed_clients = mapped_client_names_for_current_user(conn)
+        if allowed_clients is not None:
+            if not allowed_clients:
+                return jsonify([])
+            placeholders = ",".join("?" * len(allowed_clients))
+            where_parts.append(f"lower(trim(COALESCE(r.client_name,''))) IN ({placeholders})")
+            params.extend(sorted(allowed_clients))
+
+        like = f"%{q}%"
+        where_parts.append(f"""
+            (
+              lower(COALESCE(r.title,'')) LIKE ?
+              OR lower(COALESCE(r.client_name,'')) LIKE ?
+              {req_filter}
+              OR CAST(r.id AS TEXT)=?
+            )
+        """)
+        params.extend([like, like])
+        if has_requisition:
+            params.append(like)
+        params.append(q)
+        where = "WHERE " + " AND ".join(where_parts)
+        rows = conn.execute(f"""
+            SELECT r.id, {req_select}, r.title, r.client_name, COALESCE(NULLIF(TRIM(r.status),''),'New') AS status,
+                   COALESCE(tg.name, r.taggd_recruiter_name, '') AS taggd_recruiter_name
+            FROM requirements r
+            LEFT JOIN taggd_recruiters tg ON tg.id=r.taggd_recruiter_id
+            {where}
+            ORDER BY
+              CASE COALESCE(NULLIF(TRIM(r.status),''),'New')
+                WHEN 'Open' THEN 1
+                WHEN 'In Progress' THEN 2
+                WHEN 'New' THEN 3
+                ELSE 4
+              END,
+              r.created_at DESC
+            LIMIT ?
+        """, params + [limit]).fetchall()
+        return jsonify([dict(r) for r in rows])
+    except Exception as exc:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        print(f"Requirement search failed: {type(exc).__name__}: {exc}", flush=True)
+        return jsonify({"error": "Requirement search timed out. Please type a more specific requirement or try again."}), 503
+    finally:
+        if USE_POSTGRES:
+            try:
+                conn.execute("RESET statement_timeout")
+            except Exception:
+                pass
+        conn.close()
 
 @app.route("/api/requirements",methods=["POST"])
 @login_required
@@ -11868,6 +12024,8 @@ def add_requirement():
         return forbidden
     d=request.json
     conn=get_db()
+    ensure_requirement_requisition_schema(conn)
+    requisition_id = normalize_requisition_id(d.get("requisition_id"))
     title = (d.get("title") or "").strip()
     client_name = (d.get("client_name") or "").strip()
     location = (d.get("location") or "").strip()
@@ -11895,14 +12053,30 @@ def add_requirement():
     duplicate = None
     title_key = normalize_requirement_title_key(title)
     client_key = normalize_requirement_client_key(client_name)
-    for row in conn.execute("SELECT id, title, client_name FROM requirements").fetchall():
-        if normalize_requirement_title_key(row["title"]) == title_key and normalize_requirement_client_key(row["client_name"]) == client_key:
+    if requisition_id:
+        existing_req = conn.execute(
+            """
+            SELECT id, title, client_name, requisition_id
+            FROM requirements
+            WHERE lower(trim(COALESCE(requisition_id,'')))=lower(trim(?))
+              AND lower(trim(COALESCE(client_name,'')))=lower(trim(?))
+            LIMIT 1
+            """,
+            (requisition_id, client_name),
+        ).fetchone()
+        if existing_req:
+            conn.close()
+            return jsonify({"ok":False,"error":f"Requisition ID {requisition_id} already exists for {client_name}."}),409
+    for row in conn.execute("SELECT id, title, client_name, requisition_id FROM requirements").fetchall():
+        same_title_client = normalize_requirement_title_key(row["title"]) == title_key and normalize_requirement_client_key(row["client_name"]) == client_key
+        existing_requisition = normalize_requisition_id(row["requisition_id"])
+        if same_title_client and not requisition_id and not existing_requisition:
             duplicate = row
             break
     if duplicate:
         conn.close()
-        return jsonify({"ok":False,"error":"A requirement with this title and client already exists."}),409
-    similar, score = find_similar_requirement(conn, title, client_name, description)
+        return jsonify({"ok":False,"error":"A requirement with this title and client already exists. Add a Requisition ID if this is a separate opening with the same title."}),409
+    similar, score = (None, 0) if requisition_id else find_similar_requirement(conn, title, client_name, description)
     if similar:
         conn.close()
         return jsonify({
@@ -11911,9 +12085,9 @@ def add_requirement():
             "similar_requirement": {"id": similar["id"], "title": similar["title"], "client_name": similar["client_name"], "score": round(score, 3)}
         }), 409
     cursor=conn.execute("""INSERT INTO requirements 
-        (title,description,client_name,location,taggd_recruiter_id,taggd_recruiter_name,assigned_sourcer_id,assigned_recruiter_id,daily_target,status,created_by)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-        (title,description,client_name,location,
+        (requisition_id,title,description,client_name,location,taggd_recruiter_id,taggd_recruiter_name,assigned_sourcer_id,assigned_recruiter_id,daily_target,status,created_by)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (requisition_id,title,description,client_name,location,
          taggd_recruiter["id"], taggd_recruiter["name"],
          d.get("assigned_sourcer_id") or session.get("team_member_id"),
          d.get("assigned_recruiter_id") or session.get("team_member_id"),d.get("daily_target",3),d.get("status","New"),
@@ -11950,6 +12124,7 @@ def add_requirement():
 @login_required
 def get_requirement(rid):
     conn=get_db()
+    ensure_requirement_requisition_schema(conn)
     row=conn.execute("SELECT * FROM requirements WHERE id=?",(rid,)).fetchone()
     conn.close()
     if row:
@@ -11969,7 +12144,8 @@ def update_requirement(rid):
         return forbidden
     d=request.json
     conn=get_db()
-    current = conn.execute("SELECT title, client_name, description, jd_url, taggd_recruiter_id, taggd_recruiter_name FROM requirements WHERE id=?", (rid,)).fetchone()
+    ensure_requirement_requisition_schema(conn)
+    current = conn.execute("SELECT title, client_name, description, jd_url, requisition_id FROM requirements WHERE id=?", (rid,)).fetchone()
     if not current:
         conn.close()
         return jsonify({"ok":False,"error":"Requirement not found"}),404
@@ -11978,19 +12154,13 @@ def update_requirement(rid):
         return jsonify({"ok":False,"error":"Requirement is not mapped to your clients"}),403
     new_title = (d.get("title", current["title"]) or "").strip()
     new_client = (d.get("client_name", current["client_name"]) or "").strip()
+    new_requisition_id = normalize_requisition_id(d.get("requisition_id", current["requisition_id"]))
     if "location" in d and ((not (d.get("location") or "").strip()) or (d.get("location") or "").strip().lower() in {"-", "na", "n/a", "none", "null"}):
         conn.close()
         return jsonify({"ok":False,"error":"Location is required."}),400
     if "client_name" in d and not current_user_can_use_client(conn, new_client):
         conn.close()
         return jsonify({"ok":False,"error":"You can use only clients mapped to you by admin."}),403
-    if "taggd_recruiter_id" in d:
-        taggd_recruiter = resolve_taggd_recruiter_for_client(conn, d.get("taggd_recruiter_id"), new_client)
-        if not taggd_recruiter:
-            conn.close()
-            return jsonify({"ok":False,"error":"Taggd Recruiter Name is required and must belong to the selected client."}),400
-    else:
-        taggd_recruiter = None
     if "title" in d or "client_name" in d:
         new_title, title_errors = validate_requirement_title(new_title, new_client)
         if title_errors:
@@ -11999,18 +12169,35 @@ def update_requirement(rid):
     duplicate = None
     title_key = normalize_requirement_title_key(new_title)
     client_key = normalize_requirement_client_key(new_client)
-    for row in conn.execute("SELECT id, title, client_name FROM requirements WHERE id<>?", (rid,)).fetchall():
-        if normalize_requirement_title_key(row["title"]) == title_key and normalize_requirement_client_key(row["client_name"]) == client_key:
+    if new_requisition_id:
+        existing_req = conn.execute(
+            """
+            SELECT id, title, client_name, requisition_id
+            FROM requirements
+            WHERE id<>?
+              AND lower(trim(COALESCE(requisition_id,'')))=lower(trim(?))
+              AND lower(trim(COALESCE(client_name,'')))=lower(trim(?))
+            LIMIT 1
+            """,
+            (rid, new_requisition_id, new_client),
+        ).fetchone()
+        if existing_req:
+            conn.close()
+            return jsonify({"ok":False,"error":f"Requisition ID {new_requisition_id} already exists for {new_client}."}),409
+    for row in conn.execute("SELECT id, title, client_name, requisition_id FROM requirements WHERE id<>?", (rid,)).fetchall():
+        same_title_client = normalize_requirement_title_key(row["title"]) == title_key and normalize_requirement_client_key(row["client_name"]) == client_key
+        existing_requisition = normalize_requisition_id(row["requisition_id"])
+        if same_title_client and not new_requisition_id and not existing_requisition:
             duplicate = row
             break
     if duplicate:
         conn.close()
-        return jsonify({"ok":False,"error":"A requirement with this title and client already exists."}),409
+        return jsonify({"ok":False,"error":"A requirement with this title and client already exists. Add a Requisition ID if this is a separate opening with the same title."}),409
     new_description = (d.get("description", current["description"]) or "").strip()
     if "description" in d and not (d.get("has_jd_text") or d.get("has_jd_file") or current["jd_url"]):
         conn.close()
         return jsonify({"ok":False,"error":"Add a detailed job description or attach a JD file."}),400
-    similar, score = find_similar_requirement(conn, new_title, new_client, new_description, exclude_id=rid)
+    similar, score = (None, 0) if new_requisition_id else find_similar_requirement(conn, new_title, new_client, new_description, exclude_id=rid)
     if similar:
         conn.close()
         return jsonify({
@@ -12019,6 +12206,7 @@ def update_requirement(rid):
             "similar_requirement": {"id": similar["id"], "title": similar["title"], "client_name": similar["client_name"], "score": round(score, 3)}
         }), 409
     if "title" in d: conn.execute("UPDATE requirements SET title=? WHERE id=?",(new_title,rid))
+    if "requisition_id" in d: conn.execute("UPDATE requirements SET requisition_id=? WHERE id=?",(new_requisition_id,rid))
     if "description" in d: conn.execute("UPDATE requirements SET description=? WHERE id=?",(new_description,rid))
     if "client_name" in d: conn.execute("UPDATE requirements SET client_name=? WHERE id=?",(new_client,rid))
     if "location" in d: conn.execute("UPDATE requirements SET location=? WHERE id=?",(d["location"],rid))
@@ -12028,6 +12216,10 @@ def update_requirement(rid):
     if "daily_target" in d: conn.execute("UPDATE requirements SET daily_target=? WHERE id=?",(d["daily_target"],rid))
     if "status" in d: conn.execute("UPDATE requirements SET status=? WHERE id=?",(d["status"],rid))
     if "taggd_recruiter_id" in d:
+        taggd_recruiter = resolve_taggd_recruiter_for_client(conn, d.get("taggd_recruiter_id"), new_client)
+        if not taggd_recruiter:
+            conn.close()
+            return jsonify({"ok":False,"error":"Taggd Recruiter Name is required and must belong to the selected client."}),400
         conn.execute(
             "UPDATE requirements SET taggd_recruiter_id=?, taggd_recruiter_name=? WHERE id=?",
             (taggd_recruiter["id"], taggd_recruiter["name"], rid)
@@ -12702,11 +12894,14 @@ def send_candidate_email(candidate_id, template_name, extra_vars={}):
         else:
             if not GMAIL_USER or not GMAIL_APP_PASS:
                 conn.close()
-                return {"error":"Please log in with Google again before sending email."}
+                return {"error":"Email is not configured. Please set GMAIL_USER and GMAIL_APP_PASS."}
             msg = MIMEMultipart("alternative")
             msg["Subject"] = subject
             msg["From"] = GMAIL_USER
             msg["To"] = recipient
+            reply_to = current_reply_to_email()
+            if reply_to:
+                msg["Reply-To"] = reply_to
             msg.attach(MIMEText(body,"plain"))
             with smtplib.SMTP_SSL("smtp.gmail.com",465) as s:
                 s.login(GMAIL_USER,GMAIL_APP_PASS)
@@ -12740,11 +12935,14 @@ def send_custom_email(to_addr, subject, body, candidate_id=None, template_name="
                 use_google = False
         if not use_google:
             if not GMAIL_USER or not GMAIL_APP_PASS:
-                return {"error":"Please log in with Google again before sending email."}
+                return {"error":"Email is not configured. Please set GMAIL_USER and GMAIL_APP_PASS."}
             msg = MIMEMultipart("mixed" if attachments else "alternative")
             msg["Subject"] = subject
             msg["From"] = GMAIL_USER
             msg["To"] = to_addr
+            reply_to = current_reply_to_email()
+            if reply_to:
+                msg["Reply-To"] = reply_to
             if cc_addrs:
                 msg["Cc"] = ", ".join(cc_addrs)
             if html_body:
@@ -12784,6 +12982,14 @@ def send_custom_email(to_addr, subject, body, candidate_id=None, template_name="
         conn.commit(); conn.close()
         return {"error": raw_error}
 
+def daily_report_query_args_from_payload(data):
+    query_args = dict(data.get("filters") or {})
+    if data.get("ids"):
+        query_args["ids"] = ",".join(str(x) for x in data.get("ids") or [] if str(x).isdigit())
+    if not query_args.get("ids") and not any(query_args.get(k) for k in ["date_preset", "date_from", "date_to", "q", "client", "requirement_id", "status", "skills", "exp_range"]):
+        query_args["date_preset"] = "today"
+    return query_args
+
 @app.route("/api/candidates/daily_report_email", methods=["POST"])
 @login_required
 def api_daily_work_report_email():
@@ -12794,11 +13000,7 @@ def api_daily_work_report_email():
     cc_addrs = clean_email_list(data.get("cc") or [])
     if not email_list_is_valid(data.get("cc"), cc_addrs):
         return jsonify({"error": "Please enter valid CC email addresses."}), 400
-    if not session.get("google_token"):
-        return jsonify({"error": "Please log in with Google before sending the daily work report email."}), 400
-    query_args = dict(data.get("filters") or {})
-    if data.get("ids"):
-        query_args["ids"] = ",".join(str(x) for x in data.get("ids") or [] if str(x).isdigit())
+    query_args = daily_report_query_args_from_payload(data)
     rows = candidate_report_rows(query_args, session)
     filters_applied = bool(query_args.get("ids") or any(query_args.get(k) for k in ["q", "client", "requirement_id", "status", "skills", "exp_range"]))
     report_date = feedback_request_shared_date(rows, query_args)
@@ -12841,9 +13043,7 @@ def api_daily_work_report_preview():
     cc_addrs = clean_email_list(data.get("cc") or [])
     if not email_list_is_valid(data.get("cc"), cc_addrs):
         return jsonify({"error": "Please enter valid CC email addresses."}), 400
-    query_args = dict(data.get("filters") or {})
-    if data.get("ids"):
-        query_args["ids"] = ",".join(str(x) for x in data.get("ids") or [] if str(x).isdigit())
+    query_args = daily_report_query_args_from_payload(data)
     rows = candidate_report_rows(query_args, session)
     filters_applied = bool(query_args.get("ids") or any(query_args.get(k) for k in ["q", "client", "requirement_id", "status", "skills", "exp_range"]))
     report_date = feedback_request_shared_date(rows, query_args)
@@ -12882,8 +13082,6 @@ def api_feedback_request_email():
     to_addr = (data.get("to") or "").strip().lower()
     if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", to_addr):
         return jsonify({"error": "Please enter a valid email address."}), 400
-    if not session.get("google_token"):
-        return jsonify({"error": "Please log in with Google before sending feedback request email."}), 400
     ids = [str(x) for x in data.get("ids") or [] if str(x).isdigit()]
     if not ids:
         return jsonify({"error": "Select at least one candidate before requesting feedback."}), 400
@@ -12989,47 +13187,23 @@ def api_send_email():
                     "mimetype": uploaded.mimetype or "application/octet-stream",
                 })
 
-        candidate_id = d.get("candidate_id")
-        if candidate_id:
-            try:
-                candidate_id = int(candidate_id)
-            except (TypeError, ValueError):
-                return jsonify({"error": "Invalid candidate."}), 400
-            conn = get_db()
-            owner_sql, owner_params = non_admin_candidate_owner_clause(session, "c")
-            allowed_candidate = conn.execute(
-                f"SELECT c.id FROM candidates c WHERE c.id=?{owner_sql}",
-                [candidate_id] + owner_params
-            ).fetchone()
-            conn.close()
-            if not allowed_candidate:
-                return jsonify({"error": "Candidate not found or permission denied."}), 404
-
         # The UI sends the final composed subject/body, so send that directly.
         # This avoids relying on an expired Google OAuth access token.
         if d.get("to") and d.get("subject") and d.get("body"):
-            to_addr = (d.get("to") or "").strip().lower()
-            cc_addrs = clean_email_list(d.get("cc") or d.get("cc_addrs"))
-            if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", to_addr):
-                return jsonify({"error": "Please enter a valid recipient email."}), 400
-            if not email_list_is_valid(d.get("cc") or d.get("cc_addrs"), cc_addrs):
-                return jsonify({"error": "Please enter valid CC email addresses."}), 400
-            result = send_custom_email(
-                to_addr,
+            return jsonify(send_custom_email(
+                d["to"],
                 d["subject"],
                 d["body"],
-                candidate_id,
+                d.get("candidate_id"),
                 d.get("template_name") or "custom",
-                attachments=attachments,
-                cc_addrs=cc_addrs
-            )
-            return jsonify(result), (200 if result.get("ok") else 400)
+                attachments=attachments
+            ))
 
         # Template-only email flow
-        if candidate_id and d.get("template_name"):
+        if d.get("candidate_id") and d.get("template_name"):
             extra = d.get("variables", {})
             return jsonify(send_candidate_email(
-                candidate_id,
+                d["candidate_id"],
                 d["template_name"],
                 extra
             ))
@@ -13352,7 +13526,7 @@ def send_due_linkedin_campaign(campaign_id):
         FROM communication_campaign_recipients r
         JOIN candidates c ON c.id = r.candidate_id
         WHERE r.campaign_id=? AND r.status='Pending' AND datetime(r.next_send_at) <= datetime('now','localtime')
-        ORDER BY datetime(r.next_send_at), r.id
+        ORDER BY r.next_send_at, r.id
         LIMIT ?
     """, (campaign_id, limit)).fetchall()]
     conn.close()
@@ -13485,7 +13659,8 @@ def get_email_log():
     conn.close(); return jsonify([dict(r) for r in rows])
 
 try:
-    acquire_single_instance_lock()
+    if not USE_POSTGRES:
+        acquire_single_instance_lock()
     initialize_app_database()
 except Exception as e:
     print("Database initialization error:", e, flush=True)
@@ -13494,6 +13669,40 @@ if __name__=="__main__":
     port = int(os.getenv("PORT", 5001))
     print(f"HR Guru ATS -> http://localhost:{port}", flush=True)
     app.run(debug=False, host="0.0.0.0", port=port)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
