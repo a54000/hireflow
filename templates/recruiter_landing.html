@@ -53,6 +53,7 @@ main{min-height:100vh;padding:22px 24px;display:grid;align-items:center}
 .action.selections{--accent:#34d399;--accent-rgb:52,211,153}
 .modal{display:none;position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);padding:22px;align-items:center;justify-content:center}.modal.active{display:flex}.modal-card{width:min(720px,100%);max-height:88vh;overflow:auto;background:#1c2030;border:1px solid #343b52;border-radius:10px;box-shadow:0 20px 48px rgba(0,0,0,.48);text-align:left}.modal-head,.modal-foot{padding:16px 18px;border-bottom:1px solid #2a2f3a;display:flex;justify-content:space-between;gap:12px;align-items:center}.modal-foot{border-top:1px solid #2a2f3a;border-bottom:0;justify-content:flex-end}.modal-body{padding:18px;display:grid;gap:14px}.modal h2{font-size:19px;color:#fff}.modal p,.muted{color:#9aa5c4;font-size:13px;line-height:1.4}.close{width:32px;height:32px;border-radius:8px;border:1px solid #343b52;background:#252a3a;color:#fff;cursor:pointer;font-size:18px;line-height:1}.field{display:grid;gap:6px}.field label{color:#9aa5c4;font-size:11px;font-weight:900;text-transform:uppercase}.field input,.field select{height:40px;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:13px;padding:0 12px}.modal-actions{display:flex;gap:10px;flex-wrap:wrap}.btn{height:40px;border:1px solid #e8643a;background:#e8643a;color:#fff;border-radius:8px;padding:0 14px;font:inherit;font-size:13px;font-weight:850;cursor:pointer}.btn.secondary{background:#252a3a;border-color:#343b52;color:#d9dee8}.client-list{display:flex;flex-wrap:wrap;gap:8px;min-height:48px;padding:10px;border:1px solid #2a2f3a;border-radius:8px;background:#151923}.client-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border-radius:999px;background:#252a3a;border:1px solid #343b52;color:#e8ecf7;font-size:12px;font-weight:800}.client-chip button{background:none;border:0;color:#fff;cursor:pointer;font-weight:900}.toast{position:fixed;right:18px;bottom:18px;z-index:90;display:none;max-width:420px;border-radius:8px;padding:12px 14px;font-size:13px;box-shadow:0 14px 32px rgba(0,0,0,.35)}.toast.active{display:block}.toast.error{background:#3a1d22;color:#ffb4bd;border:1px solid #6b2c36}.toast.success{background:#173421;color:#9af0b4;border:1px solid #2c6b3b}
 .analytics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.analytics-card{border:1px solid #343b52;background:#151923;border-radius:8px;padding:14px;min-height:92px;display:grid;align-content:center;gap:7px}.analytics-card strong{font-size:30px;line-height:1;color:#fff}.analytics-card span{font-size:12px;color:#bac4df;font-weight:850}.analytics-card em{font-style:normal;font-size:11px;color:#7f8bad}.analytics-status{min-height:20px;color:#9aa5c4;font-size:13px}.analytics-status.error{color:#ffb4bd}.weekly-chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;align-items:end;min-height:260px;border:1px solid #343b52;background:#151923;border-radius:8px;padding:16px}.weekly-bar{display:grid;grid-template-rows:1fr auto auto;gap:7px;align-items:end;min-width:0;text-align:center}.weekly-bar-fill{width:100%;min-height:8px;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,#60a5fa,#2563eb);box-shadow:0 0 0 1px rgba(96,165,250,.22) inset}.weekly-bar strong{font-size:13px;color:#fff}.weekly-bar span{font-size:11px;color:#8b95b5;font-weight:850;white-space:nowrap}.weekly-total{border:1px solid #343b52;background:#151923;border-radius:8px;padding:14px;display:flex;justify-content:space-between;gap:12px;align-items:center}.weekly-total strong{font-size:30px;color:#fff}.weekly-total span{font-size:12px;color:#bac4df;font-weight:850}
+.analytics-card.actionable{cursor:pointer;transition:transform .15s,border-color .15s}.analytics-card.actionable:hover{transform:translateY(-1px);border-color:#34d399}.selection-list{display:grid;gap:8px}.selection-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(90px,.45fr) minmax(0,1fr) minmax(120px,.55fr);gap:8px;align-items:center;border:1px solid #343b52;background:#151923;border-radius:8px;padding:10px}.selection-row strong{color:#fff;font-size:13px}.selection-row span{color:#9aa5c4;font-size:12px;font-weight:750;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.selection-status{display:inline-flex;width:max-content;padding:4px 8px;border-radius:999px;background:#143427;border:1px solid #26734f;color:#9af0b4!important;font-size:11px!important;font-weight:900!important}
 .followup-intro{border:1px solid #3b82f6;background:#12223a;border-radius:8px;padding:12px 14px;display:grid;gap:7px}.followup-intro strong{color:#fff;font-size:14px}.followup-intro p{margin:0;color:#bfdbfe;font-size:12px;line-height:1.45}.followup-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.followup-step{border:1px solid #2f3f5f;background:#151d2d;border-radius:8px;padding:10px}.followup-step b{display:block;color:#fff;font-size:12px;margin-bottom:3px}.followup-step span{display:block;color:#aebde0;font-size:11px;line-height:1.35}.followup-summary{border:1px solid #2f3f5f;background:#151d2d;border-radius:8px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:16px}.followup-summary span{color:#aebde0;font-size:12px;font-weight:850}.followup-summary strong{color:#fff;font-size:28px;line-height:1}.followup-list{display:grid;gap:8px}.followup-row{border:1px solid #2f3f5f;background:#151923;border-radius:8px;padding:10px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}.followup-row strong{color:#fff;font-size:13px}.followup-row span{display:block;color:#8b95b5;font-size:12px;margin-top:3px}.followup-reasons{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}.followup-reason{border-radius:999px;background:#173421;border:1px solid #2f7d48;color:#9af0b4;padding:4px 7px;font-size:10px;font-weight:850}.followup-count{width:54px;min-height:44px;border-radius:10px;background:#17243a;border:1px solid #31598d;color:#bfdbfe;display:grid;place-items:center;text-align:center;font-size:10px;font-weight:950}.followup-count strong{font-size:18px;line-height:1;color:#fff}.followup-count span{display:block;color:#bfdbfe;font-size:10px;margin:0}
 @media(max-width:900px){main{padding:18px 14px;align-items:start}.dashboard-layout{grid-template-columns:1fr}.primary-panel{min-height:unset}.primary-grid{grid-template-columns:1fr}.action{min-height:120px}.page-top{align-items:flex-start}}
 @media(max-width:760px){.primary-panel h1{font-size:24px}.primary-panel,.side-panel{padding:14px}.page-top{margin-right:48px}}
@@ -172,6 +173,25 @@ main{min-height:100vh;padding:22px 24px;display:grid;align-items:center}
     <div class="modal-foot">
       <button class="btn secondary" type="button" onclick="closeAnalyticsModal()">Close</button>
       <button class="btn" type="button" onclick="loadAnalytics()">Refresh</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="monthlySelectionsModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h2>Monthly Selections</h2>
+        <p>Offered, selected, and joined candidates counted in the current month.</p>
+      </div>
+      <button class="close" type="button" onclick="closeMonthlySelectionsModal()" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="analytics-status" id="monthlySelectionsStatus">Loading monthly selections...</div>
+      <div class="selection-list" id="monthlySelectionsList"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" type="button" onclick="closeMonthlySelectionsModal()">Close</button>
+      <button class="btn" type="button" onclick="loadMonthlySelections()">Refresh</button>
     </div>
   </div>
 </div>
@@ -331,8 +351,12 @@ function closeAnalyticsModal() {
 function closeWeeklyPerformanceModal() {
   document.getElementById('weeklyPerformanceModal')?.classList.remove('active');
 }
-function analyticsCard(label, value, note) {
-  return `<div class="analytics-card"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span><em>${escapeHtml(note || '')}</em></div>`;
+function closeMonthlySelectionsModal() {
+  document.getElementById('monthlySelectionsModal')?.classList.remove('active');
+}
+function analyticsCard(label, value, note, action) {
+  const actionAttr = action ? ` role="button" tabindex="0" onclick="${action}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${action}}"` : '';
+  return `<div class="analytics-card ${action ? 'actionable' : ''}"${actionAttr}><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span><em>${escapeHtml(note || '')}</em></div>`;
 }
 async function openAnalyticsModal() {
   document.getElementById('analyticsModal')?.classList.add('active');
@@ -355,7 +379,7 @@ async function loadAnalytics() {
         analyticsCard('Daily Submissions', data.daily_submissions ?? 0, 'Today'),
         analyticsCard('Weekly Submissions', data.weekly_submissions ?? 0, 'Last 7 days'),
         analyticsCard('Monthly Submissions', data.monthly_submissions ?? 0, 'Current month'),
-        analyticsCard('Monthly Selections', data.monthly_selections ?? 0, 'Selected, offered, joined'),
+        analyticsCard('Monthly Selections', data.monthly_selections ?? 0, 'Click to view candidates', 'openMonthlySelectionsModal();'),
         analyticsCard('Requirements Worked', data.monthly_requirements_worked ?? 0, 'Current month')
       ].join('');
     }
@@ -366,6 +390,55 @@ async function loadAnalytics() {
       status.className = 'analytics-status error';
     }
     showToast(e.message || 'Unable to load analytics');
+  }
+}
+function selectionDate(row) {
+  const raw = row.updated_at || row.created_at || '';
+  if (!raw) return '-';
+  const dt = new Date(String(raw).includes('T') ? raw : String(raw).replace(' ', 'T'));
+  return Number.isNaN(dt.getTime()) ? String(raw).slice(0, 10) : dt.toLocaleDateString();
+}
+function renderMonthlySelections(data) {
+  const list = document.getElementById('monthlySelectionsList');
+  const items = Array.isArray(data.items) ? data.items : [];
+  if (!list) return;
+  if (!items.length) {
+    list.innerHTML = '<div class="muted">No monthly selections found for the current month.</div>';
+    return;
+  }
+  list.innerHTML = items.map(row => `
+    <div class="selection-row">
+      <div><strong>${escapeHtml(row.candidate_name || 'Unnamed candidate')}</strong><span>${escapeHtml(row.requirement_title || 'Requirement not mapped')}</span></div>
+      <span class="selection-status">${escapeHtml(row.status || '-')}</span>
+      <span>${escapeHtml(row.client_name || '-')}</span>
+      <span>${escapeHtml(selectionDate(row))}</span>
+    </div>
+  `).join('');
+}
+async function openMonthlySelectionsModal() {
+  document.getElementById('monthlySelectionsModal')?.classList.add('active');
+  await loadMonthlySelections();
+}
+async function loadMonthlySelections() {
+  const status = document.getElementById('monthlySelectionsStatus');
+  const list = document.getElementById('monthlySelectionsList');
+  if (status) {
+    status.textContent = 'Loading monthly selections...';
+    status.className = 'analytics-status';
+  }
+  if (list) list.innerHTML = '';
+  try {
+    const res = await fetch('/api/my/monthly-selections');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || 'Unable to load monthly selections');
+    renderMonthlySelections(data);
+    if (status) status.textContent = `${data.count || 0} selections for ${data.month || 'current month'}.`;
+  } catch(e) {
+    if (status) {
+      status.textContent = e.message || 'Unable to load monthly selections';
+      status.className = 'analytics-status error';
+    }
+    showToast(e.message || 'Unable to load monthly selections');
   }
 }
 function renderWeeklyPerformance(data) {

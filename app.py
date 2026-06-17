@@ -9264,8 +9264,9 @@ def api_my_analytics():
         today_sql = base_where + " AND date(c.created_at)=date('now','localtime')"
         week_sql = base_where + " AND date(c.created_at)>=date('now','localtime','-6 days')"
         month_sql = base_where + " AND date(c.created_at)>=date('now','localtime','start of month')"
-        selection_statuses = ["Selected", "Offered", "Joined", "Hired"]
+        selection_statuses = ["selected", "offered", "joined", "hired"]
         placeholders = ",".join("?" * len(selection_statuses))
+        current_month = date.today().strftime("%Y-%m")
 
         daily = conn.execute(f"SELECT COUNT(*) FROM candidates c {today_sql}", owner_params).fetchone()[0]
         weekly = conn.execute(f"SELECT COUNT(*) FROM candidates c {week_sql}", owner_params).fetchone()[0]
@@ -9274,10 +9275,11 @@ def api_my_analytics():
             f"""
             SELECT COUNT(DISTINCT c.id)
             FROM candidates c
-            {month_sql}
-              AND COALESCE(c.status,'') IN ({placeholders})
+            {base_where}
+              AND lower(trim(COALESCE(c.status,''))) IN ({placeholders})
+              AND substr(COALESCE(NULLIF(c.updated_at,''), c.created_at, ''), 1, 7)=?
             """,
-            owner_params + selection_statuses
+            owner_params + selection_statuses + [current_month]
         ).fetchone()[0]
         requirements_worked = conn.execute(
             f"""
@@ -9305,6 +9307,58 @@ def api_my_analytics():
         if conn:
             conn.close()
         ANALYTICS_SEMAPHORE.release()
+
+@app.route("/api/my/monthly-selections")
+@login_required
+def api_my_monthly_selections():
+    if is_client_viewer_session():
+        return jsonify({"error": "Monthly selections are not available for this user type."}), 403
+    conn = None
+    try:
+        conn = get_db(timeout=5)
+        if USE_POSTGRES:
+            conn.execute("SET statement_timeout = '2500ms'")
+        owner_sql, owner_params = non_admin_candidate_owner_clause(session, "c")
+        selection_statuses = ["selected", "offered", "joined", "hired"]
+        placeholders = ",".join("?" * len(selection_statuses))
+        current_month = date.today().strftime("%Y-%m")
+        rows = conn.execute(
+            f"""
+            SELECT c.id, c.candidate_name, c.status, c.recruiter_name, c.recruiter_email,
+                   c.created_at, c.updated_at,
+                   r.title AS requirement_title, r.client_name AS client_name
+            FROM candidates c
+            LEFT JOIN requirements r ON r.id = c.requirement_id
+            WHERE COALESCE(c.is_duplicate,0)=0 {owner_sql}
+              AND lower(trim(COALESCE(c.status,''))) IN ({placeholders})
+              AND substr(COALESCE(NULLIF(c.updated_at,''), c.created_at, ''), 1, 7)=?
+            ORDER BY COALESCE(NULLIF(c.updated_at,''), c.created_at) DESC, c.id DESC
+            LIMIT 100
+            """,
+            owner_params + selection_statuses + [current_month],
+        ).fetchall()
+        return jsonify({
+            "month": current_month,
+            "count": len(rows),
+            "items": [dict(row) for row in rows],
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        })
+    except Exception as exc:
+        try:
+            if conn:
+                conn.rollback()
+        except Exception:
+            pass
+        print(f"Monthly selections failed: {type(exc).__name__}: {exc}", flush=True)
+        return jsonify({"error": "Unable to load monthly selections right now."}), 503
+    finally:
+        if conn:
+            if USE_POSTGRES:
+                try:
+                    conn.execute("RESET statement_timeout")
+                except Exception:
+                    pass
+            conn.close()
 
 @app.route("/api/roles")
 @login_required
