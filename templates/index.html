@@ -5495,7 +5495,7 @@ function queueRequirementSearch(query) {
   if (hint) hint.textContent = 'Select one requirement from the search results.';
   clearTimeout(requirementSearchTimer);
   const q = String(query || '').trim();
-  if (q.length < 2) {
+  if (q.length < 3) {
     showRequirementPickerHelp();
     return;
   }
@@ -5504,15 +5504,18 @@ function queueRequirementSearch(query) {
 
 async function searchRequirementPicker(query) {
   const seq = ++requirementSearchSeq;
+  if (window.requirementSearchAbort) window.requirementSearchAbort.abort();
+  window.requirementSearchAbort = new AbortController();
   setRequirementPickerMessage('Searching requirements...');
   try {
     const params = new URLSearchParams({q: query, limit: '25'});
-    const res = await fetch('/api/requirements/search?' + params.toString());
+    const res = await fetch('/api/requirements/search?' + params.toString(), {signal: window.requirementSearchAbort.signal});
     const rows = await res.json();
     if (seq !== requirementSearchSeq) return;
     if (!res.ok || rows.error) throw new Error(rows.error || 'Unable to search requirements');
     renderRequirementPickerResults(Array.isArray(rows) ? rows : [], query);
   } catch (e) {
+    if (e && e.name === 'AbortError') return;
     if (seq !== requirementSearchSeq) return;
     setRequirementPickerMessage(e.message || 'Unable to search requirements.');
   }

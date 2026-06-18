@@ -301,6 +301,11 @@ ANALYTICS_SEMAPHORE = threading.BoundedSemaphore(3)
 ANALYTICS_CACHE_LOCK = threading.Lock()
 ANALYTICS_CACHE = {}
 ANALYTICS_CACHE_TTL_SECONDS = 60
+REQUIREMENT_SEARCH_CACHE_LOCK = threading.Lock()
+REQUIREMENT_SEARCH_CACHE = {}
+REQUIREMENT_SEARCH_CACHE_TTL_SECONDS = int(os.getenv("ATS_REQUIREMENT_SEARCH_CACHE_SECONDS", "45"))
+REQUIREMENT_SEARCH_MAX_CONCURRENT = max(1, int(os.getenv("ATS_REQUIREMENT_SEARCH_MAX_CONCURRENT", "3")))
+REQUIREMENT_SEARCH_SEMAPHORE = threading.BoundedSemaphore(REQUIREMENT_SEARCH_MAX_CONCURRENT)
 MATCH_DB_TASK_QUEUE = queue.Queue(maxsize=500)
 MATCH_DB_WORKER_LOCK = threading.Lock()
 MATCH_DB_WORKER_STARTED = False
@@ -12001,42 +12006,70 @@ def get_requirements():
 def search_requirements():
     q = (request.args.get("q") or "").strip().lower()
     limit = parse_positive_int(request.args.get("limit"), 25, 50)
-    if len(q) < 2:
+    if len(q) < 3 and not q.isdigit():
         return jsonify([])
 
-    conn = get_db()
+    acquired = REQUIREMENT_SEARCH_SEMAPHORE.acquire(blocking=False)
+    if not acquired:
+        return jsonify({"error": "Requirement search is busy. Please type a more specific requirement and try again."}), 429
+
+    conn = None
     try:
-        if USE_POSTGRES:
-            conn.execute("SET statement_timeout = '3000ms'")
-        has_requisition = requirement_requisition_column_exists(conn)
-        req_select = "r.requisition_id" if has_requisition else "'' AS requisition_id"
-        req_filter = "OR lower(COALESCE(r.requisition_id,'')) LIKE ?" if has_requisition else ""
+        conn = get_db(timeout=3)
+        rows = _requirement_search_rows_for_current_user(conn)
+        matches = _filter_requirement_search_rows(rows, q, limit)
+        return jsonify(matches)
+    except Exception as exc:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        print(f"Requirement search failed: {type(exc).__name__}: {exc}", flush=True)
+        return jsonify({"error": "Requirement search timed out. Please type a more specific requirement or try again."}), 503
+    finally:
+        if conn is not None:
+            conn.close()
+        REQUIREMENT_SEARCH_SEMAPHORE.release()
 
-        active_statuses = ["New", "Open", "In Progress"]
-        where_parts = ["COALESCE(NULLIF(TRIM(r.status),''),'New') IN (?,?,?)"]
-        params = active_statuses[:]
+def _requirement_search_cache_key():
+    return (
+        bool(session.get("is_admin")),
+        session.get("team_member_id") or "",
+        str(session.get("recruiter_email") or "").strip().lower(),
+        str(session.get("role") or "").strip().lower(),
+        bool(session.get("is_client_viewer")),
+        bool(session.get("is_team_leader")),
+    )
 
-        allowed_clients = mapped_client_names_for_current_user(conn)
-        if allowed_clients is not None:
-            if not allowed_clients:
-                return jsonify([])
+def _requirement_search_rows_for_current_user(conn):
+    cache_key = _requirement_search_cache_key()
+    now_ts = time.time()
+    with REQUIREMENT_SEARCH_CACHE_LOCK:
+        cached = REQUIREMENT_SEARCH_CACHE.get(cache_key)
+        if cached and now_ts - cached["ts"] < REQUIREMENT_SEARCH_CACHE_TTL_SECONDS:
+            return cached["rows"]
+
+    if USE_POSTGRES:
+        conn.execute("SET statement_timeout = '1500ms'")
+    has_requisition = requirement_requisition_column_exists(conn)
+    req_select = "r.requisition_id" if has_requisition else "'' AS requisition_id"
+    active_statuses = ["New", "Open", "In Progress"]
+    where_parts = ["COALESCE(NULLIF(TRIM(r.status),''),'New') IN (?,?,?)"]
+    params = active_statuses[:]
+
+    allowed_clients = mapped_client_names_for_current_user(conn)
+    if allowed_clients is not None:
+        if not allowed_clients:
+            rows = []
+        else:
             placeholders = ",".join("?" * len(allowed_clients))
             where_parts.append(f"lower(trim(COALESCE(r.client_name,''))) IN ({placeholders})")
             params.extend(sorted(allowed_clients))
+            rows = None
+    else:
+        rows = None
 
-        like = f"%{q}%"
-        where_parts.append(f"""
-            (
-              lower(COALESCE(r.title,'')) LIKE ?
-              OR lower(COALESCE(r.client_name,'')) LIKE ?
-              {req_filter}
-              OR CAST(r.id AS TEXT)=?
-            )
-        """)
-        params.extend([like, like])
-        if has_requisition:
-            params.append(like)
-        params.append(q)
+    if rows is None:
         where = "WHERE " + " AND ".join(where_parts)
         rows = conn.execute(f"""
             SELECT r.id, {req_select}, r.title, r.client_name, COALESCE(NULLIF(TRIM(r.status),''),'New') AS status,
@@ -12052,23 +12085,36 @@ def search_requirements():
                 ELSE 4
               END,
               r.created_at DESC
-            LIMIT ?
-        """, params + [limit]).fetchall()
-        return jsonify([dict(r) for r in rows])
-    except Exception as exc:
-        try:
-            conn.rollback()
-        except Exception:
-            pass
-        print(f"Requirement search failed: {type(exc).__name__}: {exc}", flush=True)
-        return jsonify({"error": "Requirement search timed out. Please type a more specific requirement or try again."}), 503
-    finally:
-        if USE_POSTGRES:
-            try:
-                conn.execute("RESET statement_timeout")
-            except Exception:
-                pass
-        conn.close()
+            LIMIT 1000
+        """, params).fetchall()
+        rows = [dict(r) for r in rows]
+
+    with REQUIREMENT_SEARCH_CACHE_LOCK:
+        REQUIREMENT_SEARCH_CACHE[cache_key] = {"ts": now_ts, "rows": rows}
+        if len(REQUIREMENT_SEARCH_CACHE) > 100:
+            oldest_key = min(REQUIREMENT_SEARCH_CACHE, key=lambda key: REQUIREMENT_SEARCH_CACHE[key]["ts"])
+            REQUIREMENT_SEARCH_CACHE.pop(oldest_key, None)
+    return rows
+
+def _filter_requirement_search_rows(rows, q, limit):
+    needle = normalize_requirement_key(q)
+    results = []
+    for row in rows:
+        rid = str(row.get("id") or "").strip().lower()
+        req_id = normalize_requirement_key(row.get("requisition_id"))
+        title = normalize_requirement_key(row.get("title"))
+        client = normalize_requirement_key(row.get("client_name"))
+        taggd = normalize_requirement_key(row.get("taggd_recruiter_name"))
+        haystacks = [rid, req_id, title, client, taggd, f"{req_id} {title}", f"{title} {client}"]
+        if rid == needle or any(value and value.startswith(needle) for value in haystacks):
+            score = 0
+        elif any(value and needle in value for value in haystacks):
+            score = 1
+        else:
+            continue
+        results.append((score, dict(row)))
+    results.sort(key=lambda item: (item[0], str(item[1].get("title") or "").lower()))
+    return [row for _, row in results[:limit]]
 
 @app.route("/api/requirements",methods=["POST"])
 @login_required
