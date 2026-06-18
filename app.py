@@ -303,9 +303,11 @@ ANALYTICS_CACHE = {}
 ANALYTICS_CACHE_TTL_SECONDS = 60
 REQUIREMENT_SEARCH_CACHE_LOCK = threading.Lock()
 REQUIREMENT_SEARCH_CACHE = {}
-REQUIREMENT_SEARCH_CACHE_TTL_SECONDS = int(os.getenv("ATS_REQUIREMENT_SEARCH_CACHE_SECONDS", "45"))
+REQUIREMENT_SEARCH_CACHE_TTL_SECONDS = int(os.getenv("ATS_REQUIREMENT_SEARCH_CACHE_SECONDS", "300"))
 REQUIREMENT_SEARCH_MAX_CONCURRENT = max(1, int(os.getenv("ATS_REQUIREMENT_SEARCH_MAX_CONCURRENT", "3")))
 REQUIREMENT_SEARCH_SEMAPHORE = threading.BoundedSemaphore(REQUIREMENT_SEARCH_MAX_CONCURRENT)
+REQUIREMENT_REQUISITION_SCHEMA_LOCK = threading.Lock()
+REQUIREMENT_REQUISITION_EXISTS_CACHE = None
 MATCH_DB_TASK_QUEUE = queue.Queue(maxsize=500)
 MATCH_DB_WORKER_LOCK = threading.Lock()
 MATCH_DB_WORKER_STARTED = False
@@ -6302,8 +6304,11 @@ def normalize_requirement_file_key(value):
     return normalize_requirement_key(value)
 
 def requirement_requisition_column_exists(conn):
+    global REQUIREMENT_REQUISITION_EXISTS_CACHE
     if USE_POSTGRES:
-        return conn.execute(
+        if REQUIREMENT_REQUISITION_EXISTS_CACHE is not None:
+            return REQUIREMENT_REQUISITION_EXISTS_CACHE
+        exists = conn.execute(
             """
             SELECT 1
             FROM information_schema.columns
@@ -6313,10 +6318,16 @@ def requirement_requisition_column_exists(conn):
             LIMIT 1
             """
         ).fetchone() is not None
-    return any(
+        REQUIREMENT_REQUISITION_EXISTS_CACHE = exists
+        return exists
+    if REQUIREMENT_REQUISITION_EXISTS_CACHE is not None:
+        return REQUIREMENT_REQUISITION_EXISTS_CACHE
+    exists = any(
         row["name"] == "requisition_id"
         for row in conn.execute("PRAGMA table_info(requirements)").fetchall()
     )
+    REQUIREMENT_REQUISITION_EXISTS_CACHE = exists
+    return exists
 
 def load_requirement_lookup(conn):
     requisition_select = "requisition_id" if requirement_requisition_column_exists(conn) else "'' AS requisition_id"
@@ -7429,14 +7440,20 @@ def parse_positive_int(value, default, max_value=None):
 GENERIC_REQUIREMENT_TITLE_WORDS = {"jd", "job", "requirement", "opening", "urgent", "hiring", "needed", "new"}
 
 def ensure_requirement_requisition_schema(conn):
-    if USE_POSTGRES:
-        conn.execute("ALTER TABLE requirements ADD COLUMN IF NOT EXISTS requisition_id TEXT")
-        conn.commit()
+    global REQUIREMENT_REQUISITION_EXISTS_CACHE
+    if requirement_requisition_column_exists(conn):
         return
-    columns = {row["name"] for row in conn.execute("PRAGMA table_info(requirements)").fetchall()}
-    if "requisition_id" not in columns:
+    with REQUIREMENT_REQUISITION_SCHEMA_LOCK:
+        if requirement_requisition_column_exists(conn):
+            return
+        if USE_POSTGRES:
+            conn.execute("ALTER TABLE requirements ADD COLUMN IF NOT EXISTS requisition_id TEXT")
+            conn.commit()
+            REQUIREMENT_REQUISITION_EXISTS_CACHE = True
+            return
         conn.execute("ALTER TABLE requirements ADD COLUMN requisition_id TEXT")
         conn.commit()
+        REQUIREMENT_REQUISITION_EXISTS_CACHE = True
 
 def normalize_requisition_id(value):
     return re.sub(r"\s+", " ", str(value or "").strip())
@@ -12025,6 +12042,9 @@ def search_requirements():
         except Exception:
             pass
         print(f"Requirement search failed: {type(exc).__name__}: {exc}", flush=True)
+        cached = _cached_requirement_search_rows_for_current_user(max_age_seconds=1800)
+        if cached is not None:
+            return jsonify(_filter_requirement_search_rows(cached, q, limit))
         return jsonify({"error": "Requirement search timed out. Please type a more specific requirement or try again."}), 503
     finally:
         if conn is not None:
@@ -12040,6 +12060,15 @@ def _requirement_search_cache_key():
         bool(session.get("is_client_viewer")),
         bool(session.get("is_team_leader")),
     )
+
+def _cached_requirement_search_rows_for_current_user(max_age_seconds):
+    cache_key = _requirement_search_cache_key()
+    now_ts = time.time()
+    with REQUIREMENT_SEARCH_CACHE_LOCK:
+        cached = REQUIREMENT_SEARCH_CACHE.get(cache_key)
+        if cached and now_ts - cached["ts"] < max_age_seconds:
+            return cached["rows"]
+    return None
 
 def _requirement_search_rows_for_current_user(conn):
     cache_key = _requirement_search_cache_key()
