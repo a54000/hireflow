@@ -2194,6 +2194,20 @@ if (localStorage.getItem('hrguru_candidate_columns_version') !== columnStorageVe
 }
 let visibleCandidateColumns = JSON.parse(localStorage.getItem('hrguru_candidate_columns') || 'null') || {...defaultCandidateColumns};
 
+function displayClientName(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/[A-Z]/.test(raw)) return raw;
+  const acronyms = new Set(['kpmg','mm','m&m','l&t','l&d','hdfc','icici','tcs','wipro','hcl','ibm','hp','itc','mahindra']);
+  return raw.split(/([-\s/]+)/).map(part => {
+    const key = part.toLowerCase();
+    if (!part.trim() || /^[-\s/]+$/.test(part)) return part;
+    if (key === 'taggd') return 'Taggd';
+    if (acronyms.has(key)) return part.toUpperCase();
+    return part.replace(/\b[a-z]/g, ch => ch.toUpperCase());
+  }).join('');
+}
+
 
 
 // Debug function
@@ -6437,20 +6451,20 @@ async function loadFilterOptions() {
     const clientSel = document.getElementById('clientFilter');
     if (clientSel) {
       clientSel.innerHTML = '<option value="">All Clients</option>';
-      clientNames.forEach(client => { clientSel.innerHTML += '<option value="'+escapeHtml(client)+'">'+escapeHtml(client)+'</option>'; });
+      clientNames.forEach(client => { clientSel.innerHTML += '<option value="'+escapeHtml(client)+'">'+escapeHtml(displayClientName(client))+'</option>'; });
     }
     const searchClientSel = document.getElementById('candidateSearchClient');
     if (searchClientSel) {
       const selectedClient = searchClientSel.value;
       searchClientSel.innerHTML = '<option value="">All Clients</option>';
-      clientNames.forEach(client => { searchClientSel.innerHTML += '<option value="'+escapeHtml(client)+'">'+escapeHtml(client)+'</option>'; });
+      clientNames.forEach(client => { searchClientSel.innerHTML += '<option value="'+escapeHtml(client)+'">'+escapeHtml(displayClientName(client))+'</option>'; });
       if (selectedClient && clientNames.includes(selectedClient)) searchClientSel.value = selectedClient;
     }
     const reportingClientSel = document.getElementById('reportingClientFilter');
     if (reportingClientSel) {
       const selectedClient = reportingClientSel.value;
       reportingClientSel.innerHTML = '<option value="">All Clients</option>';
-      clientNames.forEach(client => { reportingClientSel.innerHTML += '<option value="'+escapeHtml(client)+'">'+escapeHtml(client)+'</option>'; });
+      clientNames.forEach(client => { reportingClientSel.innerHTML += '<option value="'+escapeHtml(client)+'">'+escapeHtml(displayClientName(client))+'</option>'; });
       if (selectedClient && clientNames.includes(selectedClient)) reportingClientSel.value = selectedClient;
     }
     const reqSel = document.getElementById('reqFilter');

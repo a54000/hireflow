@@ -116,6 +116,19 @@ const reportColumns = [
 const defaultColumns = ['name','current_company','designation','requirement','email','phone','experience','current_salary','expected_salary','notice_period'];
 
 function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function displayClientName(value){
+  const raw=String(value||'').trim();
+  if(!raw)return '';
+  if(/[A-Z]/.test(raw))return raw;
+  const acronyms=new Set(['kpmg','mm','m&m','l&t','l&d','hdfc','icici','tcs','wipro','hcl','ibm','hp','itc','mahindra']);
+  return raw.split(/([-\s/]+)/).map(part=>{
+    const key=part.toLowerCase();
+    if(!part.trim()||/^[-\s/]+$/.test(part))return part;
+    if(key==='taggd')return 'Taggd';
+    if(acronyms.has(key))return part.toUpperCase();
+    return part.replace(/\b[a-z]/g,ch=>ch.toUpperCase());
+  }).join('');
+}
 function todayIso(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);}
 function toggleProfileMenu(){document.getElementById('profileMenu')?.classList.toggle('active');}
 document.addEventListener('click',e=>{if(!e.target.closest('.profile'))document.getElementById('profileMenu')?.classList.remove('active');});
@@ -134,7 +147,7 @@ async function loadFilters(){
   try{
     const data=await fetch('/api/candidate_search_filters').then(r=>r.json());
     const clients=[...new Set((data.clients||[]).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-    clientFilter.innerHTML='<option value="">All Clients</option>'+clients.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    clientFilter.innerHTML='<option value="">All Clients</option>'+clients.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(displayClientName(c))}</option>`).join('');
     const sourcers=[...new Map((data.sourcers||[]).filter(s=>s.email).map(s=>[String(s.email).toLowerCase(),s])).values()];
     recruiterFilter.innerHTML='<option value="">All Recruiters</option>'+sourcers.map(s=>`<option value="${escapeHtml(String(s.email).toLowerCase())}">${escapeHtml(s.name||s.email)}</option>`).join('');
   }catch(e){}

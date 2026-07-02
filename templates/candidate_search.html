@@ -65,6 +65,19 @@ let totalPages = 1;
 let timer = null;
 const statuses = ['New','Shortlisted','Screening Pending','Feedback Pending','Offered','On Hold','Joined','Rejected','Duplicate'];
 function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function displayClientName(value){
+  const raw=String(value||'').trim();
+  if(!raw)return '';
+  if(/[A-Z]/.test(raw))return raw;
+  const acronyms=new Set(['kpmg','mm','m&m','l&t','l&d','hdfc','icici','tcs','wipro','hcl','ibm','hp','itc','mahindra']);
+  return raw.split(/([-\s/]+)/).map(part=>{
+    const key=part.toLowerCase();
+    if(!part.trim()||/^[-\s/]+$/.test(part))return part;
+    if(key==='taggd')return 'Taggd';
+    if(acronyms.has(key))return part.toUpperCase();
+    return part.replace(/\b[a-z]/g,ch=>ch.toUpperCase());
+  }).join('');
+}
 function toggleProfileMenu(){document.getElementById('profileMenu')?.classList.toggle('active');}
 document.addEventListener('click',e=>{if(!e.target.closest('.profile'))document.getElementById('profileMenu')?.classList.remove('active');});
 function scheduleSearch(){clearTimeout(timer);timer=setTimeout(searchFirstPage,300);}
@@ -112,7 +125,7 @@ async function loadFilters(){
   try{
     const data=await fetch('/api/candidate_search_filters').then(r=>r.json());
     const clients=[...new Set((data.clients||[]).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-    client.innerHTML='<option value="">All Clients</option>'+clients.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    client.innerHTML='<option value="">All Clients</option>'+clients.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(displayClientName(c))}</option>`).join('');
   }catch(e){}
 }
 async function signOut(){await fetch('/api/logout',{method:'POST'});localStorage.removeItem('hrguru_user');window.location.href='/login';}
