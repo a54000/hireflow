@@ -8987,6 +8987,28 @@ def api_filters():
                     "pipelines":pipelines})
 
 def preferred_client_display_names(names):
+    acronyms = {"kpmg", "mm", "m&m", "l&t", "l&d", "hdfc", "icici", "tcs", "wipro", "hcl", "ibm", "hp", "itc"}
+
+    def fallback_display_name(name):
+        text = str(name or "").strip()
+        if not text:
+            return ""
+        if any(ch.isupper() for ch in text):
+            return text
+        parts = re.split(r"([-\s/]+)", text)
+        out = []
+        for part in parts:
+            key = part.lower()
+            if not part.strip() or re.fullmatch(r"[-\s/]+", part):
+                out.append(part)
+            elif key == "taggd":
+                out.append("Taggd")
+            elif key in acronyms:
+                out.append(part.upper())
+            else:
+                out.append(re.sub(r"\b[a-z]", lambda match: match.group(0).upper(), part))
+        return "".join(out)
+
     def score(name):
         letters = [ch for ch in name if ch.isalpha()]
         has_display_case = any(ch.isupper() for ch in letters) and not name.isupper()
@@ -9000,7 +9022,7 @@ def preferred_client_display_names(names):
         key = name.lower()
         if key not in by_key or score(name) > score(by_key[key]):
             by_key[key] = name
-    return sorted(by_key.values(), key=lambda value: value.lower())
+    return sorted((fallback_display_name(value) for value in by_key.values()), key=lambda value: value.lower())
 
 @app.route("/api/candidate_search_filters")
 @login_required
