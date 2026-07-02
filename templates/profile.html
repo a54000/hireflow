@@ -50,7 +50,7 @@ body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Ro
     </div>
   </div>
   <div class="foot">
-    <button class="btn secondary" type="button" onclick="resetProfile()">Cancel</button>
+    <button class="btn secondary" type="button" onclick="cancelProfile()">Cancel</button>
     <button class="btn" id="saveBtn" type="button" onclick="saveProfile()">Save Profile</button>
   </div>
 </main>
@@ -92,6 +92,14 @@ async function loadProfile(){
 function resetProfile(){
   applyProfile(currentUser);
   showAlert('');
+}
+function cancelProfile(){
+  const previous = document.referrer || '';
+  if (previous && new URL(previous, window.location.origin).origin === window.location.origin && !previous.includes('/login')) {
+    window.location.href = previous;
+    return;
+  }
+  window.location.href = '/';
 }
 async function saveProfile(){
   const name=value('profileName').trim();
