@@ -8986,6 +8986,22 @@ def api_filters():
                     "submission_statuses":SUBMISSION_STATUSES,"hiring_managers":hms,
                     "pipelines":pipelines})
 
+def preferred_client_display_names(names):
+    def score(name):
+        letters = [ch for ch in name if ch.isalpha()]
+        has_display_case = any(ch.isupper() for ch in letters) and not name.isupper()
+        return (1 if has_display_case else 0, sum(1 for ch in letters if ch.isupper()), len(name))
+
+    by_key = {}
+    for raw in names or []:
+        name = str(raw or "").strip()
+        if not name:
+            continue
+        key = name.lower()
+        if key not in by_key or score(name) > score(by_key[key]):
+            by_key[key] = name
+    return sorted(by_key.values(), key=lambda value: value.lower())
+
 @app.route("/api/candidate_search_filters")
 @login_required
 def api_candidate_search_filters():
@@ -8995,7 +9011,7 @@ def api_candidate_search_filters():
             conn.execute("SET statement_timeout = '2500ms'")
         allowed_clients = mapped_client_names_for_current_user(conn)
         if allowed_clients is None:
-            clients = [
+            client_names = [
                 r[0] for r in conn.execute("""
                     SELECT client_name
                     FROM clients
@@ -9004,10 +9020,20 @@ def api_candidate_search_filters():
                     LIMIT 300
                 """).fetchall()
             ]
+            client_names.extend([
+                r[0] for r in conn.execute("""
+                    SELECT DISTINCT r.client_name
+                    FROM requirements r
+                    WHERE COALESCE(r.client_name,'')!=''
+                    ORDER BY r.client_name
+                    LIMIT 300
+                """).fetchall()
+            ])
+            clients = preferred_client_display_names(client_names)[:300]
         else:
             if allowed_clients:
                 placeholders = ",".join("?" * len(allowed_clients))
-                clients = [
+                client_names = [
                     r[0] for r in conn.execute(f"""
                         SELECT client_name
                         FROM clients
@@ -9016,6 +9042,17 @@ def api_candidate_search_filters():
                         LIMIT 300
                     """, sorted(allowed_clients)).fetchall()
                 ]
+                client_names.extend([
+                    r[0] for r in conn.execute(f"""
+                        SELECT DISTINCT r.client_name
+                        FROM requirements r
+                        WHERE lower(trim(COALESCE(r.client_name,''))) IN ({placeholders})
+                          AND COALESCE(r.client_name,'')!=''
+                        ORDER BY r.client_name
+                        LIMIT 300
+                    """, sorted(allowed_clients)).fetchall()
+                ])
+                clients = preferred_client_display_names(client_names)[:300]
             else:
                 clients = []
 
