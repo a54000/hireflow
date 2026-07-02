@@ -150,6 +150,19 @@ let statuses = ['New','Shortlisted','Screening Pending','Screen Rejected','Inter
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+function displayClientName(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/[A-Z]/.test(raw)) return raw;
+  const acronyms = new Set(['kpmg','mm','m&m','l&t','l&d','hdfc','icici','tcs','wipro','hcl','ibm','hp','itc','mahindra','m&m']);
+  return raw.split(/([-\s/]+)/).map(part => {
+    const key = part.toLowerCase();
+    if (!part.trim() || /^[-\s/]+$/.test(part)) return part;
+    if (key === 'taggd') return 'Taggd';
+    if (acronyms.has(key)) return part.toUpperCase();
+    return part.replace(/\b[a-z]/g, ch => ch.toUpperCase());
+  }).join('');
+}
 function toggleProfileMenu() {
   document.getElementById('profileMenu')?.classList.toggle('active');
 }
@@ -580,7 +593,7 @@ async function loadClientFilterOptions() {
     const res = await fetch('/api/candidate_search_filters');
     const data = await res.json().catch(() => ({}));
     const clients = Array.isArray(data.clients) ? data.clients.filter(Boolean) : [];
-    select.innerHTML = '<option value="">All clients</option>' + clients.map(client => `<option value="${escapeHtml(client)}">${escapeHtml(client)}</option>`).join('');
+    select.innerHTML = '<option value="">All clients</option>' + clients.map(client => `<option value="${escapeHtml(client)}">${escapeHtml(displayClientName(client))}</option>`).join('');
   } catch(e) {
     select.innerHTML = '<option value="">All clients</option>';
   }
