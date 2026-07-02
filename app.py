@@ -7301,8 +7301,12 @@ def build_query(args, current_session=None, select_clause=None):
             p.extend(id_list)
     elif req_id:
         sql+=" AND requirement_id=?"; p.append(req_id)
-    if client: sql+=" AND r.client_name=?"; p.append(client)
-    if client_like: sql+=" AND r.client_name LIKE ?"; p.append(f"%{client_like}%")
+    if client:
+        sql+=" AND lower(trim(COALESCE(r.client_name,'')))=lower(trim(?))"
+        p.append(client)
+    if client_like:
+        sql+=" AND lower(COALESCE(r.client_name,'')) LIKE ?"
+        p.append(f"%{str(client_like).lower()}%")
     if date_preset == "today":
         sql+=" AND date(c.created_at)=date('now','localtime')"
     elif date_preset == "yesterday":
@@ -9001,7 +9005,19 @@ def api_candidate_search_filters():
                 """).fetchall()
             ]
         else:
-            clients = sorted(allowed_clients)[:300]
+            if allowed_clients:
+                placeholders = ",".join("?" * len(allowed_clients))
+                clients = [
+                    r[0] for r in conn.execute(f"""
+                        SELECT client_name
+                        FROM clients
+                        WHERE lower(trim(COALESCE(client_name,''))) IN ({placeholders})
+                        ORDER BY client_name
+                        LIMIT 300
+                    """, sorted(allowed_clients)).fetchall()
+                ]
+            else:
+                clients = []
 
         if session.get("is_admin") or is_team_leader_session():
             sourcers = [dict(r) for r in conn.execute("""
