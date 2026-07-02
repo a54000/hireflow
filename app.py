@@ -9029,6 +9029,17 @@ def api_candidate_search_filters():
                     LIMIT 300
                 """).fetchall()
             ])
+            candidate_client_sql, candidate_client_params = non_admin_candidate_owner_clause(session, "c")
+            client_names.extend([
+                r[0] for r in conn.execute(f"""
+                    SELECT DISTINCT r.client_name
+                    FROM candidates c
+                    LEFT JOIN requirements r ON r.id=c.requirement_id
+                    WHERE COALESCE(r.client_name,'')!='' {candidate_client_sql}
+                    ORDER BY r.client_name
+                    LIMIT 300
+                """, candidate_client_params).fetchall()
+            ])
             clients = preferred_client_display_names(client_names)[:300]
         else:
             if allowed_clients:
@@ -9051,6 +9062,19 @@ def api_candidate_search_filters():
                         ORDER BY r.client_name
                         LIMIT 300
                     """, sorted(allowed_clients)).fetchall()
+                ])
+                candidate_client_sql, candidate_client_params = non_admin_candidate_owner_clause(session, "c")
+                client_names.extend([
+                    r[0] for r in conn.execute(f"""
+                        SELECT DISTINCT r.client_name
+                        FROM candidates c
+                        LEFT JOIN requirements r ON r.id=c.requirement_id
+                        WHERE lower(trim(COALESCE(r.client_name,''))) IN ({placeholders})
+                          AND COALESCE(r.client_name,'')!=''
+                          {candidate_client_sql}
+                        ORDER BY r.client_name
+                        LIMIT 300
+                    """, sorted(allowed_clients) + candidate_client_params).fetchall()
                 ])
                 clients = preferred_client_display_names(client_names)[:300]
             else:
