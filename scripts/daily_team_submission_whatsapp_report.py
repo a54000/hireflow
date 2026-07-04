@@ -26,6 +26,7 @@ from app import get_db  # noqa: E402
 
 
 ATTENTION_LABEL = "*Attention Needed*"
+ABSENT_LABEL = "*Absent*"
 
 
 def load_env_file() -> None:
@@ -167,27 +168,60 @@ def submission_counts(conn, day: date, members: list[dict]) -> tuple[dict[int, i
     return counts, sorted(unmapped.values(), key=lambda item: item["name"].lower())
 
 
+def logged_in_members(conn, day: date, members: list[dict]) -> set[int]:
+    member_by_id = {member["id"]: member for member in members}
+    member_by_email = {member["email"]: member for member in members if member["email"]}
+    logged_in = set()
+    rows = conn.execute(
+        """
+        SELECT team_member_id, email
+        FROM user_login_audit
+        WHERE lower(trim(COALESCE(status,'')))='success'
+          AND substr(COALESCE(created_at,''),1,10)=?
+        GROUP BY team_member_id, email
+        """,
+        (day.isoformat(),),
+    ).fetchall()
+    for row in rows:
+        team_member_id = row["team_member_id"]
+        email = clean_text(row["email"]).lower()
+        member = member_by_id.get(int(team_member_id)) if team_member_id else None
+        if not member and email:
+            member = member_by_email.get(email)
+        if member:
+            logged_in.add(member["id"])
+    return logged_in
+
+
 def build_report(day: date) -> dict:
     conn = get_db(timeout=20)
     try:
         members = active_team_members(conn)
         counts, unmapped = submission_counts(conn, day, members)
+        logged_in = logged_in_members(conn, day, members)
     finally:
         conn.close()
 
     rows = []
     for member in members:
         count = int(counts.get(member["id"], 0))
+        if count > 0:
+            status = "OK"
+        elif member["id"] in logged_in:
+            status = ATTENTION_LABEL
+        else:
+            status = ABSENT_LABEL
         rows.append({
             "name": member["name"],
             "email": member["email"],
             "submissions": count,
-            "status": ATTENTION_LABEL if count == 0 else "OK",
+            "status": status,
         })
-    rows.sort(key=lambda item: (item["submissions"] == 0, item["name"].lower()))
+    rows.sort(key=lambda item: (item["submissions"] == 0, item["status"] == ABSENT_LABEL, item["name"].lower()))
     total = sum(row["submissions"] for row in rows)
     active = sum(1 for row in rows if row["submissions"] > 0)
-    attention = sum(1 for row in rows if row["submissions"] == 0)
+    attention = sum(1 for row in rows if row["status"] == ATTENTION_LABEL)
+    absent = sum(1 for row in rows if row["status"] == ABSENT_LABEL)
     return {
         "date": day.isoformat(),
         "rows": rows,
@@ -196,6 +230,7 @@ def build_report(day: date) -> dict:
             "team_members": len(rows),
             "active_submitters": active,
             "attention_needed": attention,
+            "absent": absent,
             "submissions": total,
         },
     }
@@ -210,6 +245,7 @@ def build_whatsapp_message(report: dict) -> str:
         f"Total submissions: *{totals['submissions']}*",
         f"Submitted by: *{totals['active_submitters']}* / {totals['team_members']}",
         f"Attention needed: *{totals['attention_needed']}*",
+        f"Absent: *{totals['absent']}*",
         "",
         "*Team Member | Submissions | Status*",
     ]
@@ -218,7 +254,7 @@ def build_whatsapp_message(report: dict) -> str:
         status = row["status"]
         name = row["name"]
         if count == 0:
-            lines.append(f"*{name}* | *0* | {ATTENTION_LABEL}")
+            lines.append(f"*{name}* | *0* | {status}")
         else:
             lines.append(f"{name} | {count} | OK")
     if report.get("unmapped"):
@@ -235,9 +271,10 @@ def build_html_report(report: dict) -> str:
     totals = report["totals"]
     rows = []
     for row in report["rows"]:
-        attention = row["submissions"] == 0
-        tr_class = "attention" if attention else "ok"
-        status = "Attention Needed" if attention else "OK"
+        absent = row["status"] == ABSENT_LABEL
+        attention = row["status"] == ATTENTION_LABEL
+        tr_class = "absent" if absent else ("attention" if attention else "ok")
+        status = "Absent" if absent else ("Attention Needed" if attention else "OK")
         rows.append(
             "<tr class=\"{tr_class}\">"
             "<td>{name}</td>"
@@ -284,7 +321,7 @@ def build_html_report(report: dict) -> str:
     .title{{background:#172033;color:white;border-radius:10px 10px 0 0;padding:16px 18px}}
     .title h1{{font-size:20px;line-height:1.2;margin:0 0 4px}}
     .title p{{margin:0;color:#c9d4ef;font-size:13px}}
-    .summary{{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:white;padding:12px;border:1px solid #d9deea;border-top:0}}
+    .summary{{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:white;padding:12px;border:1px solid #d9deea;border-top:0}}
     .metric{{border:1px solid #e2e6f0;border-radius:8px;padding:10px;background:#fbfcff}}
     .metric strong{{display:block;font-size:22px;color:#0d172a}}
     .metric span{{font-size:12px;color:#5b6578}}
@@ -295,6 +332,7 @@ def build_html_report(report: dict) -> str:
     td{{padding:7px 8px;border-bottom:1px solid #edf0f6;vertical-align:middle}}
     .count{{text-align:right;font-weight:700}}
     tr.attention td{{background:#fff1f1;color:#7f1d1d}}
+    tr.absent td{{background:#fff7ed;color:#7c2d12}}
     tr.ok td{{background:#ffffff}}
     @media(max-width:640px){{
       .wrap{{padding:8px}}
@@ -314,6 +352,7 @@ def build_html_report(report: dict) -> str:
       <div class="metric"><strong>{submissions}</strong><span>Total submissions</span></div>
       <div class="metric"><strong>{active_submitters}/{team_members}</strong><span>Submitted by</span></div>
       <div class="metric"><strong>{attention_needed}</strong><span>Attention needed</span></div>
+      <div class="metric"><strong>{absent}</strong><span>Absent</span></div>
     </div>
     <section class="panel">
       <h2>Team Submission Status</h2>
@@ -334,6 +373,7 @@ def build_html_report(report: dict) -> str:
         active_submitters=int(totals["active_submitters"]),
         team_members=int(totals["team_members"]),
         attention_needed=int(totals["attention_needed"]),
+        absent=int(totals["absent"]),
         rows="\n".join(rows),
         unmapped_rows=unmapped_rows,
     )
