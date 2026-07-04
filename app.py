@@ -1,5 +1,6 @@
 ﻿import os, re, hashlib, csv, io, sqlite3, json, smtplib, secrets, zipfile, traceback, difflib, tempfile, warnings, html, mimetypes, time, atexit, threading
 import queue
+import subprocess
 import xml.etree.ElementTree as ET
 import requests
 from flask import send_from_directory
@@ -7647,6 +7648,15 @@ def admin_data_quality_page():
         return redirect(url_for("index"))
     return render_template("admin_data_quality.html")
 
+@app.route("/admin/whatsapp-automation")
+@login_required
+def admin_whatsapp_automation_page():
+    if is_client_viewer_session():
+        return redirect(url_for("client_candidates_page"))
+    if not session.get("is_admin"):
+        return redirect(url_for("index"))
+    return render_template("admin_whatsapp_automation.html")
+
 def render_app_route(initial_app_route, route_pending=True):
     return render_template(
         "index.html",
@@ -9517,6 +9527,148 @@ def add_role():
     conn.commit()
     conn.close()
     return jsonify({"ok": True})
+
+WHATSAPP_AUTOMATION_TIMERS = [
+    "hrguru-team-morning-reminder.timer",
+    "hrguru-team-afternoon-reminder.timer",
+    "hrguru-team-evening-reminder.timer",
+    "hrguru-daily-submission-report.timer",
+    "hrguru-weekly-submission-report.timer",
+]
+
+WHATSAPP_AUTOMATION_SERVICES = [
+    "hrguru-whatsapp-relay.service",
+    "hrguru-team-morning-reminder.service",
+    "hrguru-team-afternoon-reminder.service",
+    "hrguru-team-evening-reminder.service",
+    "hrguru-daily-submission-report.service",
+    "hrguru-weekly-submission-report.service",
+]
+
+WHATSAPP_AUTOMATION_ACTIONS = {
+    "morning": ["scripts/send_team_whatsapp_reminder.py", "morning", "--send"],
+    "afternoon": ["scripts/send_team_whatsapp_reminder.py", "afternoon", "--send"],
+    "evening": ["scripts/send_team_whatsapp_reminder.py", "evening", "--send"],
+    "daily": ["scripts/daily_team_submission_whatsapp_report.py", "--send", "--format", "text"],
+    "weekly": ["scripts/weekly_team_submission_whatsapp_report.py", "--send"],
+}
+
+
+def admin_only_json():
+    if is_client_viewer_session() or not session.get("is_admin"):
+        return jsonify({"error": "Admin only"}), 403
+    return None
+
+
+def run_local_command(args, timeout=8):
+    try:
+        completed = subprocess.run(
+            args,
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=timeout,
+            check=False,
+        )
+        return {
+            "ok": completed.returncode == 0,
+            "returncode": completed.returncode,
+            "stdout": (completed.stdout or "").strip(),
+            "stderr": (completed.stderr or "").strip(),
+        }
+    except FileNotFoundError as exc:
+        return {"ok": False, "returncode": None, "stdout": "", "stderr": str(exc)}
+    except subprocess.TimeoutExpired as exc:
+        return {
+            "ok": False,
+            "returncode": None,
+            "stdout": (exc.stdout or "").strip() if isinstance(exc.stdout, str) else "",
+            "stderr": f"Command timed out after {timeout}s",
+        }
+
+
+def systemctl_field(unit, field):
+    result = run_local_command(["systemctl", "show", unit, f"--property={field}", "--value"], timeout=4)
+    if not result["ok"]:
+        return ""
+    return result["stdout"].strip()
+
+
+def timer_status(unit):
+    return {
+        "unit": unit,
+        "active_state": systemctl_field(unit, "ActiveState"),
+        "next_elapsed": systemctl_field(unit, "NextElapseUSecRealtime"),
+        "last_trigger": systemctl_field(unit, "LastTriggerUSec"),
+    }
+
+
+@app.route("/api/admin/whatsapp/status")
+@login_required
+def api_admin_whatsapp_status():
+    denied = admin_only_json()
+    if denied:
+        return denied
+
+    webhook_url = os.getenv("TEAM_SUBMISSION_WHATSAPP_WEBHOOK_URL", "")
+    group_id = os.getenv("TEAM_SUBMISSION_WHATSAPP_GROUP_ID", "")
+    token = os.getenv("TEAM_SUBMISSION_WHATSAPP_TOKEN", "")
+    relay_url = webhook_url.rsplit("/", 1)[0] if webhook_url.endswith("/send") else "http://127.0.0.1:8090"
+
+    relay = {"ok": False, "ready": False, "error": "Not checked"}
+    try:
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        response = requests.get(f"{relay_url}/healthz", headers=headers, timeout=3)
+        relay = response.json() if response.headers.get("content-type", "").startswith("application/json") else {}
+        relay["http_status"] = response.status_code
+        relay["ok"] = bool(response.ok and relay.get("ok"))
+    except Exception as exc:
+        relay = {"ok": False, "ready": False, "error": f"{type(exc).__name__}: {exc}"}
+
+    timers = [timer_status(unit) for unit in WHATSAPP_AUTOMATION_TIMERS]
+    relay_state = systemctl_field("hrguru-whatsapp-relay.service", "ActiveState")
+    relay_substate = systemctl_field("hrguru-whatsapp-relay.service", "SubState")
+    logs = run_local_command(
+        ["journalctl", "-u", "hrguru-whatsapp-relay.service", "-u", "hrguru-daily-submission-report.service", "-u", "hrguru-weekly-submission-report.service", "-n", "80", "--no-pager"],
+        timeout=6,
+    )
+
+    return jsonify({
+        "ok": True,
+        "configured": {
+            "webhook_url": bool(webhook_url),
+            "group_id": bool(group_id),
+            "token": bool(token),
+        },
+        "relay": relay,
+        "relay_service": {
+            "active_state": relay_state,
+            "sub_state": relay_substate,
+        },
+        "timers": timers,
+        "logs": logs["stdout"] or logs["stderr"],
+    })
+
+
+@app.route("/api/admin/whatsapp/send/<action>", methods=["POST"])
+@login_required
+def api_admin_whatsapp_send(action):
+    denied = admin_only_json()
+    if denied:
+        return denied
+    command = WHATSAPP_AUTOMATION_ACTIONS.get(action)
+    if not command:
+        return jsonify({"error": "Unknown WhatsApp action."}), 404
+    result = run_local_command([sys.executable, *command], timeout=60)
+    status = 200 if result["ok"] else 500
+    return jsonify({
+        "ok": result["ok"],
+        "action": action,
+        "stdout": result["stdout"],
+        "stderr": result["stderr"],
+        "returncode": result["returncode"],
+    }), status
 
 @app.route("/api/statuses")
 @login_required

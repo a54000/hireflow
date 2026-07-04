@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WhatsApp Automation - HR Guru ATS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:#0d1017;color:#e8ecf7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px}
+main{width:min(1180px,100%);margin:0 auto;padding:22px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px}
+.brand{font-size:22px;font-weight:950}.brand span{color:#e8643a}.back{color:#cbd5ef;text-decoration:none;border:1px solid #30384f;background:#1b2130;border-radius:8px;padding:10px 13px;font-weight:900}.back:hover{border-color:#e8643a;color:#fff}
+.hero{border:1px solid #2a3146;background:#171d2a;border-radius:10px;padding:16px;margin-bottom:14px}
+.hero h1{font-size:24px;margin-bottom:5px}.hero p{color:#aab4cf;line-height:1.4}
+.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}.panel{border:1px solid #2a3146;background:#171d2a;border-radius:10px;padding:14px;min-width:0}.panel h2{font-size:17px;margin-bottom:10px}.muted{color:#9da8c6;font-size:12px}
+.status-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px}.card{border:1px solid #323a52;background:#202638;border-radius:9px;padding:12px;min-height:76px}.card strong{display:block;font-size:20px;margin-bottom:4px}.card span{color:#aeb8d5;font-size:12px;font-weight:800}.ok{color:#3ddc97}.bad{color:#ff7886}.warn{color:#fbbf24}
+.buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.btn{border:1px solid #374159;background:#222a3d;color:#fff;border-radius:8px;padding:12px;font:inherit;font-weight:950;cursor:pointer;text-align:left}.btn:hover{border-color:#60a5fa;background:#263149}.btn:disabled{opacity:.65;cursor:wait}
+.timers{display:grid;gap:8px}.timer{border:1px solid #30384f;background:#202638;border-radius:8px;padding:10px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.timer strong{font-size:13px}.timer em{font-style:normal;color:#aab4cf;font-size:12px}.pill{border-radius:999px;padding:4px 8px;font-size:11px;font-weight:950;background:#2b3348;color:#cbd5ef}.pill.active{background:rgba(61,220,151,.14);color:#5eead4}.pill.inactive{background:rgba(255,120,134,.12);color:#ff9aa4}
+.output{white-space:pre-wrap;background:#0f1420;border:1px solid #293149;border-radius:8px;padding:12px;color:#d7def1;max-height:360px;overflow:auto;font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.45}.status-line{margin-top:10px;min-height:18px;color:#aab4cf}.status-line.error{color:#ff9aa4}.status-line.success{color:#5eead4}
+@media(max-width:860px){main{padding:16px}.grid{grid-template-columns:1fr}.status-grid{grid-template-columns:1fr}.buttons{grid-template-columns:1fr}.top{align-items:flex-start}}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div>
+      <div class="brand">HR <span>Guru</span></div>
+      <div class="muted">Admin Workspace</div>
+    </div>
+    <a class="back" href="/">Dashboard</a>
+  </div>
+
+  <section class="hero">
+    <h1>WhatsApp Automation</h1>
+    <p>Monitor scheduled team reminders and submission reports. Use manual sends only when a reminder/report was missed or needs to be tested.</p>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Status</h2>
+      <div class="status-grid">
+        <div class="card"><strong id="relayReady" class="warn">Checking</strong><span>WhatsApp relay</span></div>
+        <div class="card"><strong id="configStatus" class="warn">Checking</strong><span>Webhook configuration</span></div>
+        <div class="card"><strong id="serviceStatus" class="warn">Checking</strong><span>Relay service</span></div>
+      </div>
+      <h2>Scheduled Runs</h2>
+      <div class="timers" id="timers"></div>
+      <div class="status-line" id="statusLine"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Manual Sends</h2>
+      <div class="buttons">
+        <button class="btn" data-action="morning">Morning Reminder</button>
+        <button class="btn" data-action="afternoon">Afternoon Reminder</button>
+        <button class="btn" data-action="evening">Evening Reminder</button>
+        <button class="btn" data-action="daily">Daily Report</button>
+        <button class="btn" data-action="weekly">Weekly Report</button>
+        <button class="btn" type="button" onclick="loadStatus()">Refresh Status</button>
+      </div>
+      <div class="status-line" id="sendStatus"></div>
+    </section>
+  </div>
+
+  <section class="panel" style="margin-top:14px">
+    <h2>Recent Logs</h2>
+    <div class="output" id="logs">Loading...</div>
+  </section>
+</main>
+
+<script>
+function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function labelForTimer(unit){
+  return {
+    'hrguru-team-morning-reminder.timer':'Morning reminder',
+    'hrguru-team-afternoon-reminder.timer':'Afternoon reminder',
+    'hrguru-team-evening-reminder.timer':'Evening reminder',
+    'hrguru-daily-submission-report.timer':'Daily report',
+    'hrguru-weekly-submission-report.timer':'Weekly report'
+  }[unit] || unit;
+}
+function setText(id,text,cls){
+  const el=document.getElementById(id);
+  el.textContent=text;
+  el.className=cls||'';
+}
+async function loadStatus(){
+  const status=document.getElementById('statusLine');
+  status.textContent='Refreshing...';
+  status.className='status-line';
+  try{
+    const res=await fetch('/api/admin/whatsapp/status');
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'Unable to load status');
+    const ready=!!(data.relay&&data.relay.ready);
+    setText('relayReady',ready?'Ready':'Not Ready',ready?'ok':'bad');
+    const configured=data.configured&&data.configured.webhook_url&&data.configured.group_id&&data.configured.token;
+    setText('configStatus',configured?'Configured':'Missing',configured?'ok':'bad');
+    const active=data.relay_service&&data.relay_service.active_state==='active';
+    setText('serviceStatus',active?'Active':'Inactive',active?'ok':'bad');
+    document.getElementById('timers').innerHTML=(data.timers||[]).map(timer=>{
+      const active=timer.active_state==='active';
+      return `<div class="timer"><div><strong>${escapeHtml(labelForTimer(timer.unit))}</strong><br><em>${escapeHtml(timer.next_elapsed||'Next run unavailable')}</em></div><span class="pill ${active?'active':'inactive'}">${escapeHtml(timer.active_state||'unknown')}</span></div>`;
+    }).join('') || '<div class="muted">No timers found.</div>';
+    document.getElementById('logs').textContent=data.logs||'No recent logs.';
+    status.textContent='Status refreshed.';
+    status.className='status-line success';
+  }catch(error){
+    status.textContent=error.message||'Unable to load status';
+    status.className='status-line error';
+  }
+}
+async function sendAction(action,button){
+  const status=document.getElementById('sendStatus');
+  button.disabled=true;
+  const old=button.textContent;
+  button.textContent='Sending...';
+  status.textContent='';
+  status.className='status-line';
+  try{
+    const res=await fetch(`/api/admin/whatsapp/send/${encodeURIComponent(action)}`,{method:'POST'});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.ok)throw new Error(data.stderr||data.error||'Send failed');
+    status.textContent=`${old} sent.`;
+    status.className='status-line success';
+    document.getElementById('logs').textContent=[data.stdout,data.stderr].filter(Boolean).join('\n') || 'Sent successfully.';
+    await loadStatus();
+  }catch(error){
+    status.textContent=error.message||'Send failed';
+    status.className='status-line error';
+  }finally{
+    button.disabled=false;
+    button.textContent=old;
+  }
+}
+document.querySelectorAll('[data-action]').forEach(button=>{
+  button.addEventListener('click',()=>sendAction(button.dataset.action,button));
+});
+document.addEventListener('DOMContentLoaded',loadStatus);
+</script>
+</body>
+</html>
