@@ -213,23 +213,37 @@ def build_report(end_day: date) -> dict:
 
 def build_whatsapp_message(report: dict) -> str:
     totals = report["totals"]
+    active_rows = [row for row in report["rows"] if row["submissions"] > 0]
+    zero_rows = [row for row in report["rows"] if row["submissions"] == 0]
+    top_rows = active_rows[:5]
     lines = [
         "*ATS Weekly Submission Report*",
-        f"Period: {report['start_date']} to {report['end_date']}",
+        f"{report['start_date']} to {report['end_date']}",
         "",
-        f"Total submissions: *{totals['submissions']}*",
-        f"Submitted by: *{totals['active_submitters']}* / {totals['team_members']}",
-        f"Zero submissions: *{totals['zero_submitters']}*",
+        "*Summary*",
+        f"Total: *{totals['submissions']}* submissions",
+        f"Submitted by: *{totals['active_submitters']}* of {totals['team_members']}",
+        f"Attention needed: *{totals['zero_submitters']}*",
         "",
-        "*Team Member | Weekly Submissions*",
     ]
-    for row in report["rows"]:
-        name = row["name"]
-        count = row["submissions"]
-        if count == 0:
-            lines.append(f"*{name}* | *0*")
-        else:
-            lines.append(f"{name} | {count}")
+    if top_rows:
+        lines.append("*Top 5 This Week*")
+        for index, row in enumerate(top_rows, start=1):
+            lines.append(f"{index}. {row['name']} - *{row['submissions']}*")
+        lines.append("")
+
+    if active_rows:
+        lines.append("*Full Team Ranking*")
+        for index, row in enumerate(active_rows, start=1):
+            lines.append(f"{index}. {row['name']} - {row['submissions']}")
+    else:
+        lines.append("*Full Team Ranking*")
+        lines.append("No submissions recorded in this period.")
+
+    if zero_rows:
+        lines.extend(["", "*Attention Needed - No Submissions*"])
+        for row in zero_rows:
+            lines.append(f"- *{row['name']}*")
 
     if report.get("unmapped"):
         lines.extend(["", "*Unmapped submissions*"])
