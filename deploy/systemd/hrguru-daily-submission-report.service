@@ -8,4 +8,4 @@ Type=oneshot
 User=ubuntu
 WorkingDirectory=/home/ubuntu/hrguru-ats
 EnvironmentFile=-/home/ubuntu/hrguru-ats/.env
-ExecStart=/home/ubuntu/hrguru-ats/venv/bin/python /home/ubuntu/hrguru-ats/scripts/daily_team_submission_whatsapp_report.py --send --format html
+ExecStart=/home/ubuntu/hrguru-ats/venv/bin/python /home/ubuntu/hrguru-ats/scripts/daily_team_submission_whatsapp_report.py --send --format text

@@ -1,0 +1,11 @@
+[Unit]
+Description=Send HR Guru team morning WhatsApp reminder
+Wants=network-online.target
+After=network-online.target hrguru-whatsapp-relay.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/hrguru-ats
+EnvironmentFile=-/home/ubuntu/hrguru-ats/.env
+ExecStart=/home/ubuntu/hrguru-ats/venv/bin/python /home/ubuntu/hrguru-ats/scripts/send_team_whatsapp_reminder.py morning --send

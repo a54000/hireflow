@@ -1,0 +1,10 @@
+[Unit]
+Description=Run HR Guru team evening WhatsApp reminder
+
+[Timer]
+OnCalendar=Mon..Sat *-*-* 18:00:00 Asia/Kolkata
+Persistent=true
+Unit=hrguru-team-evening-reminder.service
+
+[Install]
+WantedBy=timers.target
