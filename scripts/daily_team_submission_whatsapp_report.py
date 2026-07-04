@@ -8,6 +8,7 @@ default and POSTs it to TEAM_SUBMISSION_WHATSAPP_WEBHOOK_URL when --send is used
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import os
 import re
@@ -37,6 +38,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--group-id", default=os.getenv("TEAM_SUBMISSION_WHATSAPP_GROUP_ID", ""))
     parser.add_argument("--token", default=os.getenv("TEAM_SUBMISSION_WHATSAPP_TOKEN", ""))
     parser.add_argument("--timeout", type=float, default=float(os.getenv("TEAM_SUBMISSION_WHATSAPP_TIMEOUT", "20")))
+    parser.add_argument("--format", choices=("text", "html"), default=os.getenv("TEAM_SUBMISSION_REPORT_FORMAT", "html"))
+    parser.add_argument("--output", default="", help="Optional file path to save the generated report.")
     return parser.parse_args()
 
 
@@ -213,7 +216,115 @@ def build_whatsapp_message(report: dict) -> str:
     return "\n".join(lines)
 
 
-def send_to_webhook(message: str, args: argparse.Namespace) -> tuple[bool, str]:
+def build_html_report(report: dict) -> str:
+    totals = report["totals"]
+    rows = []
+    for row in report["rows"]:
+        attention = row["submissions"] == 0
+        tr_class = "attention" if attention else "ok"
+        status = "Attention Needed" if attention else "OK"
+        rows.append(
+            "<tr class=\"{tr_class}\">"
+            "<td>{name}</td>"
+            "<td class=\"count\">{count}</td>"
+            "<td><strong>{status}</strong></td>"
+            "</tr>".format(
+                tr_class=tr_class,
+                name=html.escape(row["name"]),
+                count=int(row["submissions"]),
+                status=html.escape(status),
+            )
+        )
+
+    unmapped_rows = ""
+    if report.get("unmapped"):
+        unmapped_items = []
+        for row in report["unmapped"]:
+            label = row["name"]
+            if row.get("email"):
+                label = f"{label} ({row['email']})"
+            unmapped_items.append(
+                "<tr><td>{label}</td><td class=\"count\">{count}</td></tr>".format(
+                    label=html.escape(label),
+                    count=int(row["submissions"]),
+                )
+            )
+        unmapped_rows = """
+        <section class="panel">
+          <h2>Unmapped Submissions</h2>
+          <table>
+            <thead><tr><th>Name / Email</th><th>Submissions</th></tr></thead>
+            <tbody>{rows}</tbody>
+          </table>
+        </section>
+        """.format(rows="\n".join(unmapped_items))
+
+    return """<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body{{margin:0;background:#f6f7fb;color:#121827;font-family:Arial,Helvetica,sans-serif}}
+    .wrap{{max-width:840px;margin:0 auto;padding:18px}}
+    .title{{background:#172033;color:white;border-radius:10px 10px 0 0;padding:16px 18px}}
+    .title h1{{font-size:20px;line-height:1.2;margin:0 0 4px}}
+    .title p{{margin:0;color:#c9d4ef;font-size:13px}}
+    .summary{{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:white;padding:12px;border:1px solid #d9deea;border-top:0}}
+    .metric{{border:1px solid #e2e6f0;border-radius:8px;padding:10px;background:#fbfcff}}
+    .metric strong{{display:block;font-size:22px;color:#0d172a}}
+    .metric span{{font-size:12px;color:#5b6578}}
+    .panel{{background:white;border:1px solid #d9deea;border-radius:0 0 10px 10px;padding:12px}}
+    h2{{font-size:15px;margin:4px 0 10px;color:#172033}}
+    table{{width:100%;border-collapse:collapse;font-size:13px}}
+    th{{text-align:left;background:#eef2f8;color:#34405a;padding:8px;border-bottom:1px solid #d5dbea}}
+    td{{padding:7px 8px;border-bottom:1px solid #edf0f6;vertical-align:middle}}
+    .count{{text-align:right;font-weight:700}}
+    tr.attention td{{background:#fff1f1;color:#7f1d1d}}
+    tr.ok td{{background:#ffffff}}
+    @media(max-width:640px){{
+      .wrap{{padding:8px}}
+      .summary{{grid-template-columns:1fr}}
+      table{{font-size:12px}}
+      th,td{{padding:6px}}
+    }}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title">
+      <h1>ATS Daily Submission Report</h1>
+      <p>Date: {date}</p>
+    </div>
+    <div class="summary">
+      <div class="metric"><strong>{submissions}</strong><span>Total submissions</span></div>
+      <div class="metric"><strong>{active_submitters}/{team_members}</strong><span>Submitted by</span></div>
+      <div class="metric"><strong>{attention_needed}</strong><span>Attention needed</span></div>
+    </div>
+    <section class="panel">
+      <h2>Team Submission Status</h2>
+      <table>
+        <thead><tr><th>Team Member</th><th>Submissions</th><th>Status</th></tr></thead>
+        <tbody>
+          {rows}
+        </tbody>
+      </table>
+    </section>
+    {unmapped_rows}
+  </div>
+</body>
+</html>
+""".format(
+        date=html.escape(report["date"]),
+        submissions=int(totals["submissions"]),
+        active_submitters=int(totals["active_submitters"]),
+        team_members=int(totals["team_members"]),
+        attention_needed=int(totals["attention_needed"]),
+        rows="\n".join(rows),
+        unmapped_rows=unmapped_rows,
+    )
+
+
+def send_to_webhook(message: str, args: argparse.Namespace, html_message: str = "") -> tuple[bool, str]:
     if not args.webhook_url:
         return False, "TEAM_SUBMISSION_WHATSAPP_WEBHOOK_URL is not configured."
     headers = {"Content-Type": "application/json"}
@@ -224,6 +335,8 @@ def send_to_webhook(message: str, args: argparse.Namespace) -> tuple[bool, str]:
         "text": message,
         "group_id": args.group_id,
     }
+    if html_message:
+        payload["html"] = html_message
     response = requests.post(args.webhook_url, headers=headers, data=json.dumps(payload), timeout=args.timeout)
     if response.status_code >= 400:
         return False, f"Webhook failed with HTTP {response.status_code}: {response.text[:500]}"
@@ -239,10 +352,17 @@ def main() -> int:
 
     report = build_report(day)
     message = build_whatsapp_message(report)
-    print(message)
+    html_message = build_html_report(report)
+    output = html_message if args.format == "html" else message
+
+    if args.output:
+        Path(args.output).write_text(output, encoding="utf-8")
+        print(f"Report written to {args.output}")
+    else:
+        print(output)
 
     if args.send:
-        ok, detail = send_to_webhook(message, args)
+        ok, detail = send_to_webhook(message, args, html_message if args.format == "html" else "")
         print(detail, file=sys.stderr)
         return 0 if ok else 2
     return 0
