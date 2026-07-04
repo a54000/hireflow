@@ -11,6 +11,9 @@ import sys
 import requests
 
 
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+
 REMINDERS = {
     "morning": (
         "Good morning team.\n\n"
@@ -26,6 +29,22 @@ REMINDERS = {
         "The daily submission report will be shared at 7 PM."
     ),
 }
+
+
+def load_env_file() -> None:
+    env_path = os.path.join(ROOT, ".env")
+    if not os.path.exists(env_path):
+        return
+    with open(env_path, "r", encoding="utf-8") as handle:
+        for raw_line in handle:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = value
 
 
 def parse_args() -> argparse.Namespace:
@@ -58,6 +77,7 @@ def send_to_webhook(message: str, args: argparse.Namespace) -> tuple[bool, str]:
 
 
 def main() -> int:
+    load_env_file()
     args = parse_args()
     message = args.message.strip() or REMINDERS[args.reminder]
     print(message)

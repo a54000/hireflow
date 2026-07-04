@@ -28,6 +28,21 @@ from app import get_db  # noqa: E402
 ATTENTION_LABEL = "*Attention Needed*"
 
 
+def load_env_file() -> None:
+    env_path = ROOT / ".env"
+    if not env_path.exists():
+        return
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Send daily ATS submission summary to WhatsApp.")
     parser.add_argument("--date", default="", help="Report date in YYYY-MM-DD. Defaults to today.")
@@ -344,6 +359,7 @@ def send_to_webhook(message: str, args: argparse.Namespace, html_message: str = 
 
 
 def main() -> int:
+    load_env_file()
     args = parse_args()
     day = report_date(args.date, args.days_ago)
     if day.weekday() == 6 and not args.include_sunday:
