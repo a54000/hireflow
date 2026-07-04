@@ -77,6 +77,19 @@ def active_team_members(conn) -> list[dict]:
                 AND COALESCE(u.is_active,1)=1
                 AND COALESCE(u.is_admin,0)=1
           )
+          AND (
+              NOT EXISTS (
+                  SELECT 1
+                  FROM app_users u
+                  WHERE u.team_member_id=team_members.id
+              )
+              OR EXISTS (
+                  SELECT 1
+                  FROM app_users u
+                  WHERE u.team_member_id=team_members.id
+                    AND COALESCE(u.is_active,1)=1
+              )
+          )
         ORDER BY lower(COALESCE(name,email,'')), id
         """
     ).fetchall()
