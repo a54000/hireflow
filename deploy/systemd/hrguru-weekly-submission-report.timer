@@ -1,0 +1,10 @@
+[Unit]
+Description=Run HR Guru ATS weekly submission report on Saturday evening
+
+[Timer]
+OnCalendar=Sat *-*-* 19:10:00 Asia/Kolkata
+Persistent=true
+Unit=hrguru-weekly-submission-report.service
+
+[Install]
+WantedBy=timers.target
