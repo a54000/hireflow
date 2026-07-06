@@ -9531,6 +9531,7 @@ def add_role():
 WHATSAPP_AUTOMATION_TIMERS = [
     "hrguru-team-morning-reminder.timer",
     "hrguru-team-afternoon-reminder.timer",
+    "hrguru-zero-submission-check.timer",
     "hrguru-team-evening-reminder.timer",
     "hrguru-daily-submission-report.timer",
     "hrguru-weekly-submission-report.timer",
@@ -9540,6 +9541,7 @@ WHATSAPP_AUTOMATION_SERVICES = [
     "hrguru-whatsapp-relay.service",
     "hrguru-team-morning-reminder.service",
     "hrguru-team-afternoon-reminder.service",
+    "hrguru-zero-submission-check.service",
     "hrguru-team-evening-reminder.service",
     "hrguru-daily-submission-report.service",
     "hrguru-weekly-submission-report.service",
@@ -9548,6 +9550,7 @@ WHATSAPP_AUTOMATION_SERVICES = [
 WHATSAPP_AUTOMATION_ACTIONS = {
     "morning": ["scripts/send_team_whatsapp_reminder.py", "morning", "--send"],
     "afternoon": ["scripts/send_team_whatsapp_reminder.py", "afternoon", "--send"],
+    "zero-submission": ["scripts/no_submission_so_far_whatsapp_report.py", "--send"],
     "evening": ["scripts/send_team_whatsapp_reminder.py", "evening", "--send"],
     "daily": ["scripts/daily_team_submission_whatsapp_report.py", "--send", "--format", "text"],
     "weekly": ["scripts/weekly_team_submission_whatsapp_report.py", "--send"],
