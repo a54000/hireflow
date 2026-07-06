@@ -20,6 +20,9 @@ if str(ROOT) not in sys.path:
 from app import get_db  # noqa: E402
 
 
+EXCLUDED_NAMES = {"megha", "megha singh", "reetu", "reetu saini"}
+
+
 def load_env_file() -> None:
     env_path = ROOT / ".env"
     if not env_path.exists():
@@ -61,6 +64,10 @@ def report_date(value: str, days_ago: int | None = None) -> date:
 
 def clean_text(value: object) -> str:
     return re.sub(r"\s+", " ", str(value or "").strip())
+
+
+def normalized_name(value: object) -> str:
+    return clean_text(value).lower()
 
 
 def active_team_members(conn) -> list[dict]:
@@ -106,6 +113,8 @@ def active_team_members(conn) -> list[dict]:
     seen = set()
     for row in rows:
         name = clean_text(row["name"]) or clean_text(row["email"]) or f"Team Member {row['id']}"
+        if normalized_name(name) in EXCLUDED_NAMES:
+            continue
         email = clean_text(row["email"]).lower()
         key = (int(row["id"]), email)
         if key in seen:
