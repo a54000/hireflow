@@ -9604,6 +9604,14 @@ def timer_status(unit):
     }
 
 
+def whatsapp_relay_config():
+    webhook_url = os.getenv("TEAM_SUBMISSION_WHATSAPP_WEBHOOK_URL", "")
+    group_id = os.getenv("TEAM_SUBMISSION_WHATSAPP_GROUP_ID", "")
+    token = os.getenv("TEAM_SUBMISSION_WHATSAPP_TOKEN", "")
+    relay_url = webhook_url.rsplit("/", 1)[0] if webhook_url.endswith("/send") else "http://127.0.0.1:8090"
+    return webhook_url, group_id, token, relay_url
+
+
 @app.route("/api/admin/whatsapp/status")
 @login_required
 def api_admin_whatsapp_status():
@@ -9611,10 +9619,7 @@ def api_admin_whatsapp_status():
     if denied:
         return denied
 
-    webhook_url = os.getenv("TEAM_SUBMISSION_WHATSAPP_WEBHOOK_URL", "")
-    group_id = os.getenv("TEAM_SUBMISSION_WHATSAPP_GROUP_ID", "")
-    token = os.getenv("TEAM_SUBMISSION_WHATSAPP_TOKEN", "")
-    relay_url = webhook_url.rsplit("/", 1)[0] if webhook_url.endswith("/send") else "http://127.0.0.1:8090"
+    webhook_url, group_id, token, relay_url = whatsapp_relay_config()
 
     relay = {"ok": False, "ready": False, "error": "Not checked"}
     try:
@@ -9649,6 +9654,24 @@ def api_admin_whatsapp_status():
         "timers": timers,
         "logs": logs["stdout"] or logs["stderr"],
     })
+
+
+@app.route("/api/admin/whatsapp/qr")
+@login_required
+def api_admin_whatsapp_qr():
+    denied = admin_only_json()
+    if denied:
+        return denied
+    _, _, token, relay_url = whatsapp_relay_config()
+    try:
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        response = requests.get(f"{relay_url}/qr", headers=headers, timeout=5)
+        payload = response.json() if response.headers.get("content-type", "").startswith("application/json") else {}
+        if response.status_code >= 400:
+            return jsonify(payload or {"error": response.text[:300] or "QR unavailable"}), response.status_code
+        return jsonify(payload)
+    except Exception as exc:
+        return jsonify({"ok": False, "error": f"{type(exc).__name__}: {exc}"}), 503
 
 
 @app.route("/api/admin/whatsapp/send/<action>", methods=["POST"])

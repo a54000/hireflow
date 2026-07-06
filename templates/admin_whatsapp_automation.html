@@ -15,6 +15,7 @@ main{width:min(1180px,100%);margin:0 auto;padding:22px}
 .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}.panel{border:1px solid #2a3146;background:#171d2a;border-radius:10px;padding:14px;min-width:0}.panel h2{font-size:17px;margin-bottom:10px}.muted{color:#9da8c6;font-size:12px}
 .status-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px}.card{border:1px solid #323a52;background:#202638;border-radius:9px;padding:12px;min-height:76px}.card strong{display:block;font-size:20px;margin-bottom:4px}.card span{color:#aeb8d5;font-size:12px;font-weight:800}.ok{color:#3ddc97}.bad{color:#ff7886}.warn{color:#fbbf24}
 .buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.btn{border:1px solid #374159;background:#222a3d;color:#fff;border-radius:8px;padding:12px;font:inherit;font-weight:950;cursor:pointer;text-align:left}.btn:hover{border-color:#60a5fa;background:#263149}.btn:disabled{opacity:.65;cursor:wait}
+.qrbox{display:grid;gap:10px;margin-top:12px}.qrimage{display:none;width:min(280px,100%);background:white;border-radius:8px;padding:10px;border:1px solid #d8deef}.qrhint{color:#aab4cf;font-size:12px;line-height:1.45}
 .timers{display:grid;gap:8px}.timer{border:1px solid #30384f;background:#202638;border-radius:8px;padding:10px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.timer strong{font-size:13px}.timer em{font-style:normal;color:#aab4cf;font-size:12px}.pill{border-radius:999px;padding:4px 8px;font-size:11px;font-weight:950;background:#2b3348;color:#cbd5ef}.pill.active{background:rgba(61,220,151,.14);color:#5eead4}.pill.inactive{background:rgba(255,120,134,.12);color:#ff9aa4}
 .output{white-space:pre-wrap;background:#0f1420;border:1px solid #293149;border-radius:8px;padding:12px;color:#d7def1;max-height:360px;overflow:auto;font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.45}.status-line{margin-top:10px;min-height:18px;color:#aab4cf}.status-line.error{color:#ff9aa4}.status-line.success{color:#5eead4}
 @media(max-width:860px){main{padding:16px}.grid{grid-template-columns:1fr}.status-grid{grid-template-columns:1fr}.buttons{grid-template-columns:1fr}.top{align-items:flex-start}}
@@ -59,6 +60,13 @@ main{width:min(1180px,100%);margin:0 auto;padding:22px}
         <button class="btn" type="button" onclick="loadStatus()">Refresh Status</button>
       </div>
       <div class="status-line" id="sendStatus"></div>
+      <div class="qrbox">
+        <h2 style="margin-top:12px">WhatsApp QR Login</h2>
+        <p class="qrhint">Use this only when the relay is not ready. Open WhatsApp on the linked phone, then go to Settings &gt; Linked devices &gt; Link a device.</p>
+        <button class="btn" type="button" onclick="loadQr()">Show QR Code</button>
+        <img class="qrimage" id="qrImage" alt="WhatsApp login QR code">
+        <div class="status-line" id="qrStatus"></div>
+      </div>
     </section>
   </div>
 
@@ -131,6 +139,32 @@ async function sendAction(action,button){
   }finally{
     button.disabled=false;
     button.textContent=old;
+  }
+}
+async function loadQr(){
+  const status=document.getElementById('qrStatus');
+  const image=document.getElementById('qrImage');
+  status.textContent='Loading QR...';
+  status.className='status-line';
+  image.style.display='none';
+  image.removeAttribute('src');
+  try{
+    const res=await fetch('/api/admin/whatsapp/qr');
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.error)throw new Error(data.error||'QR unavailable');
+    if(data.ready){
+      status.textContent='WhatsApp relay is already ready. No QR scan is needed.';
+      status.className='status-line success';
+      return;
+    }
+    if(!data.qr_data_url)throw new Error(data.message||'No QR available yet. Restart relay or wait a few seconds, then refresh.');
+    image.src=data.qr_data_url;
+    image.style.display='block';
+    status.textContent=`QR generated${data.age_seconds!=null?` ${data.age_seconds}s ago`:''}. Scan it from WhatsApp Linked devices.`;
+    status.className='status-line success';
+  }catch(error){
+    status.textContent=error.message||'QR unavailable';
+    status.className='status-line error';
   }
 }
 document.querySelectorAll('[data-action]').forEach(button=>{
