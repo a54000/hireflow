@@ -133,7 +133,10 @@ app.get("/groups", async (req, res) => {
 
 app.post("/send", async (req, res) => {
   if (!checkToken(req, res)) return;
-  if (!isReady) return res.status(503).json({ ok: false, error: "WhatsApp client not ready" });
+  if (!isReady) {
+    console.error("SEND rejected: WhatsApp client not ready");
+    return res.status(503).json({ ok: false, error: "WhatsApp client not ready" });
+  }
 
   const groupId = req.body.group_id || DEFAULT_GROUP_ID;
   const message = req.body.text || req.body.message || "";
@@ -142,8 +145,12 @@ app.post("/send", async (req, res) => {
   if (!message.trim()) return res.status(400).json({ ok: false, error: "Missing message" });
 
   try {
-    await client.sendMessage(groupId, message);
-    res.json({ ok: true });
+    const preview = message.replace(/\s+/g, " ").trim().slice(0, 120);
+    console.log(`SEND requested group=${groupId} chars=${message.length} preview="${preview}"`);
+    const sent = await client.sendMessage(groupId, message);
+    const messageId = sent && sent.id ? sent.id._serialized || sent.id.id || "" : "";
+    console.log(`SEND success group=${groupId} message_id=${messageId}`);
+    res.json({ ok: true, message_id: messageId });
   } catch (error) {
     console.error("Failed to send message:", error);
     res.status(500).json({ ok: false, error: "Failed to send message" });
