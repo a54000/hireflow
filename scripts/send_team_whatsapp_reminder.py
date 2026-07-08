@@ -4,14 +4,15 @@
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import sys
 
-import requests
-
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+
+from scripts.whatsapp_send import send_to_webhook  # noqa: E402
 
 
 REMINDERS = {
@@ -57,23 +58,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--token", default=os.getenv("TEAM_SUBMISSION_WHATSAPP_TOKEN", ""))
     parser.add_argument("--timeout", type=float, default=float(os.getenv("TEAM_SUBMISSION_WHATSAPP_TIMEOUT", "20")))
     return parser.parse_args()
-
-
-def send_to_webhook(message: str, args: argparse.Namespace) -> tuple[bool, str]:
-    if not args.webhook_url:
-        return False, "TEAM_SUBMISSION_WHATSAPP_WEBHOOK_URL is not configured."
-    headers = {"Content-Type": "application/json"}
-    if args.token:
-        headers["Authorization"] = f"Bearer {args.token}"
-    payload = {
-        "message": message,
-        "text": message,
-        "group_id": args.group_id,
-    }
-    response = requests.post(args.webhook_url, headers=headers, data=json.dumps(payload), timeout=args.timeout)
-    if response.status_code >= 400:
-        return False, f"Webhook failed with HTTP {response.status_code}: {response.text[:500]}"
-    return True, f"Webhook accepted message with HTTP {response.status_code}."
 
 
 def main() -> int:

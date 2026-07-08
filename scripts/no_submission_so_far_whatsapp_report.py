@@ -4,20 +4,18 @@
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import re
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-import requests
-
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app import get_db  # noqa: E402
+from scripts.whatsapp_send import send_to_webhook  # noqa: E402
 
 
 EXCLUDED_NAMES = {"megha", "megha singh", "reetu", "reetu saini"}
@@ -199,23 +197,6 @@ def build_whatsapp_message(report: dict) -> str:
         for index, row in enumerate(report["rows"], start=1):
             lines.append(f"{index}. *{row['name']}*")
     return "\n".join(lines)
-
-
-def send_to_webhook(message: str, args: argparse.Namespace) -> tuple[bool, str]:
-    if not args.webhook_url:
-        return False, "TEAM_SUBMISSION_WHATSAPP_WEBHOOK_URL is not configured."
-    headers = {"Content-Type": "application/json"}
-    if args.token:
-        headers["Authorization"] = f"Bearer {args.token}"
-    payload = {
-        "message": message,
-        "text": message,
-        "group_id": args.group_id,
-    }
-    response = requests.post(args.webhook_url, headers=headers, data=json.dumps(payload), timeout=args.timeout)
-    if response.status_code >= 400:
-        return False, f"Webhook failed with HTTP {response.status_code}: {response.text[:500]}"
-    return True, f"Webhook accepted message with HTTP {response.status_code}."
 
 
 def main() -> int:

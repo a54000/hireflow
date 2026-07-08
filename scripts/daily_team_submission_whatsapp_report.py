@@ -9,20 +9,18 @@ from __future__ import annotations
 
 import argparse
 import html
-import json
 import os
 import re
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-import requests
-
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app import get_db  # noqa: E402
+from scripts.whatsapp_send import send_to_webhook  # noqa: E402
 
 
 ATTENTION_LABEL = "*Attention Needed*"
@@ -377,25 +375,6 @@ def build_html_report(report: dict) -> str:
         rows="\n".join(rows),
         unmapped_rows=unmapped_rows,
     )
-
-
-def send_to_webhook(message: str, args: argparse.Namespace, html_message: str = "") -> tuple[bool, str]:
-    if not args.webhook_url:
-        return False, "TEAM_SUBMISSION_WHATSAPP_WEBHOOK_URL is not configured."
-    headers = {"Content-Type": "application/json"}
-    if args.token:
-        headers["Authorization"] = f"Bearer {args.token}"
-    payload = {
-        "message": message,
-        "text": message,
-        "group_id": args.group_id,
-    }
-    if html_message:
-        payload["html"] = html_message
-    response = requests.post(args.webhook_url, headers=headers, data=json.dumps(payload), timeout=args.timeout)
-    if response.status_code >= 400:
-        return False, f"Webhook failed with HTTP {response.status_code}: {response.text[:500]}"
-    return True, f"Webhook accepted message with HTTP {response.status_code}."
 
 
 def main() -> int:
