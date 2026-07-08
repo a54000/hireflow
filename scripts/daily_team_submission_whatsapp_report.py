@@ -25,6 +25,7 @@ from scripts.whatsapp_send import send_to_webhook  # noqa: E402
 
 ATTENTION_LABEL = "*Attention Needed*"
 ABSENT_LABEL = "*Absent*"
+EXCLUDED_NAMES = {"janvi", "janvi singh", "megha", "megha singh"}
 
 
 def load_env_file() -> None:
@@ -71,6 +72,10 @@ def clean_text(value: object) -> str:
     return re.sub(r"\s+", " ", str(value or "").strip())
 
 
+def normalized_name(value: object) -> str:
+    return clean_text(value).lower()
+
+
 def active_team_members(conn) -> list[dict]:
     rows = conn.execute(
         """
@@ -114,6 +119,8 @@ def active_team_members(conn) -> list[dict]:
     seen = set()
     for row in rows:
         name = clean_text(row["name"]) or clean_text(row["email"]) or f"Team Member {row['id']}"
+        if normalized_name(name) in EXCLUDED_NAMES:
+            continue
         email = clean_text(row["email"]).lower()
         key = (int(row["id"]), email)
         if key in seen:

@@ -21,7 +21,7 @@ from app import get_db  # noqa: E402
 from scripts.whatsapp_send import send_to_webhook  # noqa: E402
 
 
-EXCLUDED_NAMES = {"reetu", "reetu saini", "megha", "megha singh", "parul", "parul yadav"}
+EXCLUDED_NAMES = {"janvi", "janvi singh", "reetu", "reetu saini", "megha", "megha singh", "parul", "parul yadav"}
 
 
 def load_env_file() -> None:
