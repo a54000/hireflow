@@ -13,7 +13,7 @@ body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Ro
 .profile{position:relative}.profile-btn{width:38px;height:38px;border-radius:50%;border:1px solid #343b52;background:#252a3a;color:#fff;font-weight:900;cursor:pointer}.profile-menu{display:none;position:absolute;right:0;top:46px;z-index:40;min-width:170px;background:#1c2030;border:1px solid #343b52;border-radius:8px;box-shadow:0 16px 34px rgba(0,0,0,.35);overflow:hidden}.profile-menu.active{display:block}.profile-menu a,.profile-menu button{display:block;width:100%;border:0;background:transparent;color:#d9dee8;text-align:left;text-decoration:none;padding:12px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.profile-menu a:hover,.profile-menu button:hover{background:#252a3a;color:#fff}
 .wrap{width:100%;max-width:calc(100vw - 24px);margin:0 auto;background:#1c2030;border:1px solid #2a2f3a;border-radius:10px;overflow:hidden}
 .head{padding:14px 18px;border-bottom:1px solid #2a2f3a;display:grid;gap:10px}.head-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.head h1{font-size:22px;color:#fff;margin-bottom:4px}.head p{color:#9aa5c4;font-size:13px}
-.tools{display:grid;grid-template-columns:minmax(260px,1fr) minmax(180px,240px) auto auto;gap:10px;align-items:end}.field{display:grid;gap:6px}.field input,.field select{width:100%;height:40px;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:13px;padding:0 12px}.field input:focus,.field select:focus{outline:none;border-color:#e8643a}
+.tools{display:grid;grid-template-columns:minmax(240px,1fr) minmax(170px,220px) minmax(170px,220px) auto auto;gap:10px;align-items:end}.field{display:grid;gap:6px}.field input,.field select{width:100%;max-width:none;height:40px;background:#252a3a;border:1px solid #343b52;border-radius:8px;color:#fff;font:inherit;font-size:13px;padding:0 12px}.field input:focus,.field select:focus{outline:none;border-color:#e8643a}
 .status{padding:8px 18px;color:#9aa5c4;font-size:13px;border-bottom:1px solid #2a2f3a;min-height:36px}
 .table-wrap{overflow:auto;height:calc(100vh - 252px);min-height:430px}.candidate-table{width:100%;min-width:1130px;border-collapse:collapse;table-layout:fixed}.candidate-table th,.candidate-table td{height:42px;padding:8px 10px;border-bottom:1px solid #2a2f3a;border-right:1px solid #2a2f3a;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.candidate-table th{position:sticky;top:0;z-index:2;background:#0d1017;color:#aab3c8;font-size:12px;font-weight:900}.candidate-table tr:hover td{background:#222838}.candidate-table input[type=checkbox]{width:auto}
 .col-check{width:46px;text-align:center}.col-date{width:112px}.col-name{width:240px}.col-req{width:240px}.col-client{width:150px}.col-status{width:174px}.col-rec{width:150px}.col-cv{width:92px;text-align:center}.col-actions{width:220px}
@@ -57,6 +57,10 @@ select{height:32px;max-width:154px;background:#252a3a;border:1px solid #343b52;b
       <div class="field">
         <label>Client</label>
         <select id="clientFilter" onchange="reloadFirstPage()"><option value="">All clients</option></select>
+      </div>
+      <div class="field">
+        <label>Recruiter</label>
+        <select id="recruiterFilter" onchange="reloadFirstPage()"><option value="">All recruiters</option></select>
       </div>
       <button class="btn danger" id="deleteSelectedBtn" type="button" onclick="deleteSelectedCandidates()" disabled>Delete Selected</button>
       <button class="btn ghost" type="button" onclick="reloadFirstPage()">Refresh</button>
@@ -230,8 +234,10 @@ async function loadCandidates() {
     const params = new URLSearchParams({page: String(page), page_size: String(pageSize), sort: 'date_desc', view: 'list'});
     const q = document.getElementById('searchInput').value.trim();
     const client = document.getElementById('clientFilter')?.value.trim();
+    const recruiter = document.getElementById('recruiterFilter')?.value.trim();
     if (q) params.set('q', q);
     if (client) params.set('client', client);
+    if (recruiter) params.set('sender', recruiter);
     const res = await fetch('/api/candidates?' + params.toString());
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(payload.error || 'Unable to load candidates.');
@@ -586,16 +592,27 @@ async function signOut() {
   localStorage.removeItem('hrguru_user');
   window.location.href = '/login';
 }
-async function loadClientFilterOptions() {
-  const select = document.getElementById('clientFilter');
-  if (!select) return;
+async function loadFilterOptions() {
+  const clientSelect = document.getElementById('clientFilter');
+  const recruiterSelect = document.getElementById('recruiterFilter');
   try {
     const res = await fetch('/api/candidate_search_filters');
     const data = await res.json().catch(() => ({}));
     const clients = Array.isArray(data.clients) ? data.clients.filter(Boolean) : [];
-    select.innerHTML = '<option value="">All clients</option>' + clients.map(client => `<option value="${escapeHtml(client)}">${escapeHtml(displayClientName(client))}</option>`).join('');
+    const sourcers = Array.isArray(data.sourcers) ? data.sourcers.filter(row => row && (row.email || row.name)) : [];
+    if (clientSelect) {
+      clientSelect.innerHTML = '<option value="">All clients</option>' + clients.map(client => `<option value="${escapeHtml(client)}">${escapeHtml(displayClientName(client))}</option>`).join('');
+    }
+    if (recruiterSelect) {
+      recruiterSelect.innerHTML = '<option value="">All recruiters</option>' + sourcers.map(row => {
+        const email = String(row.email || '').trim().toLowerCase();
+        const label = String(row.name || row.email || '').trim();
+        return `<option value="${escapeHtml(email)}">${escapeHtml(label || email)}</option>`;
+      }).join('');
+    }
   } catch(e) {
-    select.innerHTML = '<option value="">All clients</option>';
+    if (clientSelect) clientSelect.innerHTML = '<option value="">All clients</option>';
+    if (recruiterSelect) recruiterSelect.innerHTML = '<option value="">All recruiters</option>';
   }
 }
 async function loadCandidateStatuses() {
@@ -612,7 +629,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentUser = await res.json();
   } catch(e) {}
   await loadCandidateStatuses();
-  await loadClientFilterOptions();
+  await loadFilterOptions();
   loadCandidates();
 });
 </script>
