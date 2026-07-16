@@ -212,10 +212,21 @@ app.post("/send", async (req, res) => {
   try {
     const preview = message.replace(/\s+/g, " ").trim().slice(0, 120);
     console.log(`SEND requested group=${groupId} chars=${message.length} preview="${preview}"`);
-    const sent = await client.sendMessage(groupId, message);
+    let sent = null;
+    try {
+      const chat = await client.getChatById(groupId);
+      console.log(`SEND chat resolved group=${groupId} name="${chat.name || chat.formattedTitle || ""}" isGroup=${!!chat.isGroup}`);
+      sent = await chat.sendMessage(message);
+    } catch (chatError) {
+      console.error("SEND chat.sendMessage failed, trying client.sendMessage fallback:", chatError);
+      sent = await client.sendMessage(groupId, message);
+    }
     const messageId = sent && sent.id ? sent.id._serialized || sent.id.id || "" : "";
+    if (!messageId) {
+      console.error(`SEND warning group=${groupId} returned no message id; WhatsApp may have rejected or queued the message.`);
+    }
     console.log(`SEND success group=${groupId} message_id=${messageId}`);
-    res.json({ ok: true, message_id: messageId });
+    res.json({ ok: true, message_id: messageId, warning: messageId ? "" : "WhatsApp returned no message id. Check group permissions and relay phone delivery." });
   } catch (error) {
     console.error("Failed to send message:", error);
     res.status(500).json({ ok: false, error: "Failed to send message" });
