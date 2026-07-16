@@ -126,8 +126,27 @@ app.get("/groups", async (req, res) => {
       .map(c => ({ name: c.name, id: c.id._serialized }));
     res.json({ ok: true, groups });
   } catch (error) {
-    console.error("Failed to load groups:", error);
-    res.status(500).json({ ok: false, error: "Failed to load groups" });
+    console.error("Failed to load groups via client.getChats, trying Store fallback:", error);
+    try {
+      const groups = await client.pupPage.evaluate(() => {
+        const chatStore = window.Store && window.Store.Chat;
+        const models = chatStore && typeof chatStore.getModelsArray === "function"
+          ? chatStore.getModelsArray()
+          : [];
+        return models
+          .filter(chat => chat && (chat.isGroup || (chat.id && chat.id.server === "g.us")))
+          .map(chat => {
+            const id = chat.id && (chat.id._serialized || (chat.id.user && chat.id.server ? `${chat.id.user}@${chat.id.server}` : ""));
+            const name = chat.name || chat.formattedTitle || chat.__x_name || chat.__x_formattedTitle || "";
+            return { name, id };
+          })
+          .filter(group => group.id);
+      });
+      res.json({ ok: true, groups, fallback: true });
+    } catch (fallbackError) {
+      console.error("Failed to load groups via Store fallback:", fallbackError);
+      res.status(500).json({ ok: false, error: "Failed to load groups" });
+    }
   }
 });
 
