@@ -15,10 +15,12 @@ main{width:min(1180px,100%);margin:0 auto;padding:22px}
 .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}.panel{border:1px solid #2a3146;background:#171d2a;border-radius:10px;padding:14px;min-width:0}.panel h2{font-size:17px;margin-bottom:10px}.muted{color:#9da8c6;font-size:12px}
 .status-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px}.card{border:1px solid #323a52;background:#202638;border-radius:9px;padding:12px;min-height:76px}.card strong{display:block;font-size:20px;margin-bottom:4px}.card span{color:#aeb8d5;font-size:12px;font-weight:800}.ok{color:#3ddc97}.bad{color:#ff7886}.warn{color:#fbbf24}
 .buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.btn{border:1px solid #374159;background:#222a3d;color:#fff;border-radius:8px;padding:12px;font:inherit;font-weight:950;cursor:pointer;text-align:left}.btn:hover{border-color:#60a5fa;background:#263149}.btn:disabled{opacity:.65;cursor:wait}
+.weekly-tools{display:grid;grid-template-columns:1fr auto;gap:10px;margin:12px 0 10px}.weekly-tools .btn{text-align:center}.weekly-preview{white-space:pre-wrap;background:#0f1420;border:1px solid #293149;border-radius:8px;padding:12px;color:#d7def1;max-height:320px;overflow:auto;font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.45}
 .qrbox{display:grid;gap:10px;margin-top:12px}.qrimage{display:none;width:min(280px,100%);background:white;border-radius:8px;padding:10px;border:1px solid #d8deef}.qrhint{color:#aab4cf;font-size:12px;line-height:1.45}
 .timers{display:grid;gap:8px}.timer{border:1px solid #30384f;background:#202638;border-radius:8px;padding:10px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.timer strong{font-size:13px}.timer em{font-style:normal;color:#aab4cf;font-size:12px}.pill{border-radius:999px;padding:4px 8px;font-size:11px;font-weight:950;background:#2b3348;color:#cbd5ef}.pill.active{background:rgba(61,220,151,.14);color:#5eead4}.pill.inactive{background:rgba(255,120,134,.12);color:#ff9aa4}
 .output{white-space:pre-wrap;background:#0f1420;border:1px solid #293149;border-radius:8px;padding:12px;color:#d7def1;max-height:360px;overflow:auto;font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.45}.status-line{margin-top:10px;min-height:18px;color:#aab4cf}.status-line.error{color:#ff9aa4}.status-line.success{color:#5eead4}
 @media(max-width:860px){main{padding:16px}.grid{grid-template-columns:1fr}.status-grid{grid-template-columns:1fr}.buttons{grid-template-columns:1fr}.top{align-items:flex-start}}
+@media(max-width:560px){.weekly-tools{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -57,10 +59,19 @@ main{width:min(1180px,100%);margin:0 auto;padding:22px}
         <button class="btn" data-action="zero-submission">4 PM No Submission Check</button>
         <button class="btn" data-action="evening">Evening Reminder</button>
         <button class="btn" data-action="daily">Daily Report</button>
-        <button class="btn" data-action="weekly">Weekly Report</button>
         <button class="btn" type="button" onclick="loadStatus()">Refresh Status</button>
       </div>
       <div class="status-line" id="sendStatus"></div>
+      <div class="qrbox">
+        <h2 style="margin-top:12px">Weekly Report</h2>
+        <p class="qrhint">Generate the weekly submission report first to review the exact WhatsApp text. Use Send Weekly Report only after reviewing it.</p>
+        <div class="weekly-tools">
+          <button class="btn" type="button" id="generateWeeklyBtn" onclick="generateWeeklyReport()">Generate Weekly Report</button>
+          <button class="btn" type="button" data-action="weekly">Send Weekly Report</button>
+        </div>
+        <div class="weekly-preview" id="weeklyPreview">Weekly report preview will appear here.</div>
+        <div class="status-line" id="weeklyStatus"></div>
+      </div>
       <div class="qrbox">
         <h2 style="margin-top:12px">WhatsApp QR Login</h2>
         <p class="qrhint">Use this only when the relay is not ready. Open WhatsApp on the linked phone, then go to Settings &gt; Linked devices &gt; Link a device.</p>
@@ -141,6 +152,29 @@ async function sendAction(action,button){
   }finally{
     button.disabled=false;
     button.textContent=old;
+  }
+}
+async function generateWeeklyReport(){
+  const status=document.getElementById('weeklyStatus');
+  const preview=document.getElementById('weeklyPreview');
+  const button=document.getElementById('generateWeeklyBtn');
+  button.disabled=true;
+  button.textContent='Generating...';
+  status.textContent='';
+  status.className='status-line';
+  try{
+    const res=await fetch('/api/admin/whatsapp/weekly-report');
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||!data.ok)throw new Error(data.stderr||data.error||'Unable to generate weekly report');
+    preview.textContent=data.report||'Report generated, but no content was returned.';
+    status.textContent='Weekly report generated. Review it before sending.';
+    status.className='status-line success';
+  }catch(error){
+    status.textContent=error.message||'Unable to generate weekly report';
+    status.className='status-line error';
+  }finally{
+    button.disabled=false;
+    button.textContent='Generate Weekly Report';
   }
 }
 async function loadQr(){

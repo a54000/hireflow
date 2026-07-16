@@ -9696,6 +9696,29 @@ def api_admin_whatsapp_send(action):
         "returncode": result["returncode"],
     }), status
 
+
+@app.route("/api/admin/whatsapp/weekly-report")
+@login_required
+def api_admin_whatsapp_weekly_report():
+    denied = admin_only_json()
+    if denied:
+        return denied
+    command = ["scripts/weekly_team_submission_whatsapp_report.py"]
+    report_date = (request.args.get("date") or "").strip()
+    days_ago = (request.args.get("days_ago") or "").strip()
+    if report_date:
+        command.extend(["--date", report_date])
+    elif days_ago:
+        command.extend(["--days-ago", days_ago])
+    result = run_local_command([sys.executable, *command], timeout=60)
+    status = 200 if result["ok"] else 500
+    return jsonify({
+        "ok": result["ok"],
+        "report": result["stdout"],
+        "stderr": result["stderr"],
+        "returncode": result["returncode"],
+    }), status
+
 @app.route("/api/statuses")
 @login_required
 def get_statuses():
