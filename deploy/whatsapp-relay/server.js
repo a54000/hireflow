@@ -14,6 +14,7 @@ let isReady = false;
 let latestQr = "";
 let latestQrDataUrl = "";
 let latestQrAt = null;
+const recentGroups = new Map();
 
 const client = new Client({
   authStrategy: new LocalAuth({
@@ -71,6 +72,38 @@ client.on("disconnected", reason => {
   console.error("WhatsApp disconnected:", reason);
 });
 
+async function rememberGroupFromMessage(message, source) {
+  const groupId = message && message.from && String(message.from).endsWith("@g.us") ? message.from : "";
+  if (!groupId) return;
+  let name = "";
+  try {
+    const chat = await message.getChat();
+    name = chat && chat.name ? chat.name : "";
+  } catch (error) {
+    console.error(`Failed to read group chat metadata from ${source}:`, error);
+  }
+  const record = {
+    name: name || groupId,
+    id: groupId,
+    source,
+    seen_at: new Date().toISOString()
+  };
+  recentGroups.set(groupId, record);
+  console.log(`GROUP seen source=${source} name="${record.name}" id=${groupId}`);
+}
+
+client.on("message", message => {
+  rememberGroupFromMessage(message, "message").catch(error => {
+    console.error("Failed to remember group from message:", error);
+  });
+});
+
+client.on("message_create", message => {
+  rememberGroupFromMessage(message, "message_create").catch(error => {
+    console.error("Failed to remember group from message_create:", error);
+  });
+});
+
 process.on("unhandledRejection", error => {
   console.error("Unhandled rejection:", error);
 });
@@ -119,12 +152,23 @@ app.get("/groups", async (req, res) => {
   if (!checkToken(req, res)) return;
   if (!isReady) return res.status(503).json({ ok: false, error: "WhatsApp client not ready" });
 
+  const mergeRecentGroups = groups => {
+    const byId = new Map();
+    (groups || []).forEach(group => {
+      if (group && group.id) byId.set(group.id, group);
+    });
+    recentGroups.forEach(group => {
+      if (group && group.id && !byId.has(group.id)) byId.set(group.id, group);
+    });
+    return Array.from(byId.values()).sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+  };
+
   try {
     const chats = await client.getChats();
     const groups = chats
       .filter(c => c.isGroup)
       .map(c => ({ name: c.name, id: c.id._serialized }));
-    res.json({ ok: true, groups });
+    res.json({ ok: true, groups: mergeRecentGroups(groups) });
   } catch (error) {
     console.error("Failed to load groups via client.getChats, trying Store fallback:", error);
     try {
@@ -142,9 +186,11 @@ app.get("/groups", async (req, res) => {
           })
           .filter(group => group.id);
       });
-      res.json({ ok: true, groups, fallback: true });
+      res.json({ ok: true, groups: mergeRecentGroups(groups), fallback: true });
     } catch (fallbackError) {
       console.error("Failed to load groups via Store fallback:", fallbackError);
+      const groups = mergeRecentGroups([]);
+      if (groups.length) return res.json({ ok: true, groups, fallback: true, recent_only: true });
       res.status(500).json({ ok: false, error: "Failed to load groups" });
     }
   }
