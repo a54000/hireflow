@@ -41,8 +41,20 @@ main{width:min(1180px,100%);margin:0 auto;padding:22px}
 <div class="toast" id="toast"></div>
 <script>
 let statuses = [];
+const selectionStatuses = new Set(['selected','offered','joined','hired']);
 function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function toast(message,type='error'){const el=document.getElementById('toast');el.textContent=message||'';el.className='toast active '+type;setTimeout(()=>el.className='toast',2800);}
+function statusKey(value){return String(value||'').trim().toLowerCase().replace(/\s+/g,' ');}
+function isSelectionStatus(value){return selectionStatuses.has(statusKey(value));}
+function todayIsoDate(){return new Date().toISOString().slice(0,10);}
+function requestSelectionDate(status){
+  if(!isSelectionStatus(status))return '';
+  const value=window.prompt(`Enter selection date for ${status} (YYYY-MM-DD)`,todayIsoDate());
+  if(value===null)return null;
+  const clean=String(value||'').trim().slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(clean)){toast('Selection date is required in YYYY-MM-DD format.');return null;}
+  return clean;
+}
 function actionText(reason){const text=String(reason||'').toLowerCase();if(text.includes('no update'))return'Update status or add latest feedback';if(text.includes('status'))return'Choose valid status';return reason;}
 function statusOptions(current){return statuses.map(s=>`<option value="${escapeHtml(s)}" ${s===current?'selected':''}>${escapeHtml(s)}</option>`).join('');}
 function renderCard(item){
@@ -78,7 +90,9 @@ async function loadFollowups(){
 async function saveStatus(id){
   const value=document.getElementById(`status_${id}`)?.value||'';
   if(!value)return toast('Select a status first');
-  const res=await fetch(`/api/candidate/${id}/status`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:value})});
+  const selectionDate=requestSelectionDate(value);
+  if(selectionDate===null){loadFollowups();return;}
+  const res=await fetch(`/api/candidate/${id}/status`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:value,selection_date:selectionDate||''})});
   const data=await res.json().catch(()=>({}));
   if(!res.ok||data.error){toast(data.error||'Unable to update status');loadFollowups();return;}
   toast('Status updated','success');loadFollowups();

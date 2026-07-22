@@ -394,7 +394,7 @@ async function loadAnalytics() {
   }
 }
 function selectionDate(row) {
-  const raw = row.updated_at || row.created_at || '';
+  const raw = row.selection_date || row.updated_at || row.created_at || '';
   if (!raw) return '-';
   const dt = new Date(String(raw).includes('T') ? raw : String(raw).replace(' ', 'T'));
   return Number.isNaN(dt.getTime()) ? String(raw).slice(0, 10) : dt.toLocaleDateString();

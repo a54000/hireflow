@@ -69,6 +69,7 @@ body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Ro
     </div>
     <div class="modal-body">
       <div class="field"><label>Status</label><select id="reviewStatus"></select></div>
+      <div class="field"><label>Selection Date</label><input id="reviewSelectionDate" type="date"></div>
       <div class="field"><label>Feedback</label><textarea id="reviewFeedback" placeholder="Optional feedback for this candidate"></textarea></div>
       <div class="modal-status" id="reviewStatusText"></div>
     </div>
@@ -88,7 +89,10 @@ let loadTimer = null;
 let currentRows = [];
 let currentReviewId = null;
 const statuses = ['New','Shortlisted','Screening Pending','Feedback Pending','Offered','On Hold','Joined','Rejected','Duplicate'];
+const selectionStatuses = new Set(['selected','offered','joined','hired']);
 function escapeHtml(value){return String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function statusKey(value){return String(value||'').trim().toLowerCase().replace(/\s+/g,' ')}
+function isSelectionStatus(value){return selectionStatuses.has(statusKey(value))}
 function toggleProfileMenu(){document.getElementById('profileMenu')?.classList.toggle('active')}
 document.addEventListener('click',event=>{if(!event.target.closest('.profile'))document.getElementById('profileMenu')?.classList.remove('active')});
 function showToast(message,type='error'){const el=document.getElementById('toast');el.textContent=message||'';el.className='toast active '+type;setTimeout(()=>{el.className='toast'},3200)}
@@ -152,6 +156,7 @@ function openReview(id){
   currentReviewId=id;
   document.getElementById('reviewMeta').textContent=`${row.candidate_name||'Candidate'} - ${row.requirement_title||'Requirement not set'}`;
   document.getElementById('reviewStatus').innerHTML=statusOptions(row.status);
+  document.getElementById('reviewSelectionDate').value=row.selection_date||'';
   document.getElementById('reviewFeedback').value=row.candidate_feedback||'';
   document.getElementById('reviewStatusText').textContent='';
   document.getElementById('reviewModal').classList.add('active');
@@ -163,10 +168,13 @@ async function saveReview(){
   btn.disabled=true;btn.textContent='Saving...';
   document.getElementById('reviewStatusText').textContent='Saving...';
   try{
+    const selectedStatus=document.getElementById('reviewStatus').value;
+    const selectionDate=document.getElementById('reviewSelectionDate').value.trim();
+    if(isSelectionStatus(selectedStatus)&&!selectionDate)throw new Error('Selection date is required for Offered or Joined status.');
     const res=await fetch(`/api/client/candidate/${currentReviewId}/status`,{
       method:'PATCH',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({status:document.getElementById('reviewStatus').value,candidate_feedback:document.getElementById('reviewFeedback').value.trim()})
+      body:JSON.stringify({status:selectedStatus,selection_date:selectionDate,candidate_feedback:document.getElementById('reviewFeedback').value.trim()})
     });
     const data=await res.json().catch(()=>({}));
     if(!res.ok||data.error)throw new Error(data.error||'Unable to save candidate status.');

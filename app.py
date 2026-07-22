@@ -543,6 +543,15 @@ def translate_sql_for_postgres(query):
     text = re.sub(r'\.current_role\b', '."current_role"', text)
     return text.replace("?", "%s")
 
+def ensure_candidate_selection_schema(conn):
+    if USE_POSTGRES:
+        conn.execute("ALTER TABLE candidates ADD COLUMN IF NOT EXISTS selection_date TEXT")
+    else:
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(candidates)").fetchall()}
+        if "selection_date" not in columns:
+            conn.execute("ALTER TABLE candidates ADD COLUMN selection_date TEXT")
+    conn.commit()
+
 class PgCursorAdapter:
     def __init__(self, cursor):
         self.cursor = cursor
@@ -674,6 +683,28 @@ CLIENT_SLA_THRESHOLDS = {
 
 def normalize_status_key(value):
     return re.sub(r"\s+", " ", str(value or "").strip()).lower()
+
+SELECTION_STATUS_KEYS = {"selected", "offered", "joined", "hired"}
+
+def is_selection_status(value):
+    return normalize_status_key(value) in SELECTION_STATUS_KEYS
+
+def normalize_date_input(value):
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    try:
+        return datetime.strptime(raw[:10], "%Y-%m-%d").date().isoformat()
+    except ValueError:
+        return ""
+
+def validate_selection_date_for_status(status, selection_date):
+    if not is_selection_status(status):
+        return "", None
+    clean_date = normalize_date_input(selection_date)
+    if not clean_date:
+        return "", "Selection date is required when status is Selected, Offered, Joined, or Hired."
+    return clean_date, None
 
 def parse_local_datetime(value):
     raw = str(value or "").strip()
@@ -1079,7 +1110,7 @@ def client_sla_items(thresholds=None):
         WHERE trim(COALESCE(client_name,'')) <> ''
     """).fetchall()]
     cand_rows = [dict(r) for r in conn.execute("""
-        SELECT c.id, c.requirement_id, c.status, c.created_at, c.updated_at,
+        SELECT c.id, c.requirement_id, c.status, c.created_at, c.updated_at, c.selection_date,
                r.client_name, r.title AS requirement_title
         FROM candidates c
         LEFT JOIN requirements r ON r.id = c.requirement_id
@@ -1137,6 +1168,7 @@ def client_sla_items(thresholds=None):
         client = bucket(row.get("client_name"))
         status_key = normalize_status_key(row.get("status"))
         updated = parse_local_datetime(row.get("updated_at") or row.get("created_at")) or today_dt
+        selection_dt = parse_local_datetime(row.get("selection_date")) or updated
         if row.get("requirement_id") in active_req_ids and status_key not in terminal_candidate_statuses:
             client["active_candidates"] += 1
         if status_key in feedback_statuses:
@@ -1144,7 +1176,7 @@ def client_sla_items(thresholds=None):
             if age >= thresholds["feedback_pending_days"]:
                 client["pending_feedback"] += 1
                 client["oldest_pending_feedback_age"] = max(client["oldest_pending_feedback_age"], age)
-        if status_key in selection_statuses and updated.date() >= month_start:
+        if status_key in selection_statuses and selection_dt.date() >= month_start:
             client["current_month_selections"] += 1
 
     for client in clients.values():
@@ -2422,6 +2454,7 @@ def init_db():
             cv_summary         TEXT,
             candidate_feedback TEXT,
             status             TEXT DEFAULT 'New',
+            selection_date     TEXT,
             industry_domain    TEXT,
             tags               TEXT DEFAULT '',
             is_duplicate       INTEGER DEFAULT 0,
@@ -2837,6 +2870,8 @@ def init_db():
             conn.execute("ALTER TABLE candidates ADD COLUMN requirement_id INTEGER")
         if "candidate_feedback" not in candidate_columns:
             conn.execute("ALTER TABLE candidates ADD COLUMN candidate_feedback TEXT")
+        if "selection_date" not in candidate_columns:
+            conn.execute("ALTER TABLE candidates ADD COLUMN selection_date TEXT")
         if "industry_domain" not in candidate_columns:
             conn.execute("ALTER TABLE candidates ADD COLUMN industry_domain TEXT")
         for col in ["ai_screening_status", "ai_screening_score", "ai_screening_error", "ai_screening_report_json", "ai_screening_run_id", "ai_screening_updated_at"]:
@@ -3077,15 +3112,21 @@ def init_db():
 def initialize_app_database():
     if USE_POSTGRES:
         conn = get_db(timeout=5)
-        conn.execute("SELECT 1")
-        conn.close()
-        print("PostgreSQL mode: skipped SQLite schema initialization", flush=True)
+        try:
+            ensure_candidate_selection_schema(conn)
+            conn.execute("SELECT 1")
+        finally:
+            conn.close()
+        print("PostgreSQL mode: skipped SQLite schema initialization; ensured runtime schema", flush=True)
         return
     attempts = 5
     delay_seconds = 2
     for attempt in range(1, attempts + 1):
         try:
             init_db()
+            schema_conn = get_db()
+            ensure_candidate_selection_schema(schema_conn)
+            schema_conn.close()
             conn = get_db()
             admin = conn.execute("SELECT id FROM app_users WHERE username='admin'").fetchone()
             if not admin and ADMIN_PASSWORD:
@@ -8121,7 +8162,7 @@ def api_client_candidates():
     sql = f"""
         SELECT c.id, c.candidate_name, c.current_company, c.current_role,
                c.experience_years, c.current_location, c.status,
-               c.candidate_feedback, c.created_at,
+               c.selection_date, c.candidate_feedback, c.created_at,
                r.title AS requirement_title, r.client_name AS client_name
         FROM candidates c
         LEFT JOIN requirements r ON r.id = c.requirement_id
@@ -8756,7 +8797,7 @@ def api_team_report_today_by_recruiter():
             COALESCE(NULLIF(r.title,''), NULLIF(c.role_name,''), 'No Requirement') AS requirement,
             COALESCE(NULLIF(tg.name,''), NULLIF(r.taggd_recruiter_name,''), 'Not assigned') AS taggd_recruiter_name,
             COUNT(c.id) AS submissions,
-            SUM(CASE WHEN COALESCE(c.status,'') IN ('Selected','Offered','Joined','Hired') THEN 1 ELSE 0 END) AS selections
+            SUM(CASE WHEN COALESCE(c.status,'') IN ('Selected','Offered','Joined','Hired') AND substr(COALESCE(NULLIF(c.selection_date,''), NULLIF(c.updated_at,''), c.created_at, ''),1,10)=date('now','localtime') THEN 1 ELSE 0 END) AS selections
         FROM candidates c
         LEFT JOIN team_members tm ON c.sourcer_id = tm.id
         LEFT JOIN requirements r ON c.requirement_id = r.id
@@ -8777,7 +8818,7 @@ def api_team_report_today_by_recruiter():
             COUNT(c.id) AS submissions,
             COUNT(DISTINCT COALESCE(c.sourcer_id::text, c.recruiter_email)) AS recruiters,
             COUNT(DISTINCT c.requirement_id) AS requirements_worked,
-            SUM(CASE WHEN COALESCE(c.status,'') IN ('Selected','Offered','Joined','Hired') THEN 1 ELSE 0 END) AS selections
+            SUM(CASE WHEN COALESCE(c.status,'') IN ('Selected','Offered','Joined','Hired') AND substr(COALESCE(NULLIF(c.selection_date,''), NULLIF(c.updated_at,''), c.created_at, ''),1,10)=date('now','localtime') THEN 1 ELSE 0 END) AS selections
         FROM candidates c
         LEFT JOIN requirements r ON c.requirement_id = r.id
         WHERE date(c.created_at)=date('now','localtime')
@@ -8827,7 +8868,7 @@ def api_team_report_selection_summary():
     rows = conn.execute(f"""
         SELECT
             COALESCE(NULLIF(tm.name,''), NULLIF(c.recruiter_name,''), c.recruiter_email, 'Unassigned') AS recruiter,
-            SUM(CASE WHEN date(c.created_at)>=date('now','localtime','start of month') THEN 1 ELSE 0 END) AS current_month,
+            SUM(CASE WHEN substr(COALESCE(NULLIF(c.selection_date,''), NULLIF(c.updated_at,''), c.created_at, ''),1,10)>=date('now','localtime','start of month') THEN 1 ELSE 0 END) AS current_month,
             COUNT(c.id) AS overall
         FROM candidates c
         LEFT JOIN team_members tm ON c.sourcer_id = tm.id
@@ -8839,7 +8880,7 @@ def api_team_report_selection_summary():
     """, status_params).fetchall()
     totals = conn.execute(f"""
         SELECT
-            SUM(CASE WHEN date(c.created_at)>=date('now','localtime','start of month') THEN 1 ELSE 0 END) AS current_month,
+            SUM(CASE WHEN substr(COALESCE(NULLIF(c.selection_date,''), NULLIF(c.updated_at,''), c.created_at, ''),1,10)>=date('now','localtime','start of month') THEN 1 ELSE 0 END) AS current_month,
             COUNT(c.id) AS overall,
             COUNT(DISTINCT COALESCE(c.sourcer_id::text, c.recruiter_email)) AS recruiters
         FROM candidates c
@@ -9193,8 +9234,9 @@ def api_dashboard_summary():
         f"""
         SELECT COUNT(DISTINCT c.id)
         FROM candidates c
-        {month_sql}
+        {base_where}
           AND COALESCE(c.status,'') IN ({placeholders})
+          AND substr(COALESCE(NULLIF(c.selection_date,''), NULLIF(c.updated_at,''), c.created_at, ''),1,10)>=date('now','localtime','start of month')
         """,
         owner_params + selected_statuses
     ).fetchone()[0]
@@ -9302,12 +9344,12 @@ def api_dashboard_summary():
     ]
     selection_rows = conn.execute(
         f"""
-        SELECT date(c.created_at) AS day, COUNT(DISTINCT c.id) AS count
+        SELECT substr(COALESCE(NULLIF(c.selection_date,''), NULLIF(c.updated_at,''), c.created_at, ''),1,10) AS day, COUNT(DISTINCT c.id) AS count
         FROM candidates c
         {base_where}
-          AND date(c.created_at)>=date('now','localtime','-13 days')
+          AND substr(COALESCE(NULLIF(c.selection_date,''), NULLIF(c.updated_at,''), c.created_at, ''),1,10)>=date('now','localtime','-13 days')
           AND COALESCE(c.status,'') IN ({placeholders})
-        GROUP BY date(c.created_at)
+        GROUP BY substr(COALESCE(NULLIF(c.selection_date,''), NULLIF(c.updated_at,''), c.created_at, ''),1,10)
         ORDER BY day
         """,
         owner_params + selected_statuses
@@ -9408,7 +9450,7 @@ def api_my_analytics():
             FROM candidates c
             {base_where}
               AND lower(trim(COALESCE(c.status,''))) IN ({placeholders})
-              AND substr(COALESCE(NULLIF(c.updated_at,''), c.created_at, ''), 1, 7)=?
+              AND substr(COALESCE(NULLIF(c.selection_date,''), NULLIF(c.updated_at,''), c.created_at, ''), 1, 7)=?
             """,
             owner_params + selection_statuses + [current_month]
         ).fetchone()[0]
@@ -9455,15 +9497,15 @@ def api_my_monthly_selections():
         current_month = date.today().strftime("%Y-%m")
         rows = conn.execute(
             f"""
-            SELECT c.id, c.candidate_name, c.status, c.recruiter_name, c.recruiter_email,
+            SELECT c.id, c.candidate_name, c.status, c.selection_date, c.recruiter_name, c.recruiter_email,
                    c.created_at, c.updated_at,
                    r.title AS requirement_title, r.client_name AS client_name
             FROM candidates c
             LEFT JOIN requirements r ON r.id = c.requirement_id
             WHERE COALESCE(c.is_duplicate,0)=0 {owner_sql}
               AND lower(trim(COALESCE(c.status,''))) IN ({placeholders})
-              AND substr(COALESCE(NULLIF(c.updated_at,''), c.created_at, ''), 1, 7)=?
-            ORDER BY COALESCE(NULLIF(c.updated_at,''), c.created_at) DESC, c.id DESC
+              AND substr(COALESCE(NULLIF(c.selection_date,''), NULLIF(c.updated_at,''), c.created_at, ''), 1, 7)=?
+            ORDER BY COALESCE(NULLIF(c.selection_date,''), NULLIF(c.updated_at,''), c.created_at) DESC, c.id DESC
             LIMIT 100
             """,
             owner_params + selection_statuses + [current_month],
@@ -11727,10 +11769,15 @@ def update_candidate(cid):
     forbidden = client_viewer_write_forbidden()
     if forbidden:
         return forbidden
-    data=request.json
+    data=request.json or {}
     allowed=["candidate_name","email_addr","phone","current_company","current_role",
              "experience_years","key_skills","notice_period","current_salary",
-             "expected_salary","current_location","preferred_location","remarks","role_name","status","requirement_id","candidate_feedback","education"]
+             "expected_salary","current_location","preferred_location","remarks","role_name","status","requirement_id","candidate_feedback","education","selection_date"]
+    if "status" in data:
+        clean_selection_date, selection_error = validate_selection_date_for_status(data.get("status"), data.get("selection_date"))
+        if selection_error:
+            return jsonify({"error": selection_error}), 400
+        data["selection_date"] = clean_selection_date if is_selection_status(data.get("status")) else ""
     
     # Ownership check for non-admins
     if not session.get("is_admin"):
@@ -11788,6 +11835,9 @@ def add_single_candidate():
     ]
     if not (d.get("sourcer_id") or session.get("team_member_id")):
         missing_required.append("Recruiter")
+    selection_date, selection_error = validate_selection_date_for_status(d.get("status", "New"), d.get("selection_date"))
+    if selection_error:
+        missing_required.append("Selection date")
     if missing_required:
         perf_log("candidate_add.validation", validation_started, status="missing", missing=len(missing_required))
         perf_log("candidate_add.total", endpoint_started, status=400)
@@ -11830,8 +11880,8 @@ def add_single_candidate():
                  email_addr,phone,current_company,current_role,experience_years,key_skills,
                  notice_period,current_salary,expected_salary,current_location,
                  preferred_location,remarks,cv_filename,cv_url,cv_public_id,cv_summary,
-                 status,tags,is_duplicate,duplicate_of,missing_info,job_id,sourcer_id,requirement_id,education)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                 status,selection_date,tags,is_duplicate,duplicate_of,missing_info,job_id,sourcer_id,requirement_id,education)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 ("single_"+datetime.now().strftime("%Y%m%d%H%M%S"),
                  recruiter_name,recruiter_email,d.get("role_name",""),d.get("candidate_name",""),
                  d.get("email_addr",""),d.get("phone",""),
@@ -11841,7 +11891,7 @@ def add_single_candidate():
                  d.get("expected_salary",""),d.get("current_location",""),
                  d.get("preferred_location",""),d.get("remarks",""),
                  cv_filename,cv_url,cv_public_id,d.get("cv_summary",""),
-                 d.get("status","New"),d.get("tags",""),
+                 d.get("status","New"),selection_date if is_selection_status(d.get("status","New")) else "",d.get("tags",""),
                  1 if is_dup else 0,
                  dup_id if is_dup else None,
                  ",".join(missing) if missing else None,
@@ -11887,10 +11937,13 @@ def update_status(cid):
     forbidden = client_viewer_write_forbidden()
     if forbidden:
         return forbidden
-    data   = request.json
+    data   = request.json or {}
     status = data.get("status","")
     feedback = clean_value(data.get("candidate_feedback") or data.get("feedback") or "", 2000)
     if not status: return jsonify({"error":"Status required"}),400
+    selection_date, selection_error = validate_selection_date_for_status(status, data.get("selection_date"))
+    if selection_error:
+        return jsonify({"error": selection_error}), 400
     conn = get_db()
     owner_sql, owner_params = non_admin_candidate_owner_clause(session, "c")
     c = conn.execute(
@@ -11905,8 +11958,8 @@ def update_status(cid):
     if valid_statuses and normalize_status_key(status) not in {normalize_status_key(s) for s in valid_statuses}:
         conn.close()
         return jsonify({"error":f"Invalid status. Must be one of: {', '.join(valid_statuses)}"}),400
-    conn.execute("UPDATE candidates SET status=?, candidate_feedback=?, updated_at=datetime('now','localtime') WHERE id=?",
-                 (status, feedback, cid))
+    conn.execute("UPDATE candidates SET status=?, candidate_feedback=?, selection_date=?, updated_at=datetime('now','localtime') WHERE id=?",
+                 (status, feedback, selection_date if is_selection_status(status) else "", cid))
     conn.commit(); conn.close()
     return jsonify({"ok":True})
 
@@ -11920,6 +11973,9 @@ def update_client_candidate_status(cid):
     feedback = clean_value(data.get("candidate_feedback") or data.get("feedback") or "", 2000)
     if not status:
         return jsonify({"error": "Status required"}), 400
+    selection_date, selection_error = validate_selection_date_for_status(status, data.get("selection_date"))
+    if selection_error:
+        return jsonify({"error": selection_error}), 400
     conn = get_db()
     owner_sql, owner_params = non_admin_candidate_owner_clause(session, "c")
     row = conn.execute(
@@ -11938,8 +11994,8 @@ def update_client_candidate_status(cid):
         conn.close()
         return jsonify({"error": f"Invalid status. Must be one of: {', '.join(valid_statuses)}"}), 400
     conn.execute(
-        "UPDATE candidates SET status=?, candidate_feedback=?, updated_at=datetime('now','localtime') WHERE id=?",
-        (status, feedback, cid)
+        "UPDATE candidates SET status=?, candidate_feedback=?, selection_date=?, updated_at=datetime('now','localtime') WHERE id=?",
+        (status, feedback, selection_date if is_selection_status(status) else "", cid)
     )
     recruiter_email = (row["recruiter_email"] or "").strip().lower()
     if recruiter_email:

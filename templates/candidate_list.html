@@ -117,6 +117,7 @@ select{height:32px;max-width:154px;background:#252a3a;border:1px solid #343b52;b
         <div class="field"><label>Email</label><input id="edit_email_addr"></div>
         <div class="field"><label>Phone</label><input id="edit_phone"></div>
         <div class="field"><label>Status</label><select id="edit_status"></select></div>
+        <div class="field"><label>Selection Date</label><input id="edit_selection_date" type="date"></div>
         <div class="field"><label>Current Company</label><input id="edit_current_company"></div>
         <div class="field"><label>Current Designation</label><input id="edit_current_role"></div>
         <div class="field"><label>Experience</label><input id="edit_experience_years"></div>
@@ -150,6 +151,7 @@ let emailTemplatesLoadFailed = false;
 let currentEmailCandidate = null;
 let currentEditCandidateId = null;
 let statuses = ['New','Shortlisted','Screening Pending','Screen Rejected','Interviewed','HM Rejected','Offered','Joined','Dropped','Duplicate','OnHold'];
+const selectionStatuses = new Set(['selected','offered','joined','hired']);
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -192,6 +194,26 @@ function statusOptions(value) {
   const clean = String(value || 'New');
   const all = statuses.includes(clean) ? statuses : [clean, ...statuses];
   return all.map(status => `<option value="${escapeHtml(status)}" ${status === clean ? 'selected' : ''}>${escapeHtml(status)}</option>`).join('');
+}
+function statusKey(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+function isSelectionStatus(value) {
+  return selectionStatuses.has(statusKey(value));
+}
+function todayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+function requestSelectionDate(status, existingDate='') {
+  if (!isSelectionStatus(status)) return '';
+  const value = window.prompt(`Enter selection date for ${status} (YYYY-MM-DD)`, existingDate || todayIsoDate());
+  if (value === null) return null;
+  const clean = String(value || '').trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+    showAlert('Selection date is required in YYYY-MM-DD format.');
+    return null;
+  }
+  return clean;
 }
 function rowHtml(row) {
   const reportDate = row.created_at ? String(row.created_at).split(' ')[0] : '-';
@@ -340,7 +362,7 @@ function fillEditStatus(value) {
 function fillEditForm(candidate) {
   currentEditCandidateId = candidate.id;
   document.getElementById('editCandidateMeta').textContent = `${candidate.requirement_title || candidate.role_name || 'Requirement not set'}${candidate.client_name ? ' - ' + candidate.client_name : ''}`;
-  ['candidate_name','email_addr','phone','current_company','current_role','experience_years','notice_period','current_salary','expected_salary','current_location','preferred_location','key_skills','remarks'].forEach(field => setEditValue(field, candidate[field]));
+  ['candidate_name','email_addr','phone','selection_date','current_company','current_role','experience_years','notice_period','current_salary','expected_salary','current_location','preferred_location','key_skills','remarks'].forEach(field => setEditValue(field, candidate[field]));
   fillEditStatus(candidate.status);
 }
 async function openCandidateEdit(id) {
@@ -378,6 +400,7 @@ async function saveCandidateEdit() {
     email_addr: getEditValue('email_addr'),
     phone: getEditValue('phone'),
     status: document.getElementById('edit_status').value,
+    selection_date: getEditValue('selection_date'),
     current_company: getEditValue('current_company'),
     current_role: getEditValue('current_role'),
     experience_years: getEditValue('experience_years'),
@@ -391,6 +414,11 @@ async function saveCandidateEdit() {
   };
   if (!payload.candidate_name) {
     document.getElementById('editStatus').textContent = 'Candidate name is required.';
+    document.getElementById('editStatus').style.color = '#ffb3b3';
+    return;
+  }
+  if (isSelectionStatus(payload.status) && !payload.selection_date) {
+    document.getElementById('editStatus').textContent = 'Selection date is required for Selected, Offered, Joined, or Hired status.';
     document.getElementById('editStatus').style.color = '#ffb3b3';
     return;
   }
@@ -570,12 +598,18 @@ async function sendCandidateEmail() {
 }
 async function updateStatus(id, select) {
   const next = select.value;
+  const row = candidateById(id);
+  const selectionDate = requestSelectionDate(next, row?.selection_date || '');
+  if (selectionDate === null) {
+    loadCandidates();
+    return;
+  }
   select.disabled = true;
   try {
     const res = await fetch(`/api/candidate/${id}/status`, {
       method: 'PATCH',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({status: next})
+      body: JSON.stringify({status: next, selection_date: selectionDate || ''})
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.error) throw new Error(data.error || 'Unable to update status.');
